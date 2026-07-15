@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Agora-expo-app",
+    "name": "Agora",
     "slug": "Agora-expo-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -28,12 +28,11 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#0F2C1F"
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&amp;family=Schibsted+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<style>
+body{margin:0;background:#EDE7DA}
+a{color:#E7A33C}a:hover{color:#F0B04E}
+input::placeholder,textarea::placeholder{color:#A9A794}
+input,textarea,button{font-family:'Schibsted Grotesk',sans-serif}
+@keyframes adFade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes adDot{0%,100%{opacity:1}50%{opacity:0.4}}
+@keyframes adSpin{to{transform:rotate(360deg)}}
+@keyframes adPop{from{transform:scale(0.6);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes adSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes adBar{from{width:0}}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:36px 20px;background:radial-gradient(1200px 700px at 50% -10%, #F4EFE3, #EDE7DA);font-family:'Schibsted Grotesk',sans-serif">
+  <div style="font-size:12px;letter-spacing:0.18em;font-weight:700;color:#8A8470">AGORA · SOCIETY ADMIN</div>
+  <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+    <div style="height:100%;position:relative;overflow:hidden;font-family:'Schibsted Grotesk',sans-serif;color:#17251D;background:#F4EFE3">
+
+      <!-- ═══════════ HOME ═══════════ -->
+      <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+        <div data-screen-label="Home" style="height:100%;overflow:auto;box-sizing:border-box;background:#F4EFE3;animation:adFade 0.3s ease">
+          <div style="background:linear-gradient(180deg,#123528 0%,#0F2C1F 100%);padding:58px 20px 60px;box-sizing:border-box;color:#F7F4EC">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex;align-items:center;gap:9px">
+                <svg width="24" height="22" viewBox="0 0 74 66" fill="none"><defs><linearGradient id="adhlg" x1="10" y1="0" x2="64" y2="66" gradientUnits="userSpaceOnUse"><stop stop-color="#F3B75B"></stop><stop offset="1" stop-color="#D0871F"></stop></linearGradient></defs><path fill-rule="evenodd" clip-rule="evenodd" fill="url(#adhlg)" d="M31.6 4.7a6 6 0 0 1 10.8 0l29.4 52.9c2.2 4-0.7 8.9-5.4 8.9H7.6c-4.7 0-7.6-4.9-5.4-8.9L31.6 4.7ZM37 26.5 26.1 46.1c-1.1 2 0.3 4.4 2.7 4.4h16.4c2.4 0 3.8-2.4 2.7-4.4L37 26.5Z"></path></svg>
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:19px;font-weight:800">Agora</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div onClick="{{ bellTap }}" style="position:relative;width:38px;height:38px;border-radius:99px;background:rgba(247,244,236,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 10a6 6 0 0 1 12 0v4l1.6 3H4.4L6 14v-4z" stroke="#F7F4EC" stroke-width="1.7" stroke-linejoin="round"></path><path d="M10 20a2 2 0 0 0 4 0" stroke="#F7F4EC" stroke-width="1.7" stroke-linecap="round"></path></svg>
+                  <sc-if value="{{ hasBellCount }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;border-radius:99px;background:#D2483F;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;padding:0 3px;border:2px solid #123528">{{ bellCount }}</div></sc-if>
+                </div>
+                <div onClick="{{ goProfile }}" style="width:38px;height:38px;border-radius:99px;background:#F7F4EC;border:2px solid #E7A33C;display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:14px;color:#10261B;cursor:pointer">{{ adminInitials }}</div>
+              </div>
+            </div>
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800;margin-top:20px;line-height:1.2">{{ greeting }}, {{ adminName }}</div>
+            <div onClick="{{ communityTap }}" style="display:inline-flex;align-items:center;gap:6px;margin-top:6px;cursor:pointer;color:rgba(247,244,236,0.72);font-size:14px;font-weight:600">{{ communityName }}<svg width="10" height="6" viewBox="0 0 10 6" style="margin-top:2px"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+          </div>
+          <div style="padding:0 16px 108px;box-sizing:border-box;margin-top:-40px;position:relative">
+            <sc-if value="{{ hasPriority }}" hint-placeholder-val="{{ true }}">
+              <div style="background:#FFFFFF;border-radius:22px;padding:18px;box-shadow:0 14px 32px rgba(16,38,27,0.16)">
+                <div style="display:flex;align-items:center;gap:11px">
+                  <div style="width:36px;height:36px;border-radius:12px;flex-shrink:0;background:#FBE7E2;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3.5l9.5 16.5H2.5L12 3.5z" stroke="#D2483F" stroke-width="1.8" stroke-linejoin="round"></path><path d="M12 10v4M12 16.5h.01" stroke="#D2483F" stroke-width="1.8" stroke-linecap="round"></path></svg></div>
+                  <div style="flex:1;font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:800;color:#17251D">Priority Actions</div>
+                  <div onClick="{{ goViewAllPriority }}" style="font-size:13px;font-weight:700;color:#E7A33C;cursor:pointer;white-space:nowrap">View all</div>
+                </div>
+                <div style="font-size:13px;color:#75806F;margin-top:8px;line-height:1.45">You have {{ priorityCount }} pending items that need your attention.</div>
+                <div style="display:flex;gap:8px;margin-top:14px">
+                  <div onClick="{{ goVerifications }}" style="flex:1;cursor:pointer;background:#F7F4EC;border:1px solid #E5E0D2;border-radius:14px;padding:10px 11px">
+                    <div style="display:flex;align-items:center;gap:6px;color:#1D5C45"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.8"></circle><path d="M3.5 19c0-3.2 2.6-5.3 5.5-5.3s5.5 2.1 5.5 5.3" stroke="currentColor" stroke-width="1.8"></path><path d="M15 12l1.6 1.6L20 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg><div style="font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:800">{{ pendingVerifyCount }}</div></div>
+                    <div style="font-size:10.5px;color:#75806F;margin-top:5px;line-height:1.25">Resident Verifications</div>
+                  </div>
+                  <div onClick="{{ goComplaintsFromPriority }}" style="flex:1;cursor:pointer;background:#F7F4EC;border:1px solid #E5E0D2;border-radius:14px;padding:10px 11px">
+                    <div style="display:flex;align-items:center;gap:6px;color:#C0392B"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3.5l9.5 16.5H2.5L12 3.5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path><path d="M12 10v4M12 16.5h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg><div style="font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:800">{{ mComplaints }}</div></div>
+                    <div style="font-size:10.5px;color:#75806F;margin-top:5px;line-height:1.25">Open Complaints</div>
+                  </div>
+                  <div onClick="{{ goApprovalsFromPriority }}" style="flex:1;cursor:pointer;background:#F7F4EC;border:1px solid #E5E0D2;border-radius:14px;padding:10px 11px">
+                    <div style="display:flex;align-items:center;gap:6px;color:#9A6B14"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="5" y="3.5" width="14" height="17" rx="2" stroke="currentColor" stroke-width="1.8"></rect><path d="M9 11l2 2 4-4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg><div style="font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:800">{{ bookingPendingTotal }}</div></div>
+                    <div style="font-size:10.5px;color:#75806F;margin-top:5px;line-height:1.25">Approvals</div>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ noPriority }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#E9F1EC;border:1px solid #CFE3D8;border-radius:22px;padding:20px;text-align:center;box-shadow:0 14px 32px rgba(16,38,27,0.12)">
+                <div style="font-size:14.5px;font-weight:700;color:#1D5C45">You're all caught up</div>
+                <div style="font-size:12.5px;color:#3E6B50;margin-top:3px">No pending verifications, complaints or approvals</div>
+              </div>
+            </sc-if>
+
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:17px;font-weight:700;margin-top:24px">Overview</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:12px">
+              <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:18px;padding:15px">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="#1D5C45" stroke-width="1.7"></circle><path d="M3 19.5c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" stroke="#1D5C45" stroke-width="1.7"></path><circle cx="17" cy="9" r="2.6" stroke="#1D5C45" stroke-width="1.5" opacity="0.6"></circle></svg>
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:23px;font-weight:800;margin-top:10px">{{ totalResidents }}</div>
+                <div style="font-size:12px;color:#75806F;margin-top:2px">Total Residents</div>
+                <div style="font-size:11px;font-weight:700;margin-top:6px;color:{{ residentsDeltaColor }}">{{ residentsDeltaLabel }}</div>
+              </div>
+              <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:18px;padding:15px">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="5" y="4" width="14" height="17" rx="1.5" stroke="#17251D" stroke-width="1.7"></rect><path d="M9 8h1M9 12h1M14 8h1M14 12h1M9 16h1M14 16h1" stroke="#17251D" stroke-width="1.7" stroke-linecap="round"></path></svg>
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:23px;font-weight:800;margin-top:10px">{{ totalFlatsCount }}</div>
+                <div style="font-size:12px;color:#75806F;margin-top:2px">Total Flats</div>
+                <div style="font-size:11px;font-weight:700;margin-top:6px;color:{{ flatsDeltaColor }}">{{ flatsDeltaLabel }}</div>
+              </div>
+              <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:18px;padding:15px">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3.5l9.5 16.5H2.5L12 3.5z" stroke="#C0392B" stroke-width="1.7" stroke-linejoin="round"></path><path d="M12 10v4M12 16.5h.01" stroke="#C0392B" stroke-width="1.7" stroke-linecap="round"></path></svg>
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:23px;font-weight:800;margin-top:10px">{{ mComplaints }}</div>
+                <div style="font-size:12px;color:#75806F;margin-top:2px">Open Complaints</div>
+                <div style="font-size:11px;font-weight:700;margin-top:6px;color:{{ complaintsDeltaColor }}">{{ complaintsDeltaLabel }}</div>
+              </div>
+              <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:18px;padding:15px">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="15" rx="2" stroke="#9A6B14" stroke-width="1.7"></rect><path d="M4 10h16M8 3v4M16 3v4" stroke="#9A6B14" stroke-width="1.7" stroke-linecap="round"></path></svg>
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:23px;font-weight:800;margin-top:10px">{{ bookingsTodayCount }}</div>
+                <div style="font-size:12px;color:#75806F;margin-top:2px">Bookings Today</div>
+                <div style="font-size:11px;font-weight:700;margin-top:6px;color:{{ bookingsDeltaColor }}">{{ bookingsDeltaLabel }}</div>
+              </div>
+            </div>
+
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:24px">
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:17px;font-weight:700">Quick Actions</div>
+              <div onClick="{{ editQuickActions }}" style="font-size:13px;font-weight:700;color:#1D5C45;cursor:pointer">Edit</div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:12px">
+              <div onClick="{{ qaAddResident }}" style="cursor:pointer;text-align:center">
+                <div style="width:100%;aspect-ratio:1;border-radius:16px;background:#E9F1EC;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="9.5" cy="8.5" r="4" fill="#1D5C45"></circle><path d="M2.5 20c0-4.1 3.4-6.6 7-6.6s7 2.5 7 6.6" fill="#1D5C45"></path><circle cx="18.5" cy="7.5" r="4.3" fill="#E9F1EC" stroke="#1D5C45" stroke-width="1.6"></circle><path d="M18.5 5.6v3.8M16.6 7.5h3.8" stroke="#1D5C45" stroke-width="1.6" stroke-linecap="round"></path></svg></div>
+                <div style="font-size:10.5px;font-weight:600;margin-top:7px;line-height:1.2">Add Resident</div>
+              </div>
+              <div onClick="{{ qaPublishNotice }}" style="cursor:pointer;text-align:center">
+                <div style="width:100%;aspect-ratio:1;border-radius:16px;background:#F6ECD8;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M3 9.3v5.4l3 .5V16a1.6 1.6 0 0 0 1.6 1.6H9v-4.6l9.5-2.9V9.3L9 12.2V9.3H3z" fill="#9A6B14"></path><path d="M18.7 8.6a3.9 3.9 0 0 1 0 6.9" stroke="#9A6B14" stroke-width="1.7" stroke-linecap="round"></path></svg></div>
+                <div style="font-size:10.5px;font-weight:600;margin-top:7px;line-height:1.2">Publish Notice</div>
+              </div>
+              <div onClick="{{ qaCreatePoll }}" style="cursor:pointer;text-align:center">
+                <div style="width:100%;aspect-ratio:1;border-radius:16px;background:#EFEAF7;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="4" y="13" width="4.2" height="7.5" rx="1.3" fill="#7B5EA7"></rect><rect x="9.9" y="6.5" width="4.2" height="14" rx="1.3" fill="#7B5EA7"></rect><rect x="15.8" y="9.5" width="4.2" height="11" rx="1.3" fill="#7B5EA7" opacity="0.55"></rect></svg></div>
+                <div style="font-size:10.5px;font-weight:600;margin-top:7px;line-height:1.2">Create Poll</div>
+              </div>
+              <div onClick="{{ qaAddComplaint }}" style="cursor:pointer;text-align:center">
+                <div style="width:100%;aspect-ratio:1;border-radius:16px;background:#F9E4E1;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2.6L22.3 20.8H1.7L12 2.6z" fill="#C0392B"></path><path d="M12 9.8v4.6" stroke="#F9E4E1" stroke-width="2.1" stroke-linecap="round"></path><circle cx="12" cy="17.2" r="1.2" fill="#F9E4E1"></circle></svg></div>
+                <div style="font-size:10.5px;font-weight:600;margin-top:7px;line-height:1.2">Add Complaint</div>
+              </div>
+              <div onClick="{{ qaAddStaff }}" style="cursor:pointer;text-align:center">
+                <div style="width:100%;aspect-ratio:1;border-radius:16px;background:#E4EFF5;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4.3" fill="#2E6E8E"></circle><path d="M3.3 20.8c0-4.6 3.9-7.3 8.7-7.3s8.7 2.7 8.7 7.3" fill="#2E6E8E" opacity="0.82"></path></svg></div>
+                <div style="font-size:10.5px;font-weight:600;margin-top:7px;line-height:1.2">Add Staff</div>
+              </div>
+              <div onClick="{{ qaManageAmenity }}" style="cursor:pointer;text-align:center">
+                <div style="width:100%;aspect-ratio:1;border-radius:16px;background:#E9F1EC;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 20.5V9.1L12 3.6l8 5.5v11.4H4z" fill="#1D5C45"></path><path d="M9.3 20.5v-5.6h5.4v5.6" fill="#E9F1EC"></path><rect x="8.7" y="8" width="2.1" height="2.1" rx="0.4" fill="#E9F1EC"></rect><rect x="13.2" y="8" width="2.1" height="2.1" rx="0.4" fill="#E9F1EC"></rect></svg></div>
+                <div style="font-size:10.5px;font-weight:600;margin-top:7px;line-height:1.2">Manage Amenity</div>
+              </div>
+              <div onClick="{{ qaViewReports }}" style="cursor:pointer;text-align:center">
+                <div style="width:100%;aspect-ratio:1;border-radius:16px;background:#EEEDE4;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M6 3.2h8.6L19 7.6v13.2H6V3.2z" fill="#6F7A70"></path><path d="M14.6 3.2V7.6H19" fill="#EEEDE4"></path><rect x="8.6" y="10.8" width="7.4" height="1.7" rx="0.5" fill="#EEEDE4"></rect><rect x="8.6" y="14.3" width="7.4" height="1.7" rx="0.5" fill="#EEEDE4"></rect><rect x="8.6" y="17.8" width="4.2" height="1.7" rx="0.5" fill="#EEEDE4"></rect></svg></div>
+                <div style="font-size:10.5px;font-weight:600;margin-top:7px;line-height:1.2">View Reports</div>
+              </div>
+              <div onClick="{{ qaMore }}" style="cursor:pointer;text-align:center">
+                <div style="width:100%;aspect-ratio:1;border-radius:16px;background:#EEEDE4;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="2.3" fill="#17251D"></circle><circle cx="12" cy="12" r="2.3" fill="#17251D"></circle><circle cx="19" cy="12" r="2.3" fill="#17251D"></circle></svg></div>
+                <div style="font-size:10.5px;font-weight:600;margin-top:7px;line-height:1.2">More</div>
+              </div>
+            </div>
+
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:17px;font-weight:700;margin-top:24px">Today's Operations</div>
+            <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:20px;padding:6px 16px;margin-top:12px">
+              <sc-if value="{{ hasBookingOp }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #F0ECE0">
+                  <div style="width:38px;height:38px;border-radius:11px;flex-shrink:0;background:#E4EFF5;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="15" rx="2" stroke="#2E6E8E" stroke-width="1.7"></rect><path d="M4 10h16M8 3v4M16 3v4" stroke="#2E6E8E" stroke-width="1.7" stroke-linecap="round"></path></svg></div>
+                  <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ bookingOpTitle }}</div><div style="font-size:12px;color:#75806F;margin-top:1px">{{ bookingOpSub }}</div></div>
+                  <div style="display:inline-block;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#E3F2E9;color:#1F9D5C;flex-shrink:0">Confirmed</div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ hasMaintenanceOp }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:center;gap:12px;padding:14px 0">
+                  <div style="width:38px;height:38px;border-radius:11px;flex-shrink:0;background:#F6ECD8;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M14.5 6.5l3 3-7 7-3.5.5.5-3.5 7-7z" stroke="#9A6B14" stroke-width="1.6" stroke-linejoin="round"></path><path d="M6 18l-2 2" stroke="#9A6B14" stroke-width="1.6" stroke-linecap="round"></path></svg></div>
+                  <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ maintOpTitle }}</div><div style="font-size:12px;color:#75806F;margin-top:1px">{{ maintOpSub }}</div></div>
+                  <div style="display:inline-block;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#F6ECD8;color:#9A6B14;flex-shrink:0">Scheduled</div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ noOps }}" hint-placeholder-val="{{ false }}"><div style="padding:20px 0;text-align:center;font-size:13px;color:#75806F">Nothing scheduled for today.</div></sc-if>
+            </div>
+
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:24px">
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:17px;font-weight:700">Recent Activity</div>
+              <div onClick="{{ goAudit }}" style="font-size:13px;font-weight:700;color:#E7A33C;cursor:pointer">View all</div>
+            </div>
+            <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:20px;padding:4px 16px;margin-top:12px">
+              <sc-for list="{{ auditHome }}" as="e" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid #F0ECE0">
+                  <div style="width:34px;height:34px;border-radius:99px;flex-shrink:0;background:{{ e.iconBg }};display:flex;align-items:center;justify-content:center"><div style="width:8px;height:8px;border-radius:99px;background:{{ e.dot }}"></div></div>
+                  <div style="flex:1;min-width:0"><div style="font-size:13.5px;color:#2C3830;line-height:1.4">{{ e.text }}</div><div style="font-size:11.5px;color:#A9A794;margin-top:2px">{{ e.meta }}</div></div>
+                  <svg width="14" height="14" viewBox="0 0 24 24" style="flex-shrink:0"><path d="M8 4l8 8-8 8" stroke="#C9BE9F" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+
+      <!-- ── Resident detail ── -->
+      <sc-if value="{{ isResidentDetail }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Resident detail" style="height:100%;overflow:auto;padding:66px 20px 40px;box-sizing:border-box;animation:adFade 0.3s ease">
+          <div onClick="{{ backResidents }}" style="width:38px;height:38px;border-radius:99px;background:#FFFFFF;border:1px solid #E5E0D2;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5l-7 7 7 7" stroke="#17251D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+          <div style="display:flex;align-items:center;gap:14px;margin-top:18px">
+            <div style="width:64px;height:64px;border-radius:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:24px;color:#10261B;background:{{ dResAvatar }}">{{ dResInitial }}</div>
+            <div style="flex:1">
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:23px;font-weight:800;line-height:1.1">{{ dResName }}</div>
+              <div style="font-size:13.5px;color:#75806F;margin-top:3px">{{ dResUnit }} · {{ dResType }}</div>
+            </div>
+          </div>
+          <div style="display:inline-block;font-size:11px;font-weight:700;padding:5px 11px;border-radius:999px;background:{{ dResStatusBg }};color:{{ dResStatusColor }};margin-top:14px">{{ dResStatus }}</div>
+          <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:18px;padding:6px 16px;margin-top:18px">
+            <sc-for list="{{ dResRows }}" as="row" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid #F0ECE0">
+                <div style="font-size:13px;color:#75806F">{{ row.label }}</div>
+                <div style="font-size:14px;font-weight:600;text-align:right">{{ row.value }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ dResUnverified }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ verifyResident }}" style="margin-top:16px;height:52px;border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;background:#1F9D5C;color:#FFFFFF;font-size:15px;font-weight:700" style-hover="background:#23AD66"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 7" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg>Verify resident</div>
+          </sc-if>
+          <div style="display:flex;gap:10px;margin-top:12px">
+            <div onClick="{{ toastMsgCall }}" style="flex:1;height:48px;border-radius:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;background:#FFFFFF;border:1px solid #E5E0D2;font-size:14px;font-weight:700;color:#17251D">Call</div>
+            <div onClick="{{ toastMsgMessage }}" style="flex:1;height:48px;border-radius:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;background:#FFFFFF;border:1px solid #E5E0D2;font-size:14px;font-weight:700;color:#17251D">Message</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ── Tower detail ── -->
+      <sc-if value="{{ isTowerDetail }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Tower detail" style="height:100%;overflow:auto;padding:66px 20px 40px;box-sizing:border-box;animation:adFade 0.3s ease">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div onClick="{{ backTowers }}" style="width:38px;height:38px;border-radius:99px;background:#FFFFFF;border:1px solid #E5E0D2;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5l-7 7 7 7" stroke="#17251D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800;line-height:1.1">{{ dTowerName }}</div>
+              <div style="font-size:13px;color:#75806F;margin-top:2px">{{ dTowerFloors }} floors</div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:20px">
+            <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:16px;padding:14px 8px;text-align:center">
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:21px;font-weight:800;color:#17251D">{{ dTowerFlats }}</div>
+              <div style="font-size:11px;font-weight:600;color:#75806F;margin-top:3px">Total flats</div>
+            </div>
+            <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:16px;padding:14px 8px;text-align:center">
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:21px;font-weight:800;color:#1F9D5C">{{ dTowerOccupied }}</div>
+              <div style="font-size:11px;font-weight:600;color:#75806F;margin-top:3px">Occupied</div>
+            </div>
+            <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:16px;padding:14px 8px;text-align:center">
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:21px;font-weight:800;color:#9A6B14">{{ dTowerVacant }}</div>
+              <div style="font-size:11px;font-weight:600;color:#75806F;margin-top:3px">Vacant</div>
+            </div>
+            <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:16px;padding:14px 8px;text-align:center">
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:21px;font-weight:800;color:#17251D">{{ dTowerOwners }}</div>
+              <div style="font-size:11px;font-weight:600;color:#75806F;margin-top:3px">Owners</div>
+            </div>
+            <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:16px;padding:14px 8px;text-align:center">
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:21px;font-weight:800;color:#17251D">{{ dTowerTenants }}</div>
+              <div style="font-size:11px;font-weight:600;color:#75806F;margin-top:3px">Tenants</div>
+            </div>
+            <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:16px;padding:14px 8px;text-align:center">
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:21px;font-weight:800;color:#C0392B">{{ dTowerOpenComplaints }}</div>
+              <div style="font-size:11px;font-weight:600;color:#75806F;margin-top:3px">Open issues</div>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:24px">
+            <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470">RESIDENTS · {{ dTowerResidentCount }}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+            <sc-for list="{{ dTowerResidents }}" as="r" hint-placeholder-count="4">
+              <div onClick="{{ r.open }}" style="cursor:pointer;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:12px" style-hover="border-color:#1D5C45">
+                <div style="width:44px;height:44px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;color:#1D5C45;background:#E9F1EC;font-size:12.5px">{{ r.unitCode }}</div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:14.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.unitCode }} <span style="font-weight:500;color:#75806F;font-size:13px">({{ r.name }})</span></div>
+                  <div style="font-size:12px;color:#75806F;margin-top:1px">{{ r.type }}</div>
+                </div>
+                <div style="display:inline-block;font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:999px;background:{{ r.statusBg }};color:{{ r.statusColor }};flex-shrink:0">{{ r.status }}</div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ dTowerNoResidents }}" hint-placeholder-val="{{ false }}"><div style="text-align:center;padding:30px;font-size:13.5px;color:#75806F">No residents recorded in this tower yet.</div></sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ── Add resident ── -->
+      <sc-if value="{{ isAddResident }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Add resident" style="height:100%;overflow:auto;padding:66px 20px 40px;box-sizing:border-box;animation:adFade 0.3s ease">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div onClick="{{ backResidents }}" style="width:38px;height:38px;border-radius:99px;background:#FFFFFF;border:1px solid #E5E0D2;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5l-7 7 7 7" stroke="#17251D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800">Add resident</div>
+          </div>
+          <div style="display:flex;justify-content:center;margin-top:20px">
+            <div style="width:96px;height:96px;position:relative">
+              <image-slot id="admin-res-photo" shape="circle" fit="cover" placeholder="Photo"></image-slot>
+              <div style="position:absolute;bottom:0;right:0;width:30px;height:30px;border-radius:99px;background:#E7A33C;border:2.5px solid #F4EFE3;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="#10261B" stroke-width="2.6" stroke-linecap="round"></path></svg></div>
+            </div>
+          </div>
+          <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470;margin-top:22px">FULL NAME</div>
+          <input value="{{ fName }}" onChange="{{ setFName }}" placeholder="e.g. Priya Nair" style="width:100%;box-sizing:border-box;margin-top:8px;padding:14px 15px;border-radius:14px;border:1.5px solid #E0DACA;background:#FFFFFF;font-size:16px;color:#17251D;outline:none" style-focus="border-color:#1D5C45"></input>
+          <div style="display:flex;gap:10px;margin-top:16px">
+            <div style="flex:1"><div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470">TOWER</div>
+              <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px"><sc-for list="{{ towerChips }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.pick }}" style="padding:9px 13px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;background:{{ c.bg }};color:{{ c.color }};border:1.5px solid {{ c.border }}">{{ c.label }}</button></sc-for></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:16px">
+            <div style="flex:1"><div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470">FLAT NO.</div>
+              <input value="{{ fFlat }}" onChange="{{ setFFlat }}" placeholder="1204" style="width:100%;box-sizing:border-box;margin-top:8px;padding:14px 15px;border-radius:14px;border:1.5px solid #E0DACA;background:#FFFFFF;font-size:16px;color:#17251D;outline:none" style-focus="border-color:#1D5C45"></input>
+            </div>
+            <div style="flex:1"><div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470">PHONE</div>
+              <input value="{{ fPhone }}" onChange="{{ setFPhone }}" inputmode="numeric" placeholder="98765 43210" style="width:100%;box-sizing:border-box;margin-top:8px;padding:14px 15px;border-radius:14px;border:1.5px solid #E0DACA;background:#FFFFFF;font-size:16px;color:#17251D;outline:none" style-focus="border-color:#1D5C45"></input>
+            </div>
+          </div>
+          <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470;margin-top:18px">OCCUPANCY</div>
+          <div style="display:flex;gap:8px;margin-top:8px"><sc-for list="{{ typeChips }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.pick }}" style="flex:1;padding:12px;border-radius:14px;font-size:14px;font-weight:600;cursor:pointer;background:{{ c.bg }};color:{{ c.color }};border:1.5px solid {{ c.border }}">{{ c.label }}</button></sc-for></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:16px;padding:14px 16px">
+            <div><div style="font-size:14.5px;font-weight:700">Mark as verified</div><div style="font-size:12px;color:#75806F;margin-top:1px">Skip the pending-review step</div></div>
+            <div onClick="{{ toggleVerify }}" style="width:48px;height:28px;border-radius:99px;cursor:pointer;position:relative;transition:background 0.2s;background:{{ verifyTrackBg }}"><div style="position:absolute;top:3px;width:22px;height:22px;border-radius:99px;background:#fff;transition:left 0.2s;left:{{ verifyKnobLeft }}"></div></div>
+          </div>
+          <div onClick="{{ saveResident }}" style="margin-top:26px;height:54px;border-radius:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15.5px;font-weight:700;background:{{ saveResBg }};color:{{ saveResColor }}">Save resident</div>
+        </div>
+      </sc-if>
+
+      <!-- ═══════════ NOTICES ═══════════ -->
+      <sc-if value="{{ isNotices }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Notices" style="height:100%;overflow:auto;padding:66px 16px 108px;box-sizing:border-box;animation:adFade 0.3s ease">
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:26px;font-weight:800">Notices</div>
+          <div style="font-size:13px;color:#75806F;margin-top:3px">{{ noticeCount }} published · {{ noticeScheduled }} scheduled</div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">
+            <sc-for list="{{ noticeList }}" as="n" hint-placeholder-count="4">
+              <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:18px;padding:15px 16px">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+                  <div style="display:inline-block;font-size:10px;letter-spacing:0.1em;font-weight:700;padding:4px 9px;border-radius:999px;background:{{ n.catBg }};color:{{ n.catColor }}">{{ n.cat }}</div>
+                  <div style="display:inline-block;font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:999px;background:{{ n.stateBg }};color:{{ n.stateColor }}">{{ n.state }}</div>
+                </div>
+                <div style="font-size:15px;font-weight:600;line-height:1.35;margin-top:10px">{{ n.title }}</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+                  <div style="font-size:12px;color:#A9A794">{{ n.date }}</div>
+                  <div style="font-size:12px;font-weight:700;color:#1D5C45">{{ n.reads }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div onClick="{{ goCompose }}" style="position:absolute;bottom:96px;right:20px;width:56px;height:56px;border-radius:99px;background:#E7A33C;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 12px 28px rgba(231,163,60,0.4);z-index:20" style-hover="background:#F0B04E"><svg width="24" height="24" viewBox="0 0 24 24"><path d="M4 20l1-4L16 5l3 3L8 19l-4 1z" stroke="#10261B" stroke-width="2" fill="none" stroke-linejoin="round"></path></svg></div>
+        </div>
+      </sc-if>
+
+      <!-- ── Compose notice ── -->
+      <sc-if value="{{ isCompose }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Compose notice" style="height:100%;overflow:auto;padding:66px 20px 40px;box-sizing:border-box;animation:adFade 0.3s ease">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div onClick="{{ backNotices }}" style="width:38px;height:38px;border-radius:99px;background:#FFFFFF;border:1px solid #E5E0D2;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5l-7 7 7 7" stroke="#17251D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800">New notice</div>
+          </div>
+          <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470;margin-top:22px">TITLE</div>
+          <input value="{{ nTitle }}" onChange="{{ setNTitle }}" placeholder="e.g. Water shutdown on Tuesday" style="width:100%;box-sizing:border-box;margin-top:8px;padding:14px 15px;border-radius:14px;border:1.5px solid #E0DACA;background:#FFFFFF;font-size:16px;color:#17251D;outline:none" style-focus="border-color:#1D5C45"></input>
+          <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470;margin-top:18px">MESSAGE</div>
+          <textarea value="{{ nBody }}" onChange="{{ setNBody }}" placeholder="Write the details residents need to know…" style="width:100%;box-sizing:border-box;margin-top:8px;padding:14px 15px;border-radius:14px;border:1.5px solid #E0DACA;background:#FFFFFF;font-size:15px;color:#17251D;outline:none;min-height:110px;resize:none;line-height:1.5" style-focus="border-color:#1D5C45"></textarea>
+          <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470;margin-top:18px">CATEGORY</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><sc-for list="{{ noticeCatChips }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.pick }}" style="padding:10px 15px;border-radius:999px;font-size:13.5px;font-weight:600;cursor:pointer;background:{{ c.bg }};color:{{ c.color }};border:1.5px solid {{ c.border }}">{{ c.label }}</button></sc-for></div>
+          <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470;margin-top:18px">AUDIENCE</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><sc-for list="{{ audienceChips }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.pick }}" style="padding:10px 15px;border-radius:999px;font-size:13.5px;font-weight:600;cursor:pointer;background:{{ c.bg }};color:{{ c.color }};border:1.5px solid {{ c.border }}">{{ c.label }}</button></sc-for></div>
+          <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470;margin-top:18px">DELIVERY</div>
+          <div style="display:flex;gap:8px;margin-top:8px"><sc-for list="{{ scheduleChips }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.pick }}" style="flex:1;padding:12px;border-radius:14px;font-size:14px;font-weight:600;cursor:pointer;background:{{ c.bg }};color:{{ c.color }};border:1.5px solid {{ c.border }}">{{ c.label }}</button></sc-for></div>
+          <sc-if value="{{ isScheduled }}" hint-placeholder-val="{{ false }}">
+            <input value="{{ nSchedAt }}" onChange="{{ setNSchedAt }}" placeholder="e.g. Tue 15 Jul, 9:00 AM" style="width:100%;box-sizing:border-box;margin-top:10px;padding:14px 15px;border-radius:14px;border:1.5px solid #E0DACA;background:#FFFFFF;font-size:15px;color:#17251D;outline:none" style-focus="border-color:#1D5C45"></input>
+          </sc-if>
+          <div onClick="{{ publishNotice }}" style="margin-top:26px;height:54px;border-radius:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15.5px;font-weight:700;background:{{ publishBg }};color:{{ publishColor }}">{{ publishLabel }}</div>
+        </div>
+      </sc-if>
+
+      <!-- ═══════════ COMPLAINTS ═══════════ -->
+      <sc-if value="{{ isComplaints }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Complaints" style="height:100%;overflow:auto;padding:66px 16px 108px;box-sizing:border-box;animation:adFade 0.3s ease">
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:26px;font-weight:800">Complaints</div>
+          <div style="font-size:13px;color:#75806F;margin-top:3px">{{ complaintOpen }} open · {{ complaintResolvedToday }} resolved today</div>
+          <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+            <sc-for list="{{ complaintFilters }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.pick }}" style="padding:9px 14px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;background:{{ c.bg }};color:{{ c.color }};border:1.5px solid {{ c.border }}">{{ c.label }}</button></sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">
+            <sc-for list="{{ complaintList }}" as="c" hint-placeholder-count="4">
+              <div onClick="{{ c.open }}" style="cursor:pointer;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:18px;padding:15px 16px" style-hover="border-color:#1D5C45">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <div style="width:8px;height:8px;border-radius:99px;background:{{ c.priorityDot }}"></div>
+                    <div style="font-size:11px;letter-spacing:0.08em;font-weight:700;color:#75806F">{{ c.category }} · {{ c.id }}</div>
+                  </div>
+                  <div style="display:inline-block;font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:999px;background:{{ c.statusBg }};color:{{ c.statusColor }}">{{ c.status }}</div>
+                </div>
+                <div style="font-size:15px;font-weight:600;line-height:1.35;margin-top:10px">{{ c.title }}</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+                  <div style="font-size:12.5px;color:#75806F">{{ c.resident }} · {{ c.unit }}</div>
+                  <div style="font-size:12px;color:#A9A794">{{ c.date }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ── Complaint triage ── -->
+      <sc-if value="{{ isComplaintDetail }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Complaint triage" style="height:100%;overflow:auto;padding:66px 20px 40px;box-sizing:border-box;animation:adFade 0.3s ease">
+          <div onClick="{{ backComplaints }}" style="width:38px;height:38px;border-radius:99px;background:#FFFFFF;border:1px solid #E5E0D2;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5l-7 7 7 7" stroke="#17251D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:16px"><div style="width:8px;height:8px;border-radius:99px;background:{{ dcPriorityDot }}"></div><div style="font-size:11.5px;letter-spacing:0.1em;font-weight:700;color:#75806F">{{ dcCategory }} · {{ dcId }}</div></div>
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800;line-height:1.25;margin-top:10px">{{ dcTitle }}</div>
+          <div style="font-size:13.5px;color:#75806F;margin-top:8px">Raised by {{ dcResident }} · {{ dcUnit }} · {{ dcDate }}</div>
+          <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:16px;padding:14px 16px;margin-top:16px;font-size:14.5px;line-height:1.55;color:#2C3830">{{ dcDesc }}</div>
+          <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470;margin-top:22px">PRIORITY</div>
+          <div style="display:flex;gap:8px;margin-top:8px"><sc-for list="{{ priorityChips }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.pick }}" style="flex:1;padding:11px;border-radius:14px;font-size:13.5px;font-weight:700;cursor:pointer;background:{{ c.bg }};color:{{ c.color }};border:1.5px solid {{ c.border }}">{{ c.label }}</button></sc-for></div>
+          <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470;margin-top:20px">ASSIGN TO</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><sc-for list="{{ assigneeChips }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.pick }}" style="padding:10px 14px;border-radius:999px;font-size:13.5px;font-weight:600;cursor:pointer;background:{{ c.bg }};color:{{ c.color }};border:1.5px solid {{ c.border }}">{{ c.label }}</button></sc-for></div>
+          <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470;margin-top:20px">STATUS</div>
+          <div style="display:flex;gap:8px;margin-top:8px"><sc-for list="{{ statusChips }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.pick }}" style="flex:1;padding:11px;border-radius:14px;font-size:12.5px;font-weight:700;cursor:pointer;background:{{ c.bg }};color:{{ c.color }};border:1.5px solid {{ c.border }}">{{ c.label }}</button></sc-for></div>
+          <div onClick="{{ saveComplaint }}" style="margin-top:26px;height:54px;border-radius:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15.5px;font-weight:700;background:#10261B;color:#F7F4EC" style-hover="background:#1D5C45">Save changes</div>
+        </div>
+      </sc-if>
+
+      <!-- ═══════════ MORE ═══════════ -->
+      <sc-if value="{{ isMore }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="More" style="height:100%;overflow:auto;padding:66px 16px 108px;box-sizing:border-box;animation:adFade 0.3s ease">
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:26px;font-weight:800">Manage</div>
+          <div style="font-size:13px;color:#75806F;margin-top:3px">All admin modules</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:18px">
+            <sc-for list="{{ moreModules }}" as="m" hint-placeholder-count="5">
+              <div onClick="{{ m.go }}" style="cursor:pointer;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:18px;padding:16px" style-hover="border-color:#1D5C45">
+                <div style="width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:{{ m.iconBg }};font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:18px;color:{{ m.iconColor }}">{{ m.glyph }}</div>
+                <div style="font-size:14.5px;font-weight:700;margin-top:12px">{{ m.label }}</div>
+                <div style="font-size:12px;color:#75806F;margin-top:2px">{{ m.sub }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-top:16px;background:#10261B;border-radius:18px;padding:16px;color:#F7F4EC;display:flex;align-items:center;gap:12px">
+            <div style="width:44px;height:44px;border-radius:99px;background:#E7A33C;display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;color:#10261B;font-size:16px">SG</div>
+            <div style="flex:1"><div style="font-size:15px;font-weight:700">Serenity Greens Admin</div><div style="font-size:12.5px;color:rgba(247,244,236,0.6);margin-top:1px">Full access · RBAC enabled</div></div>
+            <svg width="18" height="18" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" stroke="rgba(247,244,236,0.5)" stroke-width="2" fill="none" stroke-linecap="round"></path></svg>
+          </div>
+        </div>
+      </sc-if>
+
+<!-- ═══════════ COMMUNITY ═══════════ -->
+      <sc-if value="{{ isCommunity }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Community" style="height:100%;overflow:auto;box-sizing:border-box;background:#F4EFE3;animation:adFade 0.3s ease">
+          <div style="background:linear-gradient(180deg,#123528 0%,#0F2C1F 100%);padding:58px 20px 54px;box-sizing:border-box;color:#F7F4EC">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div onClick="{{ goHome }}" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#F7F4EC" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+              <div onClick="{{ cmtyFilterTap }}" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 6h6M16 6h4M4 12h11M17.5 12h2.5M4 18h6M16 18h4" stroke="#F7F4EC" stroke-width="1.8" stroke-linecap="round"></path><circle cx="12.5" cy="6" r="2" fill="#123528" stroke="#F7F4EC" stroke-width="1.6"></circle><circle cx="14.5" cy="12" r="2" fill="#123528" stroke="#F7F4EC" stroke-width="1.6"></circle><circle cx="9" cy="18" r="2" fill="#123528" stroke="#F7F4EC" stroke-width="1.6"></circle></svg></div>
+            </div>
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:26px;font-weight:800;margin-top:16px">Community</div>
+            <div style="font-size:14px;color:rgba(247,244,236,0.68);margin-top:5px">Manage buildings, flats &amp; residents</div>
+          </div>
+          <div style="padding:0 16px 108px;box-sizing:border-box;margin-top:-26px;position:relative">
+            <div style="background:#FFFFFF;border-radius:20px;padding:6px;display:flex;box-shadow:0 12px 28px rgba(16,38,27,0.14)">
+              <div onClick="{{ cmtyTowersTap }}" style="flex:1;text-align:center;padding:12px 0;cursor:pointer;font-size:14.5px;font-weight:700;color:{{ cmtyTowersColor }};border-bottom:2.5px solid {{ cmtyTowersBorder }}">Towers</div>
+              <div onClick="{{ cmtyFlatsTap }}" style="flex:1;text-align:center;padding:12px 0;cursor:pointer;font-size:14.5px;font-weight:700;color:{{ cmtyFlatsColor }};border-bottom:2.5px solid {{ cmtyFlatsBorder }}">Flats</div>
+              <div onClick="{{ cmtyResidentsTap }}" style="flex:1;text-align:center;padding:12px 0;cursor:pointer;font-size:14.5px;font-weight:700;color:{{ cmtyResidentsColor }};border-bottom:2.5px solid {{ cmtyResidentsBorder }}">Residents</div>
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:16px">
+              <div style="flex:1;display:flex;align-items:center;gap:9px;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:14px;padding:11px 13px">
+                <svg width="17" height="17" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" stroke="#A9A794" stroke-width="2" fill="none"></circle><path d="M16 16l4 4" stroke="#A9A794" stroke-width="2" stroke-linecap="round"></path></svg>
+                <input value="{{ resSearch }}" onChange="{{ setResSearch }}" placeholder="{{ cmtySearchPlaceholder }}" style="flex:1;min-width:0;border:none;background:transparent;font-size:14.5px;color:#17251D;outline:none"></input>
+              </div>
+              <div onClick="{{ cmtyFilterTap }}" style="width:44px;border-radius:14px;background:{{ filterBg }};border:1px solid {{ filterBorder }};display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="19" height="19" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4" stroke="{{ filterIcon }}" stroke-width="2.2" stroke-linecap="round"></path></svg></div>
+            </div>
+
+            <sc-if value="{{ isCmtyTowers }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+                <sc-for list="{{ towerRows }}" as="t" hint-placeholder-count="4">
+                  <div onClick="{{ t.open }}" style="cursor:pointer;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:18px;padding:14px 15px;display:flex;align-items:center;gap:13px" style-hover="border-color:#1D5C45">
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><rect x="6" y="3" width="12" height="18" rx="1" stroke="#17251D" stroke-width="1.6"></rect><path d="M9 6.5h1.4M13.6 6.5H15M9 9.5h1.4M13.6 9.5H15M9 12.5h1.4M13.6 12.5H15M9 15.5h1.4M13.6 15.5H15" stroke="#17251D" stroke-width="1.3" stroke-linecap="round"></path><path d="M3 21h18" stroke="#17251D" stroke-width="1.6" stroke-linecap="round"></path></svg>
+                    <div style="flex:1;min-width:0"><div style="font-size:15.5px;font-weight:700">{{ t.name }}</div><div style="font-size:12.5px;color:#75806F;margin-top:2px">{{ t.flats }} Flats · {{ t.occupied }} Occupied</div></div>
+                    <div style="position:relative;width:50px;height:50px;flex-shrink:0">
+                      <svg width="50" height="50" viewBox="0 0 36 36" style="transform:rotate(-90deg)">
+                        <circle cx="18" cy="18" r="15.5" fill="none" stroke="#E5E0D2" stroke-width="3"></circle>
+                        <circle cx="18" cy="18" r="15.5" fill="none" stroke="#1D5C45" stroke-width="3" stroke-linecap="round" stroke-dasharray="97.4" stroke-dashoffset="{{ t.ringOffset }}"></circle>
+                      </svg>
+                      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:800;color:#17251D">{{ t.pct }}</div>
+                    </div>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><path d="M9 5l7 7-7 7" stroke="#A9A794" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ noTowers }}" hint-placeholder-val="{{ false }}"><div style="text-align:center;padding:30px;font-size:13.5px;color:#75806F">No towers match your search.</div></sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isCmtyFlats }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+                <sc-for list="{{ flatRows }}" as="f" hint-placeholder-count="4">
+                  <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:18px;padding:14px 15px;display:flex;align-items:center;gap:13px">
+                    <div style="width:44px;height:44px;border-radius:14px;background:#E9F1EC;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;color:#1D5C45;font-size:14px">{{ f.code }}</div>
+                    <div style="flex:1;min-width:0"><div style="font-size:15.5px;font-weight:700">{{ f.name }}</div><div style="font-size:12.5px;color:#75806F;margin-top:2px">{{ f.total }} flats total</div></div>
+                    <div style="text-align:right;flex-shrink:0">
+                      <div style="font-size:13px;font-weight:700;color:#1F9D5C">{{ f.occupied }} occupied</div>
+                      <div style="font-size:12px;color:#9A6B14;margin-top:2px">{{ f.vacant }} vacant</div>
+                    </div>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ noFlats }}" hint-placeholder-val="{{ false }}"><div style="text-align:center;padding:30px;font-size:13.5px;color:#75806F">No flats match your search.</div></sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isCmtyResidents }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+                <sc-for list="{{ residentList }}" as="r" hint-placeholder-count="5">
+                  <div onClick="{{ r.open }}" style="cursor:pointer;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:18px;padding:13px 14px;display:flex;align-items:center;gap:12px" style-hover="border-color:#1D5C45">
+                    <div style="width:44px;height:44px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:16px;color:#10261B;background:{{ r.avatarBg }}">{{ r.initial }}</div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</div>
+                      <div style="font-size:12.5px;color:#75806F;margin-top:1px">{{ r.unit }} · {{ r.type }}</div>
+                    </div>
+                    <div style="display:inline-block;font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:999px;background:{{ r.statusBg }};color:{{ r.statusColor }};flex-shrink:0">{{ r.status }}</div>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ noResidents }}" hint-placeholder-val="{{ false }}"><div style="text-align:center;padding:30px;font-size:13.5px;color:#75806F">No residents match your search.</div></sc-if>
+              </div>
+            </sc-if>
+
+            <div onClick="{{ cmtyAddAction }}" style="margin-top:18px;height:54px;border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;background:#E7A33C;font-size:15px;font-weight:700;color:#10261B" style-hover="background:#F0B04E"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="#10261B" stroke-width="2.4" stroke-linecap="round"></path></svg>{{ cmtyAddLabel }}</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ── Add tower + link resident ── -->
+      <sc-if value="{{ isAddTower }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Add tower" style="height:100%;overflow:auto;padding:66px 20px 40px;box-sizing:border-box;animation:adFade 0.3s ease">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div onClick="{{ backTowers }}" style="width:38px;height:38px;border-radius:99px;background:#FFFFFF;border:1px solid #E5E0D2;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5l-7 7 7 7" stroke="#17251D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800">Add tower</div>
+          </div>
+          <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470;margin-top:22px">TOWER NAME</div>
+          <input value="{{ tName }}" onChange="{{ setTName }}" placeholder="e.g. Cedar Tower" style="width:100%;box-sizing:border-box;margin-top:8px;padding:14px 15px;border-radius:14px;border:1.5px solid #E0DACA;background:#FFFFFF;font-size:16px;color:#17251D;outline:none" style-focus="border-color:#1D5C45"></input>
+          <div style="display:flex;gap:10px;margin-top:16px">
+            <div style="flex:1"><div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470">FLOORS</div><input value="{{ tFloors }}" onChange="{{ setTFloors }}" inputmode="numeric" placeholder="14" style="width:100%;box-sizing:border-box;margin-top:8px;padding:14px 15px;border-radius:14px;border:1.5px solid #E0DACA;background:#FFFFFF;font-size:16px;color:#17251D;outline:none" style-focus="border-color:#1D5C45"></input></div>
+            <div style="flex:1"><div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470">FLATS / FLOOR</div><input value="{{ tPerFloor }}" onChange="{{ setTPerFloor }}" inputmode="numeric" placeholder="4" style="width:100%;box-sizing:border-box;margin-top:8px;padding:14px 15px;border-radius:14px;border:1.5px solid #E0DACA;background:#FFFFFF;font-size:16px;color:#17251D;outline:none" style-focus="border-color:#1D5C45"></input></div>
+          </div>
+          <div style="background:#F6ECD8;border:1px solid #EBD9B4;border-radius:14px;padding:13px 15px;margin-top:16px;font-size:13px;color:#5C4408;line-height:1.5">This will create <b>{{ tTotalFlats }}</b> flats, numbered by floor. You can link residents to each unit next.</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:16px;padding:14px 16px">
+            <div><div style="font-size:14.5px;font-weight:700">Link a resident now</div><div style="font-size:12px;color:#75806F;margin-top:1px">Assign the first flat right away</div></div>
+            <div onClick="{{ toggleLink }}" style="width:48px;height:28px;border-radius:99px;cursor:pointer;position:relative;transition:background 0.2s;background:{{ linkTrackBg }}"><div style="position:absolute;top:3px;width:22px;height:22px;border-radius:99px;background:#fff;transition:left 0.2s;left:{{ linkKnobLeft }}"></div></div>
+          </div>
+          <sc-if value="{{ linkOn }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;gap:10px;margin-top:14px">
+              <div style="flex:1"><div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470">FLAT</div><input value="{{ lkFlat }}" onChange="{{ setLkFlat }}" placeholder="101" style="width:100%;box-sizing:border-box;margin-top:8px;padding:14px 15px;border-radius:14px;border:1.5px solid #E0DACA;background:#FFFFFF;font-size:16px;color:#17251D;outline:none" style-focus="border-color:#1D5C45"></input></div>
+              <div style="flex:1.6"><div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470">RESIDENT NAME</div><input value="{{ lkName }}" onChange="{{ setLkName }}" placeholder="e.g. Arjun Mehta" style="width:100%;box-sizing:border-box;margin-top:8px;padding:14px 15px;border-radius:14px;border:1.5px solid #E0DACA;background:#FFFFFF;font-size:16px;color:#17251D;outline:none" style-focus="border-color:#1D5C45"></input></div>
+            </div>
+          </sc-if>
+          <div onClick="{{ saveTower }}" style="margin-top:26px;height:54px;border-radius:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15.5px;font-weight:700;background:{{ saveTowerBg }};color:{{ saveTowerColor }}">Create tower</div>
+        </div>
+      </sc-if>
+
+      <!-- ── Amenities ── -->
+      <sc-if value="{{ isAmenities }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Amenities" style="height:100%;overflow:auto;padding:66px 16px 40px;box-sizing:border-box;animation:adFade 0.3s ease">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div onClick="{{ backMore }}" style="width:38px;height:38px;border-radius:99px;background:#FFFFFF;border:1px solid #E5E0D2;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5l-7 7 7 7" stroke="#17251D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800">Amenities</div>
+          </div>
+          <div style="font-size:13px;color:#75806F;margin-top:8px">{{ bookingPendingTotal }} booking requests waiting</div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">
+            <sc-for list="{{ amenityList }}" as="a" hint-placeholder-count="4">
+              <div onClick="{{ a.open }}" style="cursor:pointer;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:18px;padding:15px 16px;display:flex;align-items:center;gap:13px" style-hover="border-color:#1D5C45">
+                <div style="width:46px;height:46px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;background:{{ a.iconBg }}">{{ a.glyph }}</div>
+                <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">{{ a.name }}</div><div style="font-size:12.5px;color:#75806F;margin-top:1px">{{ a.timings }}</div></div>
+                <div style="text-align:right;flex-shrink:0">
+                  <div style="display:inline-block;font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:999px;background:{{ a.statusBg }};color:{{ a.statusColor }}">{{ a.statusLabel }}</div>
+                  <sc-if value="{{ a.hasPending }}" hint-placeholder-val="{{ true }}"><div style="font-size:11.5px;font-weight:700;color:#9A6B14;margin-top:5px">{{ a.pendingLabel }}</div></sc-if>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ── Amenity detail + bookings ── -->
+      <sc-if value="{{ isAmenityDetail }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Amenity detail" style="height:100%;overflow:auto;padding:66px 20px 40px;box-sizing:border-box;animation:adFade 0.3s ease">
+          <div onClick="{{ backAmenities }}" style="width:38px;height:38px;border-radius:99px;background:#FFFFFF;border:1px solid #E5E0D2;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5l-7 7 7 7" stroke="#17251D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+          <div style="display:flex;align-items:center;gap:13px;margin-top:16px">
+            <div style="width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:27px;background:{{ adIconBg }}">{{ adGlyph }}</div>
+            <div><div style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800">{{ adName }}</div><div style="font-size:13px;color:#75806F;margin-top:2px">{{ adTimings }}</div></div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:16px;padding:14px 16px;margin-top:18px">
+            <div><div style="font-size:14.5px;font-weight:700">Open for booking</div><div style="font-size:12px;color:#75806F;margin-top:1px">Residents can request slots</div></div>
+            <div onClick="{{ toggleAmenity }}" style="width:48px;height:28px;border-radius:99px;cursor:pointer;position:relative;transition:background 0.2s;background:{{ amenityTrackBg }}"><div style="position:absolute;top:3px;width:22px;height:22px;border-radius:99px;background:#fff;transition:left 0.2s;left:{{ amenityKnobLeft }}"></div></div>
+          </div>
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:700;margin-top:22px">Booking requests</div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+            <sc-for list="{{ bookingRequests }}" as="b" hint-placeholder-count="3">
+              <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:16px;padding:13px 14px">
+                <div style="display:flex;align-items:center;gap:11px">
+                  <div style="width:38px;height:38px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:14px;color:#10261B;background:{{ b.avatarBg }}">{{ b.initial }}</div>
+                  <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600">{{ b.name }}</div><div style="font-size:12px;color:#75806F;margin-top:1px">{{ b.slot }}</div></div>
+                </div>
+                <div style="display:flex;gap:9px;margin-top:11px">
+                  <div onClick="{{ b.deny }}" style="flex:1;height:38px;border-radius:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:#F0E7E4;color:#C0392B">Decline</div>
+                  <div onClick="{{ b.approve }}" style="flex:1.2;height:38px;border-radius:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:#1F9D5C;color:#FFFFFF">Approve</div>
+                </div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ noBookings }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#E9F1EC;border:1px solid #CFE3D8;border-radius:16px;padding:18px;text-align:center;font-size:13.5px;font-weight:600;color:#1D5C45">No pending requests</div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ── Polls ── -->
+      <sc-if value="{{ isPolls }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Polls" style="height:100%;overflow:auto;padding:66px 16px 40px;box-sizing:border-box;animation:adFade 0.3s ease">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div onClick="{{ backMore }}" style="width:38px;height:38px;border-radius:99px;background:#FFFFFF;border:1px solid #E5E0D2;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5l-7 7 7 7" stroke="#17251D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800">Polls &amp; Surveys</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:11px;margin-top:18px">
+            <sc-for list="{{ pollList }}" as="p" hint-placeholder-count="3">
+              <div onClick="{{ p.open }}" style="cursor:pointer;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:18px;padding:16px" style-hover="border-color:#1D5C45">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <div style="display:inline-flex;align-items:center;gap:6px;font-size:10.5px;letter-spacing:0.1em;font-weight:700;color:{{ p.stateColor }}"><div style="width:7px;height:7px;border-radius:99px;background:{{ p.stateColor }}"></div>{{ p.state }}</div>
+                  <div style="font-size:12px;color:#A9A794">{{ p.votes }} votes</div>
+                </div>
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:700;line-height:1.3;margin-top:10px">{{ p.question }}</div>
+                <div style="font-size:12.5px;color:#75806F;margin-top:8px">{{ p.meta }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div onClick="{{ goCreatePoll }}" style="margin-top:16px;height:52px;border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;background:#FFFFFF;border:1.5px dashed #C9BE9F;font-size:14.5px;font-weight:700;color:#1D5C45"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="#1D5C45" stroke-width="2.4" stroke-linecap="round"></path></svg>Create a poll</div>
+        </div>
+      </sc-if>
+
+      <!-- ── Create poll ── -->
+      <sc-if value="{{ isCreatePoll }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Create poll" style="height:100%;overflow:auto;padding:66px 20px 40px;box-sizing:border-box;animation:adFade 0.3s ease">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div onClick="{{ backPolls }}" style="width:38px;height:38px;border-radius:99px;background:#FFFFFF;border:1px solid #E5E0D2;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5l-7 7 7 7" stroke="#17251D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800">New poll</div>
+          </div>
+          <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470;margin-top:22px">QUESTION</div>
+          <textarea value="{{ pQuestion }}" onChange="{{ setPQuestion }}" placeholder="What should the community decide?" style="width:100%;box-sizing:border-box;margin-top:8px;padding:14px 15px;border-radius:14px;border:1.5px solid #E0DACA;background:#FFFFFF;font-size:16px;color:#17251D;outline:none;min-height:70px;resize:none;line-height:1.45" style-focus="border-color:#1D5C45"></textarea>
+          <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470;margin-top:18px">OPTIONS</div>
+          <div style="display:flex;flex-direction:column;gap:9px;margin-top:8px">
+            <sc-for list="{{ pollOptionInputs }}" as="o" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:9px">
+                <input value="{{ o.value }}" onChange="{{ o.set }}" placeholder="{{ o.placeholder }}" style="flex:1;box-sizing:border-box;padding:13px 15px;border-radius:14px;border:1.5px solid #E0DACA;background:#FFFFFF;font-size:15px;color:#17251D;outline:none" style-focus="border-color:#1D5C45"></input>
+                <sc-if value="{{ o.removable }}" hint-placeholder-val="{{ false }}"><div onClick="{{ o.remove }}" style="width:38px;height:38px;flex-shrink:0;border-radius:12px;background:#F0E7E4;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="#C0392B" stroke-width="2.4" stroke-linecap="round"></path></svg></div></sc-if>
+              </div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ canAddOption }}" hint-placeholder-val="{{ true }}"><div onClick="{{ addOption }}" style="margin-top:10px;font-size:13.5px;font-weight:700;color:#1D5C45;cursor:pointer">+ Add option</div></sc-if>
+          <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470;margin-top:20px">DURATION</div>
+          <div style="display:flex;gap:8px;margin-top:8px"><sc-for list="{{ durationChips }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.pick }}" style="flex:1;padding:12px;border-radius:14px;font-size:13.5px;font-weight:600;cursor:pointer;background:{{ c.bg }};color:{{ c.color }};border:1.5px solid {{ c.border }}">{{ c.label }}</button></sc-for></div>
+          <div onClick="{{ launchPoll }}" style="margin-top:26px;height:54px;border-radius:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15.5px;font-weight:700;background:{{ launchBg }};color:{{ launchColor }}">Launch poll</div>
+        </div>
+      </sc-if>
+
+      <!-- ── Poll results (live) ── -->
+      <sc-if value="{{ isPollResults }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Poll results" style="height:100%;overflow:auto;padding:66px 20px 40px;box-sizing:border-box;animation:adFade 0.3s ease">
+          <div onClick="{{ backPolls }}" style="width:38px;height:38px;border-radius:99px;background:#FFFFFF;border:1px solid #E5E0D2;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5l-7 7 7 7" stroke="#17251D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+          <div style="display:inline-flex;align-items:center;gap:6px;margin-top:16px;font-size:10.5px;letter-spacing:0.1em;font-weight:700;color:{{ prStateColor }}"><div style="width:7px;height:7px;border-radius:99px;background:{{ prStateColor }};animation:adDot 1.3s infinite"></div>{{ prState }}</div>
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:21px;font-weight:800;line-height:1.3;margin-top:10px">{{ prQuestion }}</div>
+          <div style="font-size:13px;color:#75806F;margin-top:8px">{{ prMeta }}</div>
+          <div style="display:flex;flex-direction:column;gap:12px;margin-top:20px">
+            <sc-for list="{{ prOptions }}" as="o" hint-placeholder-count="3">
+              <div style="position:relative;overflow:hidden;border-radius:16px;border:1.5px solid {{ o.border }};background:#FFFFFF;min-height:56px">
+                <div style="position:absolute;top:0;left:0;bottom:0;background:{{ o.fill }};width:{{ o.width }};transition:width 0.7s cubic-bezier(0.2,0.9,0.3,1)"></div>
+                <div style="position:relative;display:flex;align-items:center;justify-content:space-between;padding:15px 16px;gap:10px">
+                  <div style="display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:600;color:#17251D">{{ o.label }}<sc-if value="{{ o.lead }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;font-weight:700;color:#1D5C45;background:#E3F2E9;padding:2px 7px;border-radius:999px">LEADING</span></sc-if></div>
+                  <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:800;color:#1D5C45">{{ o.pct }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:18px;font-size:13px;color:#75806F"><svg width="15" height="15" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="#75806F" stroke-width="2" fill="none"></circle><path d="M12 7v5l3 2" stroke="#75806F" stroke-width="2" stroke-linecap="round" fill="none"></path></svg>{{ prTotal }} votes · updates live</div>
+          <sc-if value="{{ prActive }}" hint-placeholder-val="{{ true }}"><div onClick="{{ closePoll }}" style="margin-top:22px;height:50px;border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14.5px;font-weight:700;background:#FFFFFF;border:1.5px solid #E0DACA;color:#17251D">Close poll now</div></sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ── Staff ── -->
+      <sc-if value="{{ isStaff }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Staff" style="height:100%;overflow:auto;padding:66px 16px 40px;box-sizing:border-box;animation:adFade 0.3s ease">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div onClick="{{ backMore }}" style="width:38px;height:38px;border-radius:99px;background:#FFFFFF;border:1px solid #E5E0D2;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5l-7 7 7 7" stroke="#17251D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800">Staff &amp; Services</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:18px">
+            <sc-for list="{{ staffList }}" as="s" hint-placeholder-count="5">
+              <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:18px;padding:13px 14px;display:flex;align-items:center;gap:12px">
+                <div style="width:44px;height:44px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:16px;color:#10261B;background:{{ s.avatarBg }}">{{ s.initial }}</div>
+                <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600">{{ s.name }}</div><div style="font-size:12.5px;color:#75806F;margin-top:1px">{{ s.role }} · {{ s.shift }}</div></div>
+                <div style="display:inline-block;font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:999px;background:{{ s.statusBg }};color:{{ s.statusColor }}">{{ s.status }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ── Audit ── -->
+      <sc-if value="{{ isAudit }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Audit log" style="height:100%;overflow:auto;padding:66px 16px 40px;box-sizing:border-box;animation:adFade 0.3s ease">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div onClick="{{ backMore }}" style="width:38px;height:38px;border-radius:99px;background:#FFFFFF;border:1px solid #E5E0D2;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5l-7 7 7 7" stroke="#17251D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800">Audit trail</div>
+          </div>
+          <div style="font-size:13px;color:#75806F;margin-top:8px">Every admin action, logged for compliance</div>
+          <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:18px;padding:4px 16px;margin-top:16px">
+            <sc-for list="{{ auditAll }}" as="e" hint-placeholder-count="6">
+              <div style="display:flex;gap:12px;padding:13px 0;border-bottom:1px solid #F0ECE0">
+                <div style="width:7px;height:7px;border-radius:99px;background:{{ e.dot }};margin-top:6px;flex-shrink:0"></div>
+                <div style="flex:1"><div style="font-size:13.5px;color:#2C3830;line-height:1.4">{{ e.text }}</div><div style="font-size:11.5px;color:#A9A794;margin-top:2px">{{ e.meta }}</div></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ═══════════ BOTTOM TABS ═══════════ -->
+      <sc-if value="{{ showTabs }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;left:0;right:0;bottom:0;z-index:30;background:rgba(244,239,227,0.94);backdrop-filter:blur(14px);border-top:1px solid #E5E0D2;display:flex;padding:9px 6px 28px">
+          <div onClick="{{ goHome }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:6px 0;min-height:44px">
+            <svg width="23" height="23" viewBox="0 0 24 24"><path d="M12 3.5l8 6.8V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1v-9.7l8-6.8z" fill="{{ tabHome }}"></path></svg>
+            <div style="font-size:10px;font-weight:700;color:{{ tabHome }}">Home</div>
+          </div>
+          <div onClick="{{ goCommunity }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:6px 0;min-height:44px">
+            <svg width="23" height="23" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2" fill="{{ tabCommunity }}"></circle><path d="M3.2 19.5c0-3.1 2.6-5.2 5.8-5.2s5.8 2.1 5.8 5.2v0.5H3.2v-0.5z" fill="{{ tabCommunity }}"></path><circle cx="16.8" cy="9" r="2.6" fill="{{ tabCommunity }}" opacity="0.55"></circle><path d="M15.9 14.6c2.9 0.1 4.9 2 4.9 4.6v0.8h-4.2c0-2.1-0.2-3.9-0.7-5.4z" fill="{{ tabCommunity }}" opacity="0.55"></path></svg>
+            <div style="font-size:10px;font-weight:700;color:{{ tabCommunity }}">Community</div>
+          </div>
+          <div onClick="{{ goComplaints }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:6px 0;min-height:44px;position:relative">
+            <svg width="23" height="23" viewBox="0 0 24 24"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z" fill="{{ tabOps }}"></path><path d="M19.8 13.6l1.8-1.1-1-3-2.1.3a6.9 6.9 0 0 0-1.2-1.2l.3-2.1-3-1-1.1 1.8a7 7 0 0 0-1.7 0L10.7 4.5l-3 1 .3 2.1c-.45.35-.85.75-1.2 1.2l-2.1-.3-1 3 1.8 1.1a7 7 0 0 0 0 1.7l-1.8 1.1 1 3 2.1-.3c.35.45.75.85 1.2 1.2l-.3 2.1 3 1 1.1-1.8a7 7 0 0 0 1.7 0l1.1 1.8 3-1-.3-2.1c.45-.35.85-.75 1.2-1.2l2.1.3 1-3-1.8-1.1a7 7 0 0 0 0-1.7z" fill="{{ tabOps }}" opacity="0.5"></path></svg>
+            <div style="font-size:10px;font-weight:700;color:{{ tabOps }}">Operations</div>
+            <sc-if value="{{ hasOpenComplaints }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;top:4px;right:22%;width:8px;height:8px;border-radius:99px;background:#C0392B"></div></sc-if>
+          </div>
+          <div onClick="{{ goNotices }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:6px 0;min-height:44px">
+            <svg width="23" height="23" viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5z" fill="{{ tabComms }}"></path></svg>
+            <div style="font-size:10px;font-weight:700;color:{{ tabComms }}">Communication</div>
+          </div>
+          <div onClick="{{ goMore }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:6px 0;min-height:44px">
+            <svg width="23" height="23" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="2.2" rx="1.1" fill="{{ tabMore }}"></rect><rect x="4" y="11" width="16" height="2.2" rx="1.1" fill="{{ tabMore }}"></rect><rect x="4" y="16" width="16" height="2.2" rx="1.1" fill="{{ tabMore }}"></rect></svg>
+            <div style="font-size:10px;font-weight:700;color:{{ tabMore }}">More</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ═══════════ FILTER SHEET ═══════════ -->
+      <sc-if value="{{ filterOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closeSheets }}" style="position:absolute;inset:0;z-index:60;background:rgba(10,25,17,0.4)"></div>
+        <div style="position:absolute;left:0;right:0;bottom:0;z-index:61;background:#F7F4EC;border-radius:26px 26px 0 0;padding:12px 22px 34px;box-shadow:0 -14px 40px rgba(10,25,17,0.25);animation:adSheet 0.3s cubic-bezier(0.2,0.9,0.3,1)">
+          <div style="width:40px;height:5px;border-radius:99px;background:#D8D2C2;margin:0 auto 16px"></div>
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:19px;font-weight:800">Filter residents</div>
+          <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470;margin-top:18px">OCCUPANCY</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><sc-for list="{{ fTypeChips }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.pick }}" style="padding:11px 16px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;background:{{ c.bg }};color:{{ c.color }};border:1.5px solid {{ c.border }}">{{ c.label }}</button></sc-for></div>
+          <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470;margin-top:20px">VERIFICATION</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><sc-for list="{{ fStatusChips }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.pick }}" style="padding:11px 16px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;background:{{ c.bg }};color:{{ c.color }};border:1.5px solid {{ c.border }}">{{ c.label }}</button></sc-for></div>
+          <div style="display:flex;gap:10px;margin-top:26px">
+            <div onClick="{{ resetFilter }}" style="flex:1;height:50px;border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14.5px;font-weight:700;background:#FFFFFF;border:1.5px solid #E0DACA;color:#17251D">Reset</div>
+            <div onClick="{{ closeSheets }}" style="flex:1.4;height:50px;border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14.5px;font-weight:700;background:#10261B;color:#F7F4EC">Show {{ residentMatchCount }}</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ═══════════ BULK SHEET ═══════════ -->
+      <sc-if value="{{ bulkOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closeSheets }}" style="position:absolute;inset:0;z-index:60;background:rgba(10,25,17,0.4)"></div>
+        <div style="position:absolute;left:0;right:0;bottom:0;z-index:61;background:#F7F4EC;border-radius:26px 26px 0 0;padding:12px 22px 34px;box-shadow:0 -14px 40px rgba(10,25,17,0.25);animation:adSheet 0.3s cubic-bezier(0.2,0.9,0.3,1)">
+          <div style="width:40px;height:5px;border-radius:99px;background:#D8D2C2;margin:0 auto 16px"></div>
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:19px;font-weight:800">Bulk actions</div>
+          <div style="font-size:13px;color:#75806F;margin-top:4px">Applies to the resident directory</div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:18px">
+            <sc-for list="{{ bulkActions }}" as="b" hint-placeholder-count="3">
+              <div onClick="{{ b.run }}" style="cursor:pointer;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:16px;padding:15px 16px;display:flex;align-items:center;gap:13px" style-hover="border-color:#1D5C45">
+                <div style="width:40px;height:40px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:17px;background:{{ b.iconBg }};color:{{ b.iconColor }}">{{ b.glyph }}</div>
+                <div style="flex:1"><div style="font-size:14.5px;font-weight:700">{{ b.label }}</div><div style="font-size:12px;color:#75806F;margin-top:1px">{{ b.sub }}</div></div>
+                <svg width="17" height="17" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" stroke="#C9BE9F" stroke-width="2" fill="none" stroke-linecap="round"></path></svg>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- shared toast -->
+      <sc-if value="{{ toastOn }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;left:24px;right:24px;bottom:104px;z-index:80;background:#10261B;color:#F7F4EC;border-radius:16px;padding:13px 16px;font-size:13.5px;font-weight:600;text-align:center;box-shadow:0 12px 30px rgba(10,25,17,0.35);animation:adFade 0.3s ease">{{ toastMsg }}</div>
+      </sc-if>
+
+    </div>
+  </x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 520, &quot;height&quot;: 990}, &quot;communityName&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;Serenity Greens&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Content&quot;}, &quot;liveResults&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Behavior&quot;}}">
+class Component extends DCLogic {
+  state = {
+    screen: 'home',
+    resSearch: '', fType: 'All', fStatus: 'All', filterOpen: false, bulkOpen: false, cmtyTab: 'Towers',
+    detailResId: null, detailTowerCode: null,
+    fName: '', fTower: 'Maple', fFlat: '', fPhone: '', fOccupancy: 'Owner', fVerify: false,
+    nTitle: '', nBody: '', nCat: 'Maintenance', nAud: 'All residents', nSchedule: 'Now', nSchedAt: '',
+    detailComplaintId: null, compFilter: 'All',
+    tName: '', tFloors: '', tPerFloor: '', linkOn: false, lkFlat: '', lkName: '',
+    detailAmenityId: null,
+    pQuestion: '', pOptions: ['', ''], pDuration: '3 days',
+    detailPollId: null,
+    toastOn: false, toastMsg: '',
+    residents: [
+      { id: 1, name: 'Ananya Iyer', tower: 'Maple', flat: '1204', type: 'Owner', status: 'Verified', phone: '98450 12034', members: 4, since: 'Mar 2021', avatarBg: '#E7A33C', initial: 'A' },
+      { id: 2, name: 'Rohit Verma', tower: 'Oak', flat: '0803', type: 'Tenant', status: 'Pending', phone: '99001 55621', members: 2, since: 'Jun 2026', avatarBg: '#B9A7D6', initial: 'R' },
+      { id: 3, name: 'Fatima Sheikh', tower: 'Maple', flat: '0605', type: 'Owner', status: 'Verified', phone: '90080 71245', members: 3, since: 'Jan 2019', avatarBg: '#8FB3C7', initial: 'F' },
+      { id: 4, name: 'Karan Malhotra', tower: 'Birch', flat: '1102', type: 'Tenant', status: 'Pending', phone: '98111 44502', members: 1, since: 'Jul 2026', avatarBg: '#A7C4B5', initial: 'K' },
+      { id: 5, name: 'Sneha Reddy', tower: 'Oak', flat: '0401', type: 'Owner', status: 'Verified', phone: '90005 88213', members: 5, since: 'Sep 2020', avatarBg: '#D6C9A8', initial: 'S' },
+      { id: 6, name: 'Vikram Nair', tower: 'Birch', flat: '0907', type: 'Owner', status: 'Verified', phone: '98470 63390', members: 2, since: 'Feb 2022', avatarBg: '#E0A9A0', initial: 'V' },
+    ],
+    complaints: [
+      { id: 'C-318', title: 'Lift in Maple Tower stuck between floors 6 and 7', category: 'Maintenance', priority: 'High', status: 'Open', resident: 'Ananya Iyer', unit: 'Maple 1204', assignee: 'Unassigned', date: 'Today, 5:10 PM', desc: 'The left lift has been stuck since this afternoon. Residents on upper floors are affected. Please send the technician urgently.' },
+      { id: 'C-317', title: 'Water leakage from ceiling in parking level B2', category: 'Plumbing', priority: 'High', status: 'In progress', resident: 'Sneha Reddy', unit: 'Oak 0401', assignee: 'Ramesh (Maintenance)', date: 'Today, 1:22 PM', desc: 'Continuous dripping near pillar 14. A few cars are getting wet. Needs a plumber to check the drain line above.' },
+      { id: 'C-316', title: 'Street light near Gate 2 not working for 3 days', category: 'Electrical', priority: 'Medium', status: 'Open', resident: 'Vikram Nair', unit: 'Birch 0907', assignee: 'Unassigned', date: 'Yesterday', desc: 'The pole light between Gate 2 and the clubhouse is dead. It is dark and unsafe at night.' },
+      { id: 'C-315', title: 'Garbage not collected from Oak Tower chute', category: 'Housekeeping', priority: 'Low', status: 'Resolved', resident: 'Rohit Verma', unit: 'Oak 0803', assignee: 'Housekeeping team', date: '11 Jul', desc: 'Wet-waste chute on floor 8 was overflowing. Requesting a scheduled pickup.' },
+    ],
+    notices: [
+      { cat: 'Maintenance', title: 'Water shutdown for tank cleaning — Tue, 15 Jul', date: 'Published 12 Jul', reads: '212 / 240 read', state: 'Published' },
+      { cat: 'Event', title: 'Independence Day celebrations — volunteers needed', date: 'Published 10 Jul', reads: '178 / 240 read', state: 'Published' },
+      { cat: 'Billing', title: 'Q2 maintenance invoices issued', date: 'Published 8 Jul', reads: '236 / 240 read', state: 'Published' },
+      { cat: 'Policy', title: 'Revised clubhouse timings from August', date: 'Scheduled 20 Jul', reads: 'Goes out 20 Jul', state: 'Scheduled' },
+    ],
+    towers: [
+      { code: 'MP', name: 'Maple Tower', floors: 14, flats: 56, occ: 52 },
+      { code: 'OK', name: 'Oak Tower', floors: 12, flats: 48, occ: 44 },
+      { code: 'BR', name: 'Birch Tower', floors: 14, flats: 56, occ: 49 },
+      { code: 'PN', name: 'Pine Tower', floors: 20, flats: 80, occ: 61 },
+    ],
+    amenities: [
+      { id: 1, name: 'Clubhouse', glyph: '🏛️', iconBg: '#F6ECD8', timings: '9 AM – 11 PM', open: true, bookings: [ { id: 11, name: 'Ananya Iyer', slot: 'Sat 20 Jul · 6–9 PM · Birthday', initial: 'A', avatarBg: '#E7A33C' }, { id: 12, name: 'Karan Malhotra', slot: 'Sun 21 Jul · 11 AM–1 PM', initial: 'K', avatarBg: '#A7C4B5' } ] },
+      { id: 2, name: 'Swimming Pool', glyph: '🏊', iconBg: '#E4EFF5', timings: '6–9 AM, 4–8 PM', open: true, bookings: [ { id: 21, name: 'Sneha Reddy', slot: 'Coaching · Mon–Fri 7 AM', initial: 'S', avatarBg: '#D6C9A8' } ] },
+      { id: 3, name: 'Gymnasium', glyph: '🏋️', iconBg: '#E9F1EC', timings: '5 AM – 11 PM', open: true, bookings: [] },
+      { id: 4, name: 'Tennis Court', glyph: '🎾', iconBg: '#EFEAF7', timings: '6 AM – 9 PM', open: false, bookings: [] },
+    ],
+    polls: [
+      { id: 1, question: 'Should the clubhouse stay open till 11 PM on weekends?', state: 'Active', options: [ { label: 'Yes, till 11 PM', count: 86 }, { label: 'No, keep it 10 PM', count: 34 }, { label: 'Only Fri & Sat', count: 41 } ], meta: 'Closes Sun · 3 options', closesIn: true },
+      { id: 2, question: 'Hire a second gardener for the central lawn?', state: 'Closed', options: [ { label: 'Yes, hire one more', count: 139 }, { label: 'No, not needed', count: 65 } ], meta: 'Closed 9 Jul · 204 votes', closesIn: false },
+    ],
+    staff: [
+      { name: 'Rajesh Kumar', role: 'Head Security', shift: 'Day · Gate 1', status: 'On duty', initial: 'R', avatarBg: '#8FB3C7' },
+      { name: 'Salim Ansari', role: 'Maintenance', shift: 'Full day', status: 'On duty', initial: 'S', avatarBg: '#A7C4B5' },
+      { name: 'Lakshmi Devi', role: 'Housekeeping', shift: 'Morning', status: 'On duty', initial: 'L', avatarBg: '#D6C9A8' },
+      { name: 'Green Thumb Landscaping', role: 'Gardening · Contract', shift: 'Mon, Wed, Fri', status: 'Vendor', initial: 'G', avatarBg: '#B9A7D6' },
+      { name: 'Mohan Yadav', role: 'Night Security', shift: 'Night · Gate 2', status: 'Off duty', initial: 'M', avatarBg: '#E0A9A0' },
+    ],
+    audit: [
+      { text: 'Published notice “Water shutdown for tank cleaning”', meta: 'You · Today, 4:02 PM', dot: '#E7A33C' },
+      { text: 'Verified resident Fatima Sheikh (Maple 0605)', meta: 'You · Today, 2:15 PM', dot: '#1F9D5C' },
+      { text: 'Assigned complaint C-317 to Ramesh', meta: 'You · Today, 1:24 PM', dot: '#2E6E8E' },
+      { text: 'Closed poll “Hire a second gardener”', meta: 'You · 9 Jul, 6:00 PM', dot: '#7B5EA7' },
+      { text: 'Added Pine Tower (80 flats)', meta: 'You · 5 Jul, 10:11 AM', dot: '#9A6B14' },
+    ],
+  };
+  catStyles = { 'Maintenance': ['#1D5C45', '#E9F1EC'], 'Event': ['#7B5EA7', '#EFEAF7'], 'Billing': ['#9A6B14', '#F6ECD8'], 'Policy': ['#2E6E8E', '#E4EFF5'], 'Security': ['#C0392B', '#F9E4E1'], 'Plumbing': ['#2E6E8E', '#E4EFF5'], 'Electrical': ['#9A6B14', '#F6ECD8'], 'Housekeeping': ['#6F7A70', '#EEEDE4'] };
+  priorityDots = { 'High': '#C0392B', 'Medium': '#E7A33C', 'Low': '#6F7A70' };
+  statusStyles = { 'Open': ['#C0392B', '#F9E4E1'], 'In progress': ['#9A6B14', '#F6ECD8'], 'Resolved': ['#1F9D5C', '#E3F2E9'] };
+  auditIconBg = { '#1F9D5C': '#E3F2E9', '#E7A33C': '#F6ECD8', '#2E6E8E': '#E4EFF5', '#7B5EA7': '#EFEAF7', '#9A6B14': '#F6ECD8' };
+  baseline = { residents: 6, flats: 240, complaints: 3, bookings: 3 };
+  adminName = 'Devansh Rao';
+
+  componentWillUnmount() { clearTimeout(this._t); clearInterval(this._live); }
+  showToast(msg) { clearTimeout(this._t); this.setState({ toastOn: true, toastMsg: msg }); this._t = setTimeout(() => this.setState({ toastOn: false }), 2600); }
+  chip(label, active, pick, activeBg) {
+    return active ? { label, pick, bg: activeBg || '#10261B', color: '#F7F4EC', border: activeBg || '#10261B' } : { label, pick, bg: '#FFFFFF', color: '#3E4A40', border: '#E0DACA' };
+  }
+  nav(screen) { return () => this.setState({ screen, filterOpen: false, bulkOpen: false }); }
+  logAudit(text, dot) { this.setState((s) => ({ audit: [{ text, meta: 'You · Just now', dot: dot || '#E7A33C' }, ...s.audit] })); }
+  resStyle(status) { return status === 'Verified' ? ['#1F9D5C', '#E3F2E9'] : ['#9A6B14', '#F6ECD8']; }
+
+  startLive(pollId) {
+    clearInterval(this._live);
+    if (!(this.props.liveResults ?? true)) return;
+    this._live = setInterval(() => {
+      this.setState((s) => {
+        const polls = s.polls.map((p) => {
+          if (p.id !== pollId || p.state !== 'Active') return p;
+          const i = Math.floor(Math.random() * p.options.length);
+          const options = p.options.map((o, j) => j === i ? { ...o, count: o.count + 1 } : o);
+          return { ...p, options };
+        });
+        return { polls };
+      });
+    }, 1400);
+  }
+  stopLive() { clearInterval(this._live); }
+
+  matchedResidents() {
+    const s = this.state;
+    const q = s.resSearch.trim().toLowerCase();
+    return s.residents.filter((r) => {
+      if (s.fType !== 'All' && r.type !== s.fType) return false;
+      if (s.fStatus !== 'All' && r.status !== s.fStatus) return false;
+      if (q && !(r.name.toLowerCase().includes(q) || (r.tower + ' ' + r.flat).toLowerCase().includes(q))) return false;
+      return true;
+    });
+  }
+
+  renderVals() {
+    const s = this.state, scr = s.screen;
+    const tabScreens = ['home', 'community', 'notices', 'complaints', 'more'];
+    const RING_C = 97.39;
+    const community = this.props.communityName ?? 'Serenity Greens';
+    const openComplaints = s.complaints.filter((c) => c.status !== 'Resolved').length;
+    const highComplaints = s.complaints.filter((c) => c.status !== 'Resolved' && c.priority === 'High').length;
+    const pendingRes = s.residents.filter((r) => r.status === 'Pending');
+    const bookingPending = s.amenities.reduce((n, a) => n + a.bookings.length, 0);
+    const totalFlats = s.towers.reduce((n, t) => n + t.flats, 0);
+    const totalOcc = s.towers.reduce((n, t) => n + t.occ, 0);
+
+    // home: priority actions summary
+    const priorityCount = pendingRes.length + openComplaints + bookingPending;
+    const now = new Date().getHours();
+    const greeting = now < 12 ? 'Good morning' : now < 17 ? 'Good afternoon' : 'Good evening';
+    const deltaMeta = (diff, goodWhenUp, unit) => {
+      if (diff === 0) return { label: 'No change', color: '#75806F' };
+      const good = goodWhenUp ? diff > 0 : diff < 0;
+      const sign = diff > 0 ? '+' : '';
+      return { label: sign + diff + ' ' + unit, color: good ? '#1F9D5C' : '#C0392B' };
+    };
+    const resDelta = deltaMeta(s.residents.length - this.baseline.residents, true, 'this month');
+    const flatsDelta = deltaMeta(totalFlats - this.baseline.flats, true, 'flats added');
+    const compDelta = deltaMeta(openComplaints - this.baseline.complaints, false, 'vs yesterday');
+    const bookDelta = deltaMeta(bookingPending - this.baseline.bookings, true, 'vs yesterday');
+    const bkAmenity = s.amenities.find((a) => a.bookings.length);
+    const inProgComplaint = s.complaints.find((c) => c.status === 'In progress');
+
+    // residents
+    const matched = this.matchedResidents();
+    const detailRes = s.residents.find((r) => r.id === s.detailResId) || s.residents[0];
+
+    // complaints
+    const compFiltered = s.compFilter === 'All' ? s.complaints : (s.compFilter === 'Open' ? s.complaints.filter((c) => c.status !== 'Resolved') : s.complaints.filter((c) => c.status === s.compFilter));
+    const detailComp = s.complaints.find((c) => c.id === s.detailComplaintId) || s.complaints[0];
+
+    // amenity detail
+    const detailAmenity = s.amenities.find((a) => a.id === s.detailAmenityId) || s.amenities[0];
+
+    // poll detail
+    const detailPoll = s.polls.find((p) => p.id === s.detailPollId) || s.polls[0];
+    const dpTotal = detailPoll.options.reduce((n, o) => n + o.count, 0);
+    const dpMax = Math.max(...detailPoll.options.map((o) => o.count), 1);
+
+    const cq = s.resSearch.trim().toLowerCase();
+    const towerRowsC = s.towers.map((t) => { const pctNum = Math.round((t.occ / t.flats) * 100); const openTower = () => this.setState({ screen: 'tower-detail', detailTowerCode: t.code }); return { name: t.name, flats: t.flats, occupied: t.occ, open: openTower, pct: pctNum + '%', ringOffset: (RING_C * (1 - pctNum / 100)).toFixed(1) }; }).filter((t) => !cq || t.name.toLowerCase().includes(cq));
+    const flatRowsC = s.towers.map((t) => ({ code: t.code, name: t.name, total: t.flats, occupied: t.occ, vacant: t.flats - t.occ })).filter((f) => !cq || f.name.toLowerCase().includes(cq));
+
+    // tower detail
+    const towerObj = s.towers.find((t) => t.code === s.detailTowerCode) || s.towers[0];
+    const towerShort = towerObj.name.replace(' Tower', '');
+    const towerLetter = towerObj.code.charAt(0);
+    const residentsInTower = s.residents.filter((r) => r.tower === towerShort);
+    const towerOpenComplaints = s.complaints.filter((c) => c.status !== 'Resolved' && c.unit.indexOf(towerShort) === 0).length;
+    const dTowerResidentsC = residentsInTower.map((r) => { const [col, bg] = this.resStyle(r.status); return { unitCode: towerLetter + '-' + r.flat, name: r.name, type: r.type, status: r.status, statusColor: col, statusBg: bg, open: () => this.setState({ screen: 'resident-detail', detailResId: r.id }) }; });
+
+    // add-resident validity
+    const canSaveRes = s.fName.trim().length > 1 && s.fFlat.trim().length > 0;
+    // compose validity
+    const canPublish = s.nTitle.trim().length > 2 && s.nBody.trim().length > 3;
+    // tower validity
+    const tFloorsN = parseInt(s.tFloors) || 0, tPerN = parseInt(s.tPerFloor) || 0;
+    const tTotal = tFloorsN * tPerN;
+    const canSaveTower = s.tName.trim().length > 1 && tTotal > 0;
+    // poll validity
+    const validOpts = s.pOptions.filter((o) => o.trim().length > 0);
+    const canLaunch = s.pQuestion.trim().length > 3 && validOpts.length >= 2;
+
+    return {
+      communityName: community,
+      isHome: scr === 'home', isCommunity: scr === 'community', isNotices: scr === 'notices', isComplaints: scr === 'complaints', isMore: scr === 'more',
+      isResidentDetail: scr === 'resident-detail', isAddResident: scr === 'add-resident', isTowerDetail: scr === 'tower-detail',
+      isCompose: scr === 'compose', isComplaintDetail: scr === 'complaint-detail',
+      isAddTower: scr === 'add-tower', isAmenities: scr === 'amenities', isAmenityDetail: scr === 'amenity-detail',
+      isPolls: scr === 'polls', isCreatePoll: scr === 'create-poll', isPollResults: scr === 'poll-results', isStaff: scr === 'staff', isAudit: scr === 'audit',
+      showTabs: tabScreens.includes(scr),
+      tabHome: scr === 'home' ? '#123528' : '#9BA394', tabCommunity: scr === 'community' ? '#123528' : '#9BA394',
+      tabComms: scr === 'notices' ? '#123528' : '#9BA394', tabOps: scr === 'complaints' ? '#123528' : '#9BA394', tabMore: scr === 'more' ? '#123528' : '#9BA394',
+      hasOpenComplaints: openComplaints > 0,
+      goHome: this.nav('home'), goCommunity: this.nav('community'), goNotices: this.nav('notices'), goComplaints: this.nav('complaints'), goMore: this.nav('more'),
+      goProfile: () => this.showToast('Serenity Greens Admin · full access'),
+      goApprovals: () => this.setState({ screen: 'community', cmtyTab: 'Residents' }), goAudit: () => this.setState({ screen: 'audit' }),
+      toastOn: s.toastOn, toastMsg: s.toastMsg,
+
+      // home metrics
+      mComplaints: openComplaints, mComplaintsHigh: highComplaints,
+      mApprovals: pendingRes.length + bookingPending,
+      mOccupancy: Math.round((totalOcc / totalFlats) * 100) + '%', mOccupancySub: totalOcc + ' of ' + totalFlats + ' flats',
+      mDues: '₹18.4L', mDuesSub: '92% collected',
+      auditHome: s.audit.slice(0, 3).map((e) => ({ ...e, iconBg: this.auditIconBg[e.dot] || '#EEEDE4' })),
+
+      // home header
+      greeting, adminName: this.adminName, adminInitials: this.adminName.split(' ').map((w) => w[0]).join(''),
+      hasBellCount: priorityCount > 0, bellCount: priorityCount,
+      bellTap: () => this.showToast(priorityCount > 0 ? priorityCount + ' items need your attention' : 'No new notifications'),
+      communityTap: () => this.showToast('Single-community admin — switcher coming in a later phase'),
+
+      // priority actions card
+      hasPriority: priorityCount > 0, noPriority: priorityCount === 0, priorityCount,
+      pendingVerifyCount: pendingRes.length,
+      goViewAllPriority: () => this.setState({ screen: 'community', cmtyTab: 'Residents' }), goVerifications: () => this.setState({ screen: 'community', cmtyTab: 'Residents' }),
+      goComplaintsFromPriority: this.nav('complaints'), goApprovalsFromPriority: () => this.setState({ screen: 'amenities' }),
+
+      // overview
+      totalResidents: s.residents.length, totalFlatsCount: totalFlats,
+      residentsDeltaLabel: resDelta.label, residentsDeltaColor: resDelta.color,
+      flatsDeltaLabel: flatsDelta.label, flatsDeltaColor: flatsDelta.color,
+      complaintsDeltaLabel: compDelta.label, complaintsDeltaColor: compDelta.color,
+      bookingsTodayCount: bookingPending, bookingsDeltaLabel: bookDelta.label, bookingsDeltaColor: bookDelta.color,
+
+      // quick actions
+      editQuickActions: () => this.showToast('Customize your quick actions — coming soon'),
+      qaAddResident: () => this.setState({ screen: 'add-resident', fName: '', fFlat: '', fPhone: '', fVerify: false, fOccupancy: 'Owner', fTower: 'Maple' }),
+      qaPublishNotice: () => this.setState({ screen: 'compose', nTitle: '', nBody: '', nCat: 'Maintenance', nAud: 'All residents', nSchedule: 'Now', nSchedAt: '' }),
+      qaCreatePoll: () => this.setState({ screen: 'create-poll', pQuestion: '', pOptions: ['', ''], pDuration: '3 days' }),
+      qaAddComplaint: this.nav('complaints'),
+      qaAddStaff: () => this.setState({ screen: 'staff' }),
+      qaManageAmenity: () => this.setState({ screen: 'amenities' }),
+      qaViewReports: () => this.showToast('Reports — coming in a later phase'),
+      qaMore: this.nav('more'),
+
+      // today's operations
+      hasBookingOp: !!bkAmenity, bookingOpTitle: bkAmenity ? bkAmenity.name + ' Booking' : '', bookingOpSub: bkAmenity ? bkAmenity.bookings[0].name + ' · ' + bkAmenity.bookings[0].slot : '',
+      hasMaintenanceOp: !!inProgComplaint, maintOpTitle: inProgComplaint ? 'Maintenance – ' + inProgComplaint.category : '', maintOpSub: inProgComplaint ? inProgComplaint.date : '',
+      noOps: !bkAmenity && !inProgComplaint,
+
+      // residents
+      residentCount: s.residents.length, residentPending: pendingRes.length,
+      resSearch: s.resSearch, setResSearch: (e) => this.setState({ resSearch: e.target.value }),
+      filterBg: (s.fType !== 'All' || s.fStatus !== 'All') ? '#10261B' : '#FFFFFF',
+      filterBorder: (s.fType !== 'All' || s.fStatus !== 'All') ? '#10261B' : '#E5E0D2',
+      filterIcon: (s.fType !== 'All' || s.fStatus !== 'All') ? '#E7A33C' : '#17251D',
+      openFilter: () => this.setState({ filterOpen: true }),
+      openBulk: () => this.setState({ bulkOpen: true }),
+      residentList: matched.map((r) => { const [c, b] = this.resStyle(r.status); return { ...r, unit: r.tower + ' ' + r.flat, statusColor: c, statusBg: b, open: () => this.setState({ screen: 'resident-detail', detailResId: r.id }) }; }),
+      noResidents: matched.length === 0,
+      goAddResident: () => this.setState({ screen: 'add-resident', fName: '', fFlat: '', fPhone: '', fVerify: false, fOccupancy: 'Owner', fTower: 'Maple' }),
+
+      // resident detail
+      dResName: detailRes.name, dResInitial: detailRes.initial, dResAvatar: detailRes.avatarBg,
+      dResUnit: detailRes.tower + ' ' + detailRes.flat, dResType: detailRes.type,
+      dResStatus: detailRes.status, dResStatusColor: this.resStyle(detailRes.status)[0], dResStatusBg: this.resStyle(detailRes.status)[1],
+      dResUnverified: detailRes.status !== 'Verified',
+      dResRows: [ { label: 'Phone', value: detailRes.phone }, { label: 'Household', value: detailRes.members + ' members' }, { label: 'Occupancy', value: detailRes.type }, { label: 'Resident since', value: detailRes.since } ],
+      verifyResident: () => { this.setState((st) => ({ residents: st.residents.map((x) => x.id === detailRes.id ? { ...x, status: 'Verified' } : x) })); this.logAudit('Verified resident ' + detailRes.name, '#1F9D5C'); this.showToast(detailRes.name + ' verified'); },
+      backResidents: () => this.setState({ screen: 'community', cmtyTab: 'Residents' }),
+      toastMsgCall: () => this.showToast('Calling ' + detailRes.name + '…'),
+      toastMsgMessage: () => this.showToast('Message thread opened'),
+
+      // add resident
+      fName: s.fName, setFName: (e) => this.setState({ fName: e.target.value }),
+      fFlat: s.fFlat, setFFlat: (e) => this.setState({ fFlat: e.target.value }),
+      fPhone: s.fPhone, setFPhone: (e) => this.setState({ fPhone: e.target.value }),
+      towerChips: ['Maple', 'Oak', 'Birch', 'Pine'].map((t) => this.chip(t, s.fTower === t, () => this.setState({ fTower: t }), '#1D5C45')),
+      typeChips: ['Owner', 'Tenant'].map((t) => this.chip(t, s.fOccupancy === t, () => this.setState({ fOccupancy: t }), '#1D5C45')),
+      toggleVerify: () => this.setState({ fVerify: !s.fVerify }),
+      verifyTrackBg: s.fVerify ? '#1F9D5C' : '#D8D2C2', verifyKnobLeft: s.fVerify ? '23px' : '3px',
+      saveResBg: canSaveRes ? '#10261B' : '#DDD8C8', saveResColor: canSaveRes ? '#F7F4EC' : '#9B9682',
+      saveResident: () => {
+        if (!canSaveRes) { this.showToast('Add a name and flat number'); return; }
+        const id = Math.max(...s.residents.map((r) => r.id)) + 1;
+        const nm = s.fName.trim();
+        const entry = { id, name: nm, tower: s.fTower, flat: s.fFlat.trim(), type: s.fOccupancy, status: s.fVerify ? 'Verified' : 'Pending', phone: s.fPhone.trim() || '—', members: 1, since: 'Jul 2026', avatarBg: '#A7C4B5', initial: nm[0].toUpperCase() };
+        this.setState((st) => ({ residents: [entry, ...st.residents], screen: 'community', cmtyTab: 'Residents' }));
+        this.logAudit('Added resident ' + nm + ' (' + s.fTower + ' ' + s.fFlat.trim() + ')', '#E7A33C');
+        this.showToast(nm + ' added' + (s.fVerify ? ' & verified' : ' — pending review'));
+      },
+
+      // notices
+      noticeCount: s.notices.filter((n) => n.state === 'Published').length, noticeScheduled: s.notices.filter((n) => n.state === 'Scheduled').length,
+      noticeList: s.notices.map((n) => { const [c, b] = this.catStyles[n.cat] || ['#3E4A40', '#EEEDE4']; const published = n.state === 'Published'; return { ...n, catColor: c, catBg: b, stateColor: published ? '#1F9D5C' : '#9A6B14', stateBg: published ? '#E3F2E9' : '#F6ECD8' }; }),
+      goCompose: () => this.setState({ screen: 'compose', nTitle: '', nBody: '', nCat: 'Maintenance', nAud: 'All residents', nSchedule: 'Now', nSchedAt: '' }),
+      backNotices: this.nav('notices'),
+      nTitle: s.nTitle, setNTitle: (e) => this.setState({ nTitle: e.target.value }),
+      nBody: s.nBody, setNBody: (e) => this.setState({ nBody: e.target.value }),
+      noticeCatChips: ['Maintenance', 'Event', 'Billing', 'Policy', 'Security'].map((c) => this.chip(c, s.nCat === c, () => this.setState({ nCat: c }), '#1D5C45')),
+      audienceChips: ['All residents', 'Owners only', 'Tenants only', 'By tower'].map((a) => this.chip(a, s.nAud === a, () => this.setState({ nAud: a }), '#1D5C45')),
+      scheduleChips: ['Now', 'Schedule'].map((c) => this.chip(c === 'Now' ? 'Send now' : 'Schedule', s.nSchedule === c, () => this.setState({ nSchedule: c }), '#1D5C45')),
+      isScheduled: s.nSchedule === 'Schedule',
+      nSchedAt: s.nSchedAt, setNSchedAt: (e) => this.setState({ nSchedAt: e.target.value }),
+      publishBg: canPublish ? '#10261B' : '#DDD8C8', publishColor: canPublish ? '#F7F4EC' : '#9B9682',
+      publishLabel: s.nSchedule === 'Schedule' ? 'Schedule notice' : 'Publish now',
+      publishNotice: () => {
+        if (!canPublish) { this.showToast('Add a title and message'); return; }
+        const scheduled = s.nSchedule === 'Schedule';
+        const entry = { cat: s.nCat, title: s.nTitle.trim(), date: scheduled ? ('Scheduled ' + (s.nSchedAt.trim() || 'later')) : 'Published just now', reads: scheduled ? 'Goes out ' + (s.nSchedAt.trim() || 'soon') : '0 / 240 read', state: scheduled ? 'Scheduled' : 'Published' };
+        this.setState((st) => ({ notices: [entry, ...st.notices], screen: 'notices' }));
+        this.logAudit((scheduled ? 'Scheduled' : 'Published') + ' notice “' + s.nTitle.trim() + '”', '#E7A33C');
+        this.showToast(scheduled ? 'Notice scheduled' : 'Notice published to ' + s.nAud.toLowerCase());
+      },
+
+      // complaints
+      complaintOpen: openComplaints, complaintResolvedToday: s.complaints.filter((c) => c.status === 'Resolved').length,
+      complaintFilters: ['All', 'Open', 'In progress', 'Resolved'].map((f) => this.chip(f, s.compFilter === f, () => this.setState({ compFilter: f }))),
+      complaintList: compFiltered.map((c) => { const [col, bg] = this.statusStyles[c.status]; return { ...c, priorityDot: this.priorityDots[c.priority], statusColor: col, statusBg: bg, open: () => this.setState({ screen: 'complaint-detail', detailComplaintId: c.id }) }; }),
+      backComplaints: this.nav('complaints'),
+      dcId: detailComp.id, dcCategory: detailComp.category, dcTitle: detailComp.title, dcDesc: detailComp.desc,
+      dcResident: detailComp.resident, dcUnit: detailComp.unit, dcDate: detailComp.date, dcPriorityDot: this.priorityDots[detailComp.priority],
+      priorityChips: ['High', 'Medium', 'Low'].map((p) => this.chip(p, detailComp.priority === p, () => this.setState((st) => ({ complaints: st.complaints.map((c) => c.id === detailComp.id ? { ...c, priority: p } : c) })), this.priorityDots[p])),
+      assigneeChips: ['Unassigned', 'Ramesh (Maintenance)', 'Housekeeping team', 'Electrician', 'Rajesh (Security)'].map((a) => this.chip(a, detailComp.assignee === a, () => this.setState((st) => ({ complaints: st.complaints.map((c) => c.id === detailComp.id ? { ...c, assignee: a } : c) })), '#1D5C45')),
+      statusChips: ['Open', 'In progress', 'Resolved'].map((st2) => this.chip(st2, detailComp.status === st2, () => this.setState((st) => ({ complaints: st.complaints.map((c) => c.id === detailComp.id ? { ...c, status: st2 } : c) })), '#1D5C45')),
+      saveComplaint: () => { this.logAudit('Updated complaint ' + detailComp.id + ' → ' + detailComp.status + ' · ' + detailComp.assignee, '#2E6E8E'); this.showToast('Complaint ' + detailComp.id + ' updated'); this.setState({ screen: 'complaints' }); },
+
+      // more
+      moreModules: [
+        { glyph: '🏊', label: 'Amenities', sub: s.amenities.length + ' spaces · ' + bookingPending + ' requests', iconBg: '#E4EFF5', iconColor: '#2E6E8E', go: () => this.setState({ screen: 'amenities' }) },
+        { glyph: '▤', label: 'Polls & Surveys', sub: s.polls.filter((p) => p.state === 'Active').length + ' active', iconBg: '#EFEAF7', iconColor: '#7B5EA7', go: () => this.setState({ screen: 'polls' }) },
+        { glyph: '👷', label: 'Staff & Services', sub: s.staff.length + ' on record', iconBg: '#F6ECD8', iconColor: '#9A6B14', go: () => this.setState({ screen: 'staff' }) },
+        { glyph: '≡', label: 'Audit trail', sub: 'All logged actions', iconBg: '#EEEDE4', iconColor: '#3E4A40', go: () => this.setState({ screen: 'audit' }) },
+        { glyph: '⚙', label: 'Settings', sub: 'Roles & permissions', iconBg: '#F0E7E4', iconColor: '#C0392B', go: () => this.showToast('Settings — coming in a later phase') },
+      ],
+      backMore: this.nav('more'),
+
+      // community: towers / flats / residents
+      isCmtyTowers: s.cmtyTab === 'Towers', isCmtyFlats: s.cmtyTab === 'Flats', isCmtyResidents: s.cmtyTab === 'Residents',
+      cmtyTowersColor: s.cmtyTab === 'Towers' ? '#17251D' : '#75806F', cmtyTowersBorder: s.cmtyTab === 'Towers' ? '#1D5C45' : 'transparent',
+      cmtyFlatsColor: s.cmtyTab === 'Flats' ? '#17251D' : '#75806F', cmtyFlatsBorder: s.cmtyTab === 'Flats' ? '#1D5C45' : 'transparent',
+      cmtyResidentsColor: s.cmtyTab === 'Residents' ? '#17251D' : '#75806F', cmtyResidentsBorder: s.cmtyTab === 'Residents' ? '#1D5C45' : 'transparent',
+      cmtyTowersTap: () => this.setState({ cmtyTab: 'Towers', resSearch: '' }),
+      cmtyFlatsTap: () => this.setState({ cmtyTab: 'Flats', resSearch: '' }),
+      cmtyResidentsTap: () => this.setState({ cmtyTab: 'Residents', resSearch: '' }),
+      cmtySearchPlaceholder: s.cmtyTab === 'Towers' ? 'Search towers' : s.cmtyTab === 'Flats' ? 'Search flats' : 'Search name or unit',
+      cmtyFilterTap: () => { if (s.cmtyTab === 'Residents') this.setState({ filterOpen: true }); else this.showToast('Filters apply to the Residents view'); },
+      towerRows: towerRowsC, flatRows: flatRowsC,
+      dTowerName: towerObj.name, dTowerFloors: towerObj.floors,
+      dTowerFlats: towerObj.flats, dTowerOccupied: towerObj.occ, dTowerVacant: towerObj.flats - towerObj.occ,
+      dTowerOwners: residentsInTower.filter((r) => r.type === 'Owner').length, dTowerTenants: residentsInTower.filter((r) => r.type === 'Tenant').length,
+      dTowerOpenComplaints: towerOpenComplaints,
+      dTowerResidents: dTowerResidentsC, dTowerResidentCount: residentsInTower.length, dTowerNoResidents: dTowerResidentsC.length === 0,
+      noTowers: towerRowsC.length === 0, noFlats: flatRowsC.length === 0,
+      cmtyAddLabel: s.cmtyTab === 'Towers' ? 'Add Tower' : s.cmtyTab === 'Flats' ? 'Add Flat' : 'Add Resident',
+      cmtyAddAction: () => {
+        if (s.cmtyTab === 'Towers') this.setState({ screen: 'add-tower', tName: '', tFloors: '', tPerFloor: '', linkOn: false, lkFlat: '', lkName: '' });
+        else if (s.cmtyTab === 'Flats') this.showToast('Add flat — coming soon');
+        else this.setState({ screen: 'add-resident', fName: '', fFlat: '', fPhone: '', fVerify: false, fOccupancy: 'Owner', fTower: 'Maple' });
+      },
+      goAddTower: () => this.setState({ screen: 'add-tower', tName: '', tFloors: '', tPerFloor: '', linkOn: false, lkFlat: '', lkName: '' }),
+      backTowers: () => this.setState({ screen: 'community', cmtyTab: 'Towers' }),
+      tName: s.tName, setTName: (e) => this.setState({ tName: e.target.value }),
+      tFloors: s.tFloors, setTFloors: (e) => this.setState({ tFloors: e.target.value.replace(/\D/g, '') }),
+      tPerFloor: s.tPerFloor, setTPerFloor: (e) => this.setState({ tPerFloor: e.target.value.replace(/\D/g, '') }),
+      tTotalFlats: tTotal || '—',
+      linkOn: s.linkOn, toggleLink: () => this.setState({ linkOn: !s.linkOn }),
+      linkTrackBg: s.linkOn ? '#1F9D5C' : '#D8D2C2', linkKnobLeft: s.linkOn ? '23px' : '3px',
+      lkFlat: s.lkFlat, setLkFlat: (e) => this.setState({ lkFlat: e.target.value }),
+      lkName: s.lkName, setLkName: (e) => this.setState({ lkName: e.target.value }),
+      saveTowerBg: canSaveTower ? '#10261B' : '#DDD8C8', saveTowerColor: canSaveTower ? '#F7F4EC' : '#9B9682',
+      saveTower: () => {
+        if (!canSaveTower) { this.showToast('Add a tower name, floors and flats'); return; }
+        const nm = s.tName.trim();
+        const code = nm.replace(/tower/i, '').trim().slice(0, 2).toUpperCase() || 'NT';
+        const tower = { code, name: nm, floors: tFloorsN, flats: tTotal, occ: 0 };
+        const linked = s.linkOn && s.lkName.trim().length > 1;
+        const newResidents = [];
+        if (linked) { const id = Math.max(...s.residents.map((r) => r.id)) + 1; const rn = s.lkName.trim(); newResidents.push({ id, name: rn, tower: nm.split(' ')[0], flat: s.lkFlat.trim() || '101', type: 'Owner', status: 'Pending', phone: '—', members: 1, since: 'Jul 2026', avatarBg: '#E0A9A0', initial: rn[0].toUpperCase() }); tower.occ = 1; }
+        this.setState((st) => ({ towers: [...st.towers, tower], residents: [...newResidents, ...st.residents], screen: 'community', cmtyTab: 'Towers' }));
+        this.logAudit('Added ' + nm + ' (' + tTotal + ' flats)' + (linked ? ' & linked ' + s.lkName.trim() : ''), '#9A6B14');
+        this.showToast(nm + ' created' + (linked ? ' · resident linked' : ''));
+      },
+
+      // amenities
+      bookingPendingTotal: bookingPending,
+      amenityList: s.amenities.map((a) => ({ id: a.id, name: a.name, glyph: a.glyph, iconBg: a.iconBg, timings: a.timings, statusLabel: a.open ? 'Open' : 'Closed', statusBg: a.open ? '#E3F2E9' : '#EEEDE4', statusColor: a.open ? '#1F9D5C' : '#6F7A70', hasPending: a.bookings.length > 0, pendingLabel: a.bookings.length + ' pending', open: () => this.setState({ screen: 'amenity-detail', detailAmenityId: a.id }) })),
+      backAmenities: this.nav('amenities'),
+      adName: detailAmenity.name, adGlyph: detailAmenity.glyph, adIconBg: detailAmenity.iconBg, adTimings: detailAmenity.timings,
+      toggleAmenity: () => this.setState((st) => ({ amenities: st.amenities.map((a) => a.id === detailAmenity.id ? { ...a, open: !a.open } : a) })),
+      amenityTrackBg: detailAmenity.open ? '#1F9D5C' : '#D8D2C2', amenityKnobLeft: detailAmenity.open ? '23px' : '3px',
+      bookingRequests: detailAmenity.bookings.map((b) => ({ initial: b.initial, avatarBg: b.avatarBg, name: b.name, slot: b.slot,
+        approve: () => { this.setState((st) => ({ amenities: st.amenities.map((a) => a.id === detailAmenity.id ? { ...a, bookings: a.bookings.filter((x) => x.id !== b.id) } : a) })); this.logAudit('Approved ' + detailAmenity.name + ' booking for ' + b.name, '#1F9D5C'); this.showToast('Approved — ' + b.name + ' notified'); },
+        deny: () => { this.setState((st) => ({ amenities: st.amenities.map((a) => a.id === detailAmenity.id ? { ...a, bookings: a.bookings.filter((x) => x.id !== b.id) } : a) })); this.showToast('Booking declined'); } })),
+      noBookings: detailAmenity.bookings.length === 0,
+
+      // polls
+      pollList: s.polls.map((p) => ({ id: p.id, question: p.question, state: p.state, meta: p.meta, votes: p.options.reduce((n, o) => n + o.count, 0), stateColor: p.state === 'Active' ? '#1F9D5C' : '#A9A794', open: () => { this.setState({ screen: 'poll-results', detailPollId: p.id }); if (p.state === 'Active') this.startLive(p.id); } })),
+      goCreatePoll: () => this.setState({ screen: 'create-poll', pQuestion: '', pOptions: ['', ''], pDuration: '3 days' }),
+      backPolls: () => { this.stopLive(); this.setState({ screen: 'polls' }); },
+      pQuestion: s.pQuestion, setPQuestion: (e) => this.setState({ pQuestion: e.target.value }),
+      pollOptionInputs: s.pOptions.map((v, i) => ({ value: v, placeholder: 'Option ' + (i + 1), removable: s.pOptions.length > 2, set: (e) => this.setState((st) => { const o = st.pOptions.slice(); o[i] = e.target.value; return { pOptions: o }; }), remove: () => this.setState((st) => ({ pOptions: st.pOptions.filter((_, j) => j !== i) })) })),
+      canAddOption: s.pOptions.length < 5, addOption: () => this.setState((st) => ({ pOptions: [...st.pOptions, ''] })),
+      durationChips: ['1 day', '3 days', '1 week'].map((d) => this.chip(d, s.pDuration === d, () => this.setState({ pDuration: d }), '#1D5C45')),
+      launchBg: canLaunch ? '#10261B' : '#DDD8C8', launchColor: canLaunch ? '#F7F4EC' : '#9B9682',
+      launchPoll: () => {
+        if (!canLaunch) { this.showToast('Add a question and 2+ options'); return; }
+        const id = Math.max(...s.polls.map((p) => p.id)) + 1;
+        const poll = { id, question: s.pQuestion.trim(), state: 'Active', options: validOpts.map((o) => ({ label: o.trim(), count: 0 })), meta: 'Closes in ' + s.pDuration + ' · ' + validOpts.length + ' options', closesIn: true };
+        this.setState((st) => ({ polls: [poll, ...st.polls], screen: 'poll-results', detailPollId: id }));
+        this.logAudit('Launched poll “' + s.pQuestion.trim() + '”', '#7B5EA7');
+        this.showToast('Poll is live — residents can vote now');
+        this.startLive(id);
+      },
+      prState: detailPoll.state === 'Active' ? 'LIVE' : 'CLOSED', prStateColor: detailPoll.state === 'Active' ? '#1F9D5C' : '#A9A794',
+      prActive: detailPoll.state === 'Active',
+      prQuestion: detailPoll.question, prMeta: detailPoll.meta, prTotal: dpTotal,
+      prOptions: detailPoll.options.map((o) => { const pct = dpTotal ? Math.round((o.count / dpTotal) * 100) : 0; return { label: o.label, pct: pct + '%', width: pct + '%', lead: o.count === dpMax && o.count > 0, border: o.count === dpMax && o.count > 0 ? '#1D5C45' : '#E5E0D2', fill: o.count === dpMax && o.count > 0 ? '#DCEDE3' : '#EEEDE4' }; }),
+      closePoll: () => { this.stopLive(); this.setState((st) => ({ polls: st.polls.map((p) => p.id === detailPoll.id ? { ...p, state: 'Closed', meta: 'Closed just now · ' + dpTotal + ' votes' } : p) })); this.logAudit('Closed poll “' + detailPoll.question + '”', '#7B5EA7'); this.showToast('Poll closed'); },
+
+      // staff
+      staffList: s.staff.map((st2) => { const map = { 'On duty': ['#1F9D5C', '#E3F2E9'], 'Off duty': ['#6F7A70', '#EEEDE4'], 'Vendor': ['#7B5EA7', '#EFEAF7'] }; const [c, b] = map[st2.status] || map['Off duty']; return { ...st2, statusColor: c, statusBg: b }; }),
+
+      // audit
+      auditAll: s.audit,
+
+      // filter sheet
+      filterOpen: s.filterOpen, bulkOpen: s.bulkOpen,
+      closeSheets: () => this.setState({ filterOpen: false, bulkOpen: false }),
+      fTypeChips: ['All', 'Owner', 'Tenant'].map((t) => this.chip(t, s.fType === t, () => this.setState({ fType: t }), '#1D5C45')),
+      fStatusChips: ['All', 'Verified', 'Pending'].map((t) => this.chip(t, s.fStatus === t, () => this.setState({ fStatus: t }), '#1D5C45')),
+      resetFilter: () => this.setState({ fType: 'All', fStatus: 'All' }),
+      residentMatchCount: matched.length + ' residents',
+
+      // bulk
+      bulkActions: [
+        { glyph: '⇪', label: 'Import from CSV', sub: 'Bulk-add residents from a spreadsheet', iconBg: '#E9F1EC', iconColor: '#1D5C45', run: () => { this.setState({ bulkOpen: false }); this.showToast('Importing… 24 residents queued'); this.logAudit('Started bulk import of residents', '#1D5C45'); } },
+        { glyph: '✓', label: 'Verify all pending', sub: pendingRes.length + ' residents awaiting review', iconBg: '#F6ECD8', iconColor: '#9A6B14', run: () => { const n = pendingRes.length; this.setState((st) => ({ residents: st.residents.map((r) => r.status === 'Pending' ? { ...r, status: 'Verified' } : r), bulkOpen: false })); if (n) this.logAudit('Bulk-verified ' + n + ' residents', '#1F9D5C'); this.showToast(n ? n + ' residents verified' : 'Nothing pending'); } },
+        { glyph: '✎', label: 'Message all residents', sub: 'Send a broadcast to every home', iconBg: '#EFEAF7', iconColor: '#7B5EA7', run: () => { this.setState({ bulkOpen: false }); this.showToast('Broadcast composer opened'); } },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

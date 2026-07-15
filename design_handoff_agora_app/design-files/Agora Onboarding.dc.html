@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&amp;family=Schibsted+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<style>
+body{margin:0;background:#EDE7DA}
+a{color:#E7A33C}a:hover{color:#F0B04E}
+@keyframes agFade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes agDot{0%,100%{opacity:1}50%{opacity:0.4}}
+@keyframes agPulse{0%{box-shadow:0 0 0 0 rgba(231,163,60,0.4)}70%{box-shadow:0 0 0 16px rgba(231,163,60,0)}100%{box-shadow:0 0 0 0 rgba(231,163,60,0)}}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:36px 20px;background:radial-gradient(1200px 700px at 50% -10%, #F4EFE3, #EDE7DA);font-family:'Schibsted Grotesk',sans-serif">
+  <div style="font-size:12px;letter-spacing:0.18em;font-weight:700;color:#8A8470">AGORA · RESIDENT APP · ONBOARDING</div>
+  <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+    <div style="height:100%;position:relative;overflow:hidden;background:#0F2C1F;font-family:'Schibsted Grotesk',sans-serif;color:#F7F4EC">
+
+      <div style="display:flex;width:400%;height:100%;transition:transform 0.55s cubic-bezier(0.2,0.9,0.3,1);transform:translateX({{ trackX }})">
+
+        <!-- SLIDE 1 · WELCOME -->
+        <div style="width:25%;height:100%;flex-shrink:0;position:relative;overflow:hidden">
+          <div style="position:absolute;inset:0">
+            <image-slot id="agora-hero" shape="rect" fit="cover" src="./hero-gate-night.png" placeholder="Drop the night-gate illustration"></image-slot>
+          </div>
+          <div style="position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg, rgba(10,26,18,0.62) 0%, rgba(10,26,18,0.15) 26%, rgba(10,26,18,0.35) 58%, rgba(10,26,18,0.9) 88%)"></div>
+          <div style="position:relative;height:100%;display:flex;flex-direction:column;align-items:center;padding:78px 26px 150px;box-sizing:border-box;text-align:center">
+            <svg width="72" height="65" viewBox="0 0 74 66" fill="none" style="filter:drop-shadow(0 8px 20px rgba(0,0,0,0.4))">
+              <defs><linearGradient id="agg" x1="10" y1="0" x2="64" y2="66" gradientUnits="userSpaceOnUse"><stop stop-color="#F3B75B"></stop><stop offset="1" stop-color="#D0871F"></stop></linearGradient></defs>
+              <path fill-rule="evenodd" clip-rule="evenodd" fill="url(#agg)" d="M31.6 4.7a6 6 0 0 1 10.8 0l29.4 52.9c2.2 4-0.7 8.9-5.4 8.9H7.6c-4.7 0-7.6-4.9-5.4-8.9L31.6 4.7ZM37 26.5 26.1 46.1c-1.1 2 0.3 4.4 2.7 4.4h16.4c2.4 0 3.8-2.4 2.7-4.4L37 26.5Z"></path>
+            </svg>
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:54px;font-weight:800;letter-spacing:-0.01em;line-height:1;margin-top:14px;color:#FDFBF5">Agora</div>
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:21px;font-weight:700;margin-top:14px;color:#F7F4EC">One Community. One App.</div>
+            <div style="font-size:15.5px;line-height:1.5;color:rgba(247,244,236,0.72);margin-top:10px;max-width:270px">Powering safer, smarter and connected societies.</div>
+            <div style="flex:1"></div>
+            <div style="width:100%;background:#FFFFFF;border-radius:20px;padding:16px 18px;display:flex;align-items:center;gap:14px;box-shadow:0 20px 44px rgba(6,18,12,0.4)">
+              <div style="width:42px;height:42px;border-radius:12px;flex-shrink:0;background:#F6ECD8;display:flex;align-items:center;justify-content:center">
+                <svg width="22" height="22" viewBox="0 0 24 24"><path d="M12 2l8 3.6v5.2c0 5.2-3.4 8.9-8 10.6-4.6-1.7-8-5.4-8-10.6V5.6L12 2z" fill="none" stroke="#E7A33C" stroke-width="1.8"></path><path d="M8.6 12l2.3 2.3 4.5-4.6" fill="none" stroke="#E7A33C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </div>
+              <div style="text-align:left">
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:16.5px;font-weight:800;color:#17251D;line-height:1.2">Trusted by 1000+ communities</div>
+                <div style="font-size:13px;color:#75806F;margin-top:2px">to simplify daily operations</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SLIDE 2 · VISITOR APPROVAL -->
+        <div style="width:25%;height:100%;flex-shrink:0;position:relative;overflow:hidden;background:#0F2C1F">
+          <div style="position:absolute;inset:0">
+            <image-slot id="agora-approve" shape="rect" fit="contain" src="./slide2-hologram.png" placeholder="Drop the slide-2 illustration"></image-slot>
+          </div>
+          <div style="position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg, rgba(10,26,18,0.5) 0%, rgba(10,26,18,0.12) 24%, rgba(10,26,18,0.5) 60%, rgba(10,26,18,0.93) 90%)"></div>
+          <div style="position:relative;height:100%;display:flex;flex-direction:column;align-items:center;padding:92px 26px 150px;box-sizing:border-box">
+            <div style="width:100%;background:#F7F4EC;border-radius:24px;padding:18px;box-shadow:0 26px 54px rgba(6,18,12,0.55);animation:agFade 0.5s ease">
+              <div style="display:flex;align-items:center;gap:7px">
+                <div style="width:8px;height:8px;border-radius:99px;background:#E7A33C;animation:agDot 1.2s infinite"></div>
+                <div style="font-size:10px;letter-spacing:0.16em;font-weight:700;color:#9A6B14">GATE 1 · WAITING NOW</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:13px;margin-top:14px">
+                <div style="width:50px;height:50px;border-radius:15px;background:#E7A33C;display:flex;align-items:center;justify-content:center;color:#10261B;animation:agPulse 1.9s infinite"><svg width="27" height="27" viewBox="0 0 24 24" fill="none"><path d="M4 8l8-4 8 4v9l-8 4-8-4V8z" stroke="#10261B" stroke-width="1.8" stroke-linejoin="round"></path><path d="M4 8l8 4 8-4M12 12v9" stroke="#10261B" stroke-width="1.8" stroke-linejoin="round"></path><path d="M8 6l8 4" stroke="#10261B" stroke-width="1.8" stroke-linecap="round"></path></svg></div>
+                <div style="flex:1;text-align:left">
+                  <div style="font-size:16.5px;font-weight:700;color:#17251D">Ravi Kumar</div>
+                  <div style="font-size:13px;color:#75806F;margin-top:1px">Swiggy · Food delivery</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:10px;margin-top:16px">
+                <div style="flex:1;height:46px;border-radius:14px;background:#F0E7E4;display:flex;align-items:center;justify-content:center;gap:7px;font-size:14.5px;font-weight:700;color:#C0392B"><svg width="14" height="14" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="#C0392B" stroke-width="2.6" stroke-linecap="round"></path></svg>Deny</div>
+                <div style="flex:1.3;height:46px;border-radius:14px;background:#1F9D5C;display:flex;align-items:center;justify-content:center;gap:7px;font-size:14.5px;font-weight:700;color:#FFFFFF"><svg width="15" height="15" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 7" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg>Approve</div>
+              </div>
+            </div>
+            <div style="flex:1"></div>
+            <div style="text-align:center">
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:28px;font-weight:800;line-height:1.15">Approve visitors in a tap</div>
+              <div style="font-size:15px;line-height:1.55;color:rgba(247,244,236,0.66);margin-top:12px;max-width:290px;text-wrap:pretty">Every guest, delivery and cab is verified at the gate — you clear them from your phone in seconds.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SLIDE 3 · COMMUNITY -->
+        <div style="width:25%;height:100%;flex-shrink:0;position:relative;overflow:hidden;background:radial-gradient(120% 80% at 50% 0%, #163A2A 0%, #0F2C1F 55%, #0A1F16 100%)">
+          <div style="height:100%;display:flex;flex-direction:column;align-items:center;padding:92px 26px 150px;box-sizing:border-box">
+            <div style="width:100%;display:flex;flex-direction:column;gap:12px">
+              <div style="background:#10261B;border:1px solid rgba(231,163,60,0.28);border-radius:20px;padding:16px;box-shadow:0 22px 48px rgba(6,18,12,0.45);animation:agFade 0.5s ease">
+                <div style="display:flex;align-items:center;gap:7px">
+                  <svg width="12" height="12" viewBox="0 0 24 24"><path d="M12 2l2.4 6.2H21l-5.2 4 2 6.6-5.8-4.1-5.8 4.1 2-6.6-5.2-4h6.6L12 2z" fill="#E7A33C"></path></svg>
+                  <div style="font-size:9.5px;letter-spacing:0.16em;font-weight:700;color:#E7A33C">PINNED · WATER SUPPLY</div>
+                </div>
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:15px;font-weight:700;line-height:1.3;margin-top:9px;color:#F7F4EC">Tank cleaning — water paused Tue 10 AM–2 PM</div>
+              </div>
+              <div style="background:#F7F4EC;border-radius:20px;padding:16px;box-shadow:0 22px 48px rgba(6,18,12,0.4);animation:agFade 0.6s ease">
+                <div style="display:flex;align-items:center;gap:6px;font-size:9.5px;letter-spacing:0.14em;font-weight:700;color:#1F9D5C"><div style="width:7px;height:7px;border-radius:99px;background:#1F9D5C;animation:agDot 1.4s infinite"></div>ACTIVE POLL</div>
+                <div style="font-size:13.5px;font-weight:700;color:#17251D;margin-top:9px;line-height:1.3">Clubhouse open till 11 PM on weekends?</div>
+                <div style="position:relative;overflow:hidden;border-radius:11px;margin-top:10px;border:1.5px solid #1D5C45;height:38px">
+                  <div style="position:absolute;top:0;left:0;bottom:0;width:54%;background:#E9F1EC"></div>
+                  <div style="position:relative;display:flex;align-items:center;justify-content:space-between;padding:0 13px;height:100%"><div style="font-size:13px;font-weight:600;color:#17251D">Yes, till 11 PM</div><div style="font-size:12.5px;font-weight:700;color:#1D5C45">54%</div></div>
+                </div>
+                <div style="position:relative;overflow:hidden;border-radius:11px;margin-top:8px;border:1.5px solid #E0DACA;height:38px">
+                  <div style="position:absolute;top:0;left:0;bottom:0;width:25%;background:#EEEDE4"></div>
+                  <div style="position:relative;display:flex;align-items:center;justify-content:space-between;padding:0 13px;height:100%"><div style="font-size:13px;font-weight:600;color:#3E4A40">Keep it 10 PM</div><div style="font-size:12.5px;font-weight:700;color:#75806F">25%</div></div>
+                </div>
+              </div>
+            </div>
+            <div style="flex:1"></div>
+            <div style="text-align:center">
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:28px;font-weight:800;line-height:1.15">Your community, in one place</div>
+              <div style="font-size:15px;line-height:1.55;color:rgba(247,244,236,0.66);margin-top:12px;max-width:290px;text-wrap:pretty">Notices, polls and society updates land in a single shared feed — never miss what matters.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SLIDE 4 · PAYMENTS -->
+        <div style="width:25%;height:100%;flex-shrink:0;position:relative;overflow:hidden;background:radial-gradient(120% 80% at 50% 0%, #163A2A 0%, #0F2C1F 55%, #0A1F16 100%)">
+          <div style="height:100%;display:flex;flex-direction:column;align-items:center;padding:92px 26px 168px;box-sizing:border-box">
+            <div style="width:100%;background:#F7F4EC;border-radius:24px;padding:20px;box-shadow:0 26px 54px rgba(6,18,12,0.5);animation:agFade 0.5s ease">
+              <div style="font-size:10px;letter-spacing:0.16em;font-weight:700;color:#9A6B14">Q2 · JUL – SEP 2026</div>
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:36px;font-weight:800;color:#17251D;margin-top:8px">₹8,450</div>
+              <div style="font-size:12.5px;color:#75806F;margin-top:3px">Due 25 July · 2% late fee after</div>
+              <div style="margin-top:16px;height:48px;border-radius:15px;background:#E7A33C;color:#10261B;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">Pay now</div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:14px;font-size:12.5px;color:#3E6B50;font-weight:600"><svg width="15" height="15" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 7" stroke="#1F9D5C" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg>Receipt posts to the ledger instantly</div>
+            </div>
+            <div style="flex:1"></div>
+            <div style="text-align:center">
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:28px;font-weight:800;line-height:1.15">Dues, minus the hassle</div>
+              <div style="font-size:15px;line-height:1.55;color:rgba(247,244,236,0.66);margin-top:12px;max-width:290px;text-wrap:pretty">Pay maintenance and keep every receipt in one place — no paperwork, no follow-ups.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- SKIP -->
+      <sc-if value="{{ showSkip }}" hint-placeholder-val="{{ true }}">
+        <div onClick="{{ skip }}" style="position:absolute;top:70px;right:22px;z-index:30;cursor:pointer;font-size:14px;font-weight:600;color:rgba(247,244,236,0.7);padding:6px 4px" style-hover="color:#F7F4EC">Skip</div>
+      </sc-if>
+
+      <!-- CONTROLS -->
+      <div style="position:absolute;left:0;right:0;bottom:0;z-index:30;padding:0 24px 40px;box-sizing:border-box">
+        <sc-if value="{{ isLast }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;justify-content:center;gap:7px;margin-bottom:20px">
+            <sc-for list="{{ dots }}" as="d" hint-placeholder-count="4">
+              <div onClick="{{ d.go }}" style="height:8px;border-radius:99px;cursor:pointer;transition:width 0.35s, background 0.35s;width:{{ d.w }};background:{{ d.bg }}"></div>
+            </sc-for>
+          </div>
+          <div onClick="{{ primary }}" style="height:56px;border-radius:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;background:#E7A33C;color:#10261B;font-size:16px;font-weight:700;box-shadow:0 14px 34px rgba(231,163,60,0.3)" style-hover="background:#F0B04E">Get started<svg width="18" height="18" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" stroke="#10261B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+        </sc-if>
+        <sc-if value="{{ notLast }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;gap:7px">
+              <sc-for list="{{ dots }}" as="d" hint-placeholder-count="4">
+                <div onClick="{{ d.go }}" style="height:8px;border-radius:99px;cursor:pointer;transition:width 0.35s, background 0.35s;width:{{ d.w }};background:{{ d.bg }}"></div>
+              </sc-for>
+            </div>
+            <div onClick="{{ primary }}" style="width:60px;height:60px;border-radius:99px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:#E7A33C;box-shadow:0 12px 30px rgba(231,163,60,0.32)" style-hover="background:#F0B04E">
+              <svg width="22" height="22" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" stroke="#10261B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ toastOn }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;left:24px;right:24px;bottom:120px;z-index:50;background:#FFFFFF;color:#17251D;border-radius:16px;padding:13px 16px;font-size:13.5px;font-weight:700;text-align:center;box-shadow:0 16px 36px rgba(6,18,12,0.4);animation:agFade 0.3s ease">{{ toastMsg }}</div>
+      </sc-if>
+
+    </div>
+  </x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 520, &quot;height&quot;: 990}}">
+class Component extends DCLogic {
+  state = { idx: 0, toastOn: false, toastMsg: '' };
+  componentWillUnmount() { clearTimeout(this._t); }
+  showToast(msg) {
+    clearTimeout(this._t);
+    this.setState({ toastOn: true, toastMsg: msg });
+    this._t = setTimeout(() => this.setState({ toastOn: false }), 2600);
+  }
+  renderVals() {
+    const idx = this.state.idx;
+    const last = idx === 3;
+    const go = (i) => () => this.setState({ idx: i });
+    return {
+      trackX: (-idx * 25) + '%',
+      isLast: last, notLast: !last,
+      showSkip: !last,
+      dots: [0, 1, 2, 3].map((i) => ({
+        w: i === idx ? '26px' : '8px',
+        bg: i === idx ? '#E7A33C' : 'rgba(247,244,236,0.28)',
+        go: go(i),
+      })),
+      skip: () => this.setState({ idx: 3 }),
+      primary: () => {
+        if (last) { this.showToast('Welcome to Agora 🎉'); return; }
+        this.setState({ idx: idx + 1 });
+      },
+      toastOn: this.state.toastOn,
+      toastMsg: this.state.toastMsg,
+    };
+  }
+}
+</script>
+</body>
+</html>

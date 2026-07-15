@@ -1,56 +1,56 @@
-# Welcome to your Expo app 👋
+# Agora
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Agora is a mobile-first society (apartment community) management app being built for the **ChaiCode × Masterji Mobile Dev Hackathon**, running **July 12–26, 2026**.
 
-## Get started
+> The conversations that used to happen at the society gate should now happen inside one community app.
 
-1. Install dependencies
+## Product scope
 
-   ```bash
-   npm install
-   ```
+Agora is designed around three strictly separated roles:
 
-2. Start the app
+- **Resident:** approve or pre-approve visitors, view notices, vote in polls, raise complaints, book amenities, review visitor history, and pay maintenance dues.
+- **Security Guard:** register visitors, request and verify approvals, record entry and exit, search residents, and monitor society movement.
+- **Society Admin:** manage towers, flats, residents, amenities, notices, polls, complaints, staff, and service providers.
 
-   ```bash
-   npx expo start
-   ```
+The primary workflow is fast visitor approval: a guard raises a request, the resident approves or rejects it in the app, and the guard records the visitor's entry and exit. Push notifications are planned where they reduce delay in time-sensitive workflows.
 
-In the output, you'll find options to open the app in a
+## Selected stack
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- Expo and React Native
+- Expo Router
+- Supabase
+- TanStack Query
+- Zustand
+- Expo Notifications
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Current status
 
-## Get a fresh project
+This repository is currently at the **project foundation / Expo starter** stage. The planned product features, backend integration, authentication and role-based access control, demo credentials, screenshots, and distributable builds are not yet available.
 
-When you're ready, run:
+See [AGENTS.md](AGENTS.md) for the repository product/agent contract, including the intended scope, role rules, build order, and delivery criteria.
+
+## Local setup
+
+Prerequisites: Node.js, npm, and a phone or simulator supported by Expo.
 
 ```bash
-npm run reset-project
+npm install
+npm start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Other available commands:
 
-### Other setup steps
+```bash
+npm run android
+npm run ios
+npm run lint
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Submission checklist
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- [ ] Public GitHub repository
+- [ ] Expo project or APK
+- [ ] Demo video
+- [ ] Setup instructions finalized
+- [ ] Application screenshots
+- [ ] Demo credentials for resident, guard, and admin

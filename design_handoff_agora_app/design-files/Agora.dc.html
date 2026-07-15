@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&amp;family=Schibsted+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<style>
+body{margin:0;background:#EDE7DA}
+a{color:#E7A33C}a:hover{color:#F0B04E}
+input::placeholder{color:#A9A794}
+@keyframes slideDown{from{transform:translateY(-90px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes ringPulse{0%{box-shadow:0 0 0 0 rgba(231,163,60,0.45)}70%{box-shadow:0 0 0 22px rgba(231,163,60,0)}100%{box-shadow:0 0 0 0 rgba(231,163,60,0)}}
+@keyframes dotPulse{0%,100%{opacity:1}50%{opacity:0.35}}
+@keyframes popIn{from{transform:scale(0.5);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes fadeUp{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes agFade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes agDot{0%,100%{opacity:1}50%{opacity:0.4}}
+@keyframes agPulse{0%{box-shadow:0 0 0 0 rgba(231,163,60,0.4)}70%{box-shadow:0 0 0 16px rgba(231,163,60,0)}100%{box-shadow:0 0 0 0 rgba(231,163,60,0)}}
+@keyframes agSpin{to{transform:rotate(360deg)}}
+@keyframes splashFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:36px 20px;background:radial-gradient(1200px 700px at 50% -10%, #F4EFE3, #EDE7DA);font-family:'Schibsted Grotesk',sans-serif">
+  <div style="font-size:12px;letter-spacing:0.18em;font-weight:700;color:#8A8470">AGORA · RESIDENT APP</div>
+  <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+    <div style="height:100%;position:relative;overflow:hidden;font-family:'Schibsted Grotesk',sans-serif;color:#17251D">
+
+      <!-- ══════════ SPLASH ══════════ -->
+      <sc-if value="{{ isSplash }}" hint-placeholder-val="{{ true }}">
+        <div onClick="{{ splashTap }}" data-screen-label="Splash" style="height:100%;position:relative;overflow:hidden;background:radial-gradient(130% 90% at 50% 32%, #163A2A 0%, #0F2C1F 50%, #0A1F16 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:#F7F4EC">
+          <div style="display:flex;flex-direction:column;align-items:center;animation:popIn 0.6s cubic-bezier(0.2,0.9,0.3,1.4)">
+            <div style="animation:splashFloat 3s ease-in-out infinite">
+              <svg width="88" height="79" viewBox="0 0 74 66" fill="none" style="filter:drop-shadow(0 12px 30px rgba(231,163,60,0.35))">
+                <defs><linearGradient id="spg" x1="10" y1="0" x2="64" y2="66" gradientUnits="userSpaceOnUse"><stop stop-color="#F3B75B"></stop><stop offset="1" stop-color="#D0871F"></stop></linearGradient></defs>
+                <path fill-rule="evenodd" clip-rule="evenodd" fill="url(#spg)" d="M31.6 4.7a6 6 0 0 1 10.8 0l29.4 52.9c2.2 4-0.7 8.9-5.4 8.9H7.6c-4.7 0-7.6-4.9-5.4-8.9L31.6 4.7ZM37 26.5 26.1 46.1c-1.1 2 0.3 4.4 2.7 4.4h16.4c2.4 0 3.8-2.4 2.7-4.4L37 26.5Z"></path>
+              </svg>
+            </div>
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:46px;font-weight:800;letter-spacing:-0.01em;margin-top:18px;color:#FDFBF5">Agora</div>
+            <div style="font-size:11.5px;letter-spacing:0.22em;font-weight:700;color:rgba(247,244,236,0.5);margin-top:10px">ONE COMMUNITY · ONE APP</div>
+          </div>
+          <div style="position:absolute;bottom:74px;display:flex;gap:8px">
+            <div style="width:8px;height:8px;border-radius:99px;background:#E7A33C;animation:agDot 1.1s infinite"></div>
+            <div style="width:8px;height:8px;border-radius:99px;background:#E7A33C;animation:agDot 1.1s infinite 0.18s"></div>
+            <div style="width:8px;height:8px;border-radius:99px;background:#E7A33C;animation:agDot 1.1s infinite 0.36s"></div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ ONBOARDING ══════════ -->
+      <sc-if value="{{ isOnboarding }}" hint-placeholder-val="{{ false }}">
+        <div style="height:100%;position:relative;overflow:hidden;background:#0F2C1F;color:#F7F4EC">
+          <div style="display:flex;width:400%;height:100%;transition:transform 0.55s cubic-bezier(0.2,0.9,0.3,1);transform:translateX({{ trackX }})">
+            <div style="width:25%;height:100%;flex-shrink:0;position:relative;overflow:hidden">
+              <div style="position:absolute;inset:0"><image-slot id="agora-hero" shape="rect" fit="cover" src="./hero-gate-night.png" placeholder="Drop the night-gate illustration"></image-slot></div>
+              <div style="position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg, rgba(10,26,18,0.62) 0%, rgba(10,26,18,0.15) 26%, rgba(10,26,18,0.35) 58%, rgba(10,26,18,0.9) 88%)"></div>
+              <div style="position:relative;height:100%;display:flex;flex-direction:column;align-items:center;padding:78px 26px 150px;box-sizing:border-box;text-align:center">
+                <svg width="72" height="65" viewBox="0 0 74 66" fill="none" style="filter:drop-shadow(0 8px 20px rgba(0,0,0,0.4))">
+                  <defs><linearGradient id="agg" x1="10" y1="0" x2="64" y2="66" gradientUnits="userSpaceOnUse"><stop stop-color="#F3B75B"></stop><stop offset="1" stop-color="#D0871F"></stop></linearGradient></defs>
+                  <path fill-rule="evenodd" clip-rule="evenodd" fill="url(#agg)" d="M31.6 4.7a6 6 0 0 1 10.8 0l29.4 52.9c2.2 4-0.7 8.9-5.4 8.9H7.6c-4.7 0-7.6-4.9-5.4-8.9L31.6 4.7ZM37 26.5 26.1 46.1c-1.1 2 0.3 4.4 2.7 4.4h16.4c2.4 0 3.8-2.4 2.7-4.4L37 26.5Z"></path>
+                </svg>
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:54px;font-weight:800;letter-spacing:-0.01em;line-height:1;margin-top:14px;color:#FDFBF5">Agora</div>
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:21px;font-weight:700;margin-top:14px;color:#F7F4EC">One Community. One App.</div>
+                <div style="font-size:15.5px;line-height:1.5;color:rgba(247,244,236,0.72);margin-top:10px;max-width:270px">Powering safer, smarter and connected societies.</div>
+                <div style="flex:1"></div>
+                <div style="width:100%;background:#FFFFFF;border-radius:20px;padding:16px 18px;display:flex;align-items:center;gap:14px;box-shadow:0 20px 44px rgba(6,18,12,0.4)">
+                  <div style="width:42px;height:42px;border-radius:12px;flex-shrink:0;background:#F6ECD8;display:flex;align-items:center;justify-content:center">
+                    <svg width="22" height="22" viewBox="0 0 24 24"><path d="M12 2l8 3.6v5.2c0 5.2-3.4 8.9-8 10.6-4.6-1.7-8-5.4-8-10.6V5.6L12 2z" fill="none" stroke="#E7A33C" stroke-width="1.8"></path><path d="M8.6 12l2.3 2.3 4.5-4.6" fill="none" stroke="#E7A33C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                  </div>
+                  <div style="text-align:left">
+                    <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:16.5px;font-weight:800;color:#17251D;line-height:1.2">Trusted by 1000+ communities</div>
+                    <div style="font-size:13px;color:#75806F;margin-top:2px">to simplify daily operations</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="width:25%;height:100%;flex-shrink:0;position:relative;overflow:hidden;background:#0F2C1F">
+              <div style="position:absolute;inset:0"><image-slot id="agora-approve" shape="rect" fit="contain" src="./slide2-hologram.png" placeholder="Drop the slide-2 illustration"></image-slot></div>
+              <div style="position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg, rgba(10,26,18,0.5) 0%, rgba(10,26,18,0.12) 24%, rgba(10,26,18,0.5) 60%, rgba(10,26,18,0.93) 90%)"></div>
+              <div style="position:relative;height:100%;display:flex;flex-direction:column;align-items:center;padding:92px 26px 150px;box-sizing:border-box">
+                <div style="width:100%;background:#F7F4EC;border-radius:24px;padding:18px;box-shadow:0 26px 54px rgba(6,18,12,0.55);animation:agFade 0.5s ease">
+                  <div style="display:flex;align-items:center;gap:7px">
+                    <div style="width:8px;height:8px;border-radius:99px;background:#E7A33C;animation:agDot 1.2s infinite"></div>
+                    <div style="font-size:10px;letter-spacing:0.16em;font-weight:700;color:#9A6B14">GATE 1 · WAITING NOW</div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:13px;margin-top:14px">
+                    <div style="width:50px;height:50px;border-radius:15px;background:#E7A33C;display:flex;align-items:center;justify-content:center;color:#10261B;animation:agPulse 1.9s infinite"><svg width="27" height="27" viewBox="0 0 24 24" fill="none"><path d="M4 8l8-4 8 4v9l-8 4-8-4V8z" stroke="#10261B" stroke-width="1.8" stroke-linejoin="round"></path><path d="M4 8l8 4 8-4M12 12v9" stroke="#10261B" stroke-width="1.8" stroke-linejoin="round"></path><path d="M8 6l8 4" stroke="#10261B" stroke-width="1.8" stroke-linecap="round"></path></svg></div>
+                    <div style="flex:1;text-align:left">
+                      <div style="font-size:16.5px;font-weight:700;color:#17251D">Ravi Kumar</div>
+                      <div style="font-size:13px;color:#75806F;margin-top:1px">Swiggy · Food delivery</div>
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:10px;margin-top:16px">
+                    <div style="flex:1;height:46px;border-radius:14px;background:#F0E7E4;display:flex;align-items:center;justify-content:center;gap:7px;font-size:14.5px;font-weight:700;color:#C0392B"><svg width="14" height="14" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="#C0392B" stroke-width="2.6" stroke-linecap="round"></path></svg>Deny</div>
+                    <div style="flex:1.3;height:46px;border-radius:14px;background:#1F9D5C;display:flex;align-items:center;justify-content:center;gap:7px;font-size:14.5px;font-weight:700;color:#FFFFFF"><svg width="15" height="15" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 7" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg>Approve</div>
+                  </div>
+                </div>
+                <div style="flex:1"></div>
+                <div style="text-align:center">
+                  <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:28px;font-weight:800;line-height:1.15">Approve visitors in a tap</div>
+                  <div style="font-size:15px;line-height:1.55;color:rgba(247,244,236,0.66);margin-top:12px;max-width:290px;text-wrap:pretty">Every guest, delivery and cab is verified at the gate — you clear them from your phone in seconds.</div>
+                </div>
+              </div>
+            </div>
+            <div style="width:25%;height:100%;flex-shrink:0;position:relative;overflow:hidden;background:#0F2C1F">
+              <div style="position:absolute;inset:0"><image-slot id="agora-community" shape="rect" fit="contain" src="./slide3-community.png" placeholder="Drop the community illustration"></image-slot></div>
+              <div style="position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg, rgba(10,26,18,0.45) 0%, rgba(10,26,18,0.1) 22%, rgba(10,26,18,0.5) 58%, rgba(10,26,18,0.93) 90%)"></div>
+              <div style="position:relative;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:92px 26px 150px;box-sizing:border-box">
+                <div style="text-align:center">
+                  <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:28px;font-weight:800;line-height:1.15">Your community, in one place</div>
+                  <div style="font-size:15px;line-height:1.55;color:rgba(247,244,236,0.66);margin-top:12px;max-width:290px;text-wrap:pretty">Notices, polls and society updates land in a single shared feed — never miss what matters.</div>
+                </div>
+              </div>
+            </div>
+            <div style="width:25%;height:100%;flex-shrink:0;position:relative;overflow:hidden;background:#0F2C1F">
+              <div style="position:absolute;inset:0"><image-slot id="agora-dues" shape="rect" fit="contain" src="./slide4-dues.png" placeholder="Drop the dues illustration"></image-slot></div>
+              <div style="position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg, rgba(10,26,18,0.45) 0%, rgba(10,26,18,0.1) 22%, rgba(10,26,18,0.5) 58%, rgba(10,26,18,0.93) 90%)"></div>
+              <div style="position:relative;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:92px 26px 168px;box-sizing:border-box">
+                <div style="text-align:center">
+                  <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:28px;font-weight:800;line-height:1.15">Dues, minus the hassle</div>
+                  <div style="font-size:15px;line-height:1.55;color:rgba(247,244,236,0.66);margin-top:12px;max-width:290px;text-wrap:pretty">Pay maintenance and keep every receipt in one place — no paperwork, no follow-ups.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <sc-if value="{{ showSkip }}" hint-placeholder-val="{{ true }}">
+            <div onClick="{{ skip }}" style="position:absolute;top:70px;right:22px;z-index:30;cursor:pointer;font-size:14px;font-weight:600;color:rgba(247,244,236,0.7);padding:6px 4px" style-hover="color:#F7F4EC">Skip</div>
+          </sc-if>
+          <div style="position:absolute;left:0;right:0;bottom:0;z-index:30;padding:0 24px 40px;box-sizing:border-box">
+            <sc-if value="{{ isLast }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;justify-content:center;gap:7px;margin-bottom:20px">
+                <sc-for list="{{ dots }}" as="d" hint-placeholder-count="4"><div onClick="{{ d.go }}" style="height:8px;border-radius:99px;cursor:pointer;transition:width 0.35s, background 0.35s;width:{{ d.w }};background:{{ d.bg }}"></div></sc-for>
+              </div>
+              <div onClick="{{ obPrimary }}" style="height:56px;border-radius:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;background:#E7A33C;color:#10261B;font-size:16px;font-weight:700;box-shadow:0 14px 34px rgba(231,163,60,0.3)" style-hover="background:#F0B04E">Get started<svg width="18" height="18" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" stroke="#10261B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+            </sc-if>
+            <sc-if value="{{ notLast }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div style="display:flex;gap:7px"><sc-for list="{{ dots }}" as="d" hint-placeholder-count="4"><div onClick="{{ d.go }}" style="height:8px;border-radius:99px;cursor:pointer;transition:width 0.35s, background 0.35s;width:{{ d.w }};background:{{ d.bg }}"></div></sc-for></div>
+                <div onClick="{{ obPrimary }}" style="width:60px;height:60px;border-radius:99px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:#E7A33C;box-shadow:0 12px 30px rgba(231,163,60,0.32)" style-hover="background:#F0B04E"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" stroke="#10261B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ LOGIN ══════════ -->
+      <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
+        <div style="height:100%;overflow:auto;position:relative;background:linear-gradient(180deg,#0E241A 0%,#0B1C13 62%,#091810 100%);color:#F7F4EC;animation:agFade 0.4s ease">
+          <div style="position:absolute;top:0;left:0;right:0;height:400px;overflow:hidden">
+            <div style="position:absolute;inset:0"><image-slot id="agora-login-hero" shape="rect" fit="cover" src="./login-hero.png" placeholder="Drop the gate-house illustration"></image-slot></div>
+            <div style="position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg, rgba(9,24,16,0.45) 0%, rgba(9,24,16,0.05) 24%, rgba(9,24,16,0.55) 70%, #0B1C13 96%)"></div>
+          </div>
+          <div style="position:relative;min-height:100%;box-sizing:border-box;padding:66px 24px 40px;display:flex;flex-direction:column">
+            <div style="display:flex;align-items:center;gap:13px">
+              <div style="width:60px;height:60px;border-radius:16px;background:rgba(16,38,27,0.5);border:1.5px solid rgba(231,163,60,0.55);display:flex;align-items:center;justify-content:center;box-shadow:0 0 24px rgba(231,163,60,0.28)">
+                <svg width="34" height="31" viewBox="0 0 74 66" fill="none">
+                  <defs><linearGradient id="lgg" x1="10" y1="0" x2="64" y2="66" gradientUnits="userSpaceOnUse"><stop stop-color="#F3B75B"></stop><stop offset="1" stop-color="#D0871F"></stop></linearGradient></defs>
+                  <path fill-rule="evenodd" clip-rule="evenodd" fill="url(#lgg)" d="M31.6 4.7a6 6 0 0 1 10.8 0l29.4 52.9c2.2 4-0.7 8.9-5.4 8.9H7.6c-4.7 0-7.6-4.9-5.4-8.9L31.6 4.7ZM37 26.5 26.1 46.1c-1.1 2 0.3 4.4 2.7 4.4h16.4c2.4 0 3.8-2.4 2.7-4.4L37 26.5Z"></path>
+                </svg>
+              </div>
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:28px;font-weight:800;color:#FDFBF5">Agora</div>
+            </div>
+            <div style="height:150px"></div>
+            <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:38px;font-weight:800;line-height:1.1">Welcome back</div>
+            <div style="font-size:15.5px;color:rgba(247,244,236,0.6);margin-top:10px;line-height:1.5">{{ subheading }}</div>
+
+            <div style="display:flex;align-items:center;gap:14px;margin-top:26px;background:rgba(255,255,255,0.035);border:1px solid rgba(247,244,236,0.12);border-radius:18px;padding:13px 15px">
+              <div style="width:44px;height:44px;border-radius:12px;flex-shrink:0;background:rgba(31,157,92,0.16);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="5.5" width="18" height="13" rx="2.5" stroke="#E7A33C" stroke-width="1.8"></rect><path d="M4 7l8 6 8-6" stroke="#E7A33C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:rgba(247,244,236,0.5)">EMAIL OR PHONE</div>
+                <input value="{{ identifier }}" onChange="{{ setId }}" placeholder="you@email.com or 98765 43210" style="width:100%;box-sizing:border-box;margin-top:4px;padding:0;border:none;background:transparent;font-size:16px;font-family:'Schibsted Grotesk',sans-serif;color:#F7F4EC;outline:none"></input>
+              </div>
+            </div>
+
+            <sc-if value="{{ isPassword }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:center;gap:14px;margin-top:16px;background:rgba(255,255,255,0.035);border:1px solid rgba(247,244,236,0.12);border-radius:18px;padding:13px 15px">
+                <div style="width:44px;height:44px;border-radius:12px;flex-shrink:0;background:rgba(31,157,92,0.16);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.5" stroke="#E7A33C" stroke-width="1.8"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" stroke="#E7A33C" stroke-width="1.8"></path></svg></div>
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;align-items:center;justify-content:space-between">
+                    <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:rgba(247,244,236,0.5)">PASSWORD</div>
+                    <div onClick="{{ forgot }}" style="font-size:12.5px;font-weight:700;color:#E7A33C;cursor:pointer">Forgot password?</div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                    <input value="{{ password }}" onChange="{{ setPw }}" type="{{ pwType }}" placeholder="Enter your password" style="flex:1;min-width:0;padding:0;border:none;background:transparent;font-size:16px;font-family:'Schibsted Grotesk',sans-serif;color:#F7F4EC;outline:none"></input>
+                    <div onClick="{{ togglePw }}" style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+                      <sc-if value="{{ showPw }}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z" stroke="rgba(247,244,236,0.55)" stroke-width="1.8"></path><circle cx="12" cy="12" r="2.6" stroke="rgba(247,244,236,0.55)" stroke-width="1.8"></circle></svg></sc-if>
+                      <sc-if value="{{ hidePw }}" hint-placeholder-val="{{ true }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 4l16 16" stroke="rgba(247,244,236,0.55)" stroke-width="1.8" stroke-linecap="round"></path><path d="M9.5 5.4A9.9 9.9 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3 3.7M6.5 6.9C3.7 8.6 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 3.5-.6" stroke="rgba(247,244,236,0.55)" stroke-width="1.8" stroke-linecap="round"></path></sc-if>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div onClick="{{ doLogin }}" style="margin-top:24px;height:58px;border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;background:{{ loginBg }};color:#10261B;font-size:17px;font-weight:700;box-shadow:0 0 32px rgba(231,163,60,0.4),0 14px 30px rgba(231,163,60,0.22)" style-hover="background:#F0B04E">
+                <sc-if value="{{ busy }}" hint-placeholder-val="{{ false }}"><div style="width:16px;height:16px;border-radius:99px;border:2.5px solid rgba(16,38,27,0.3);border-top-color:#10261B;animation:agSpin 0.7s linear infinite"></div></sc-if>
+                {{ loginLabel }}
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ isOtp }}" hint-placeholder-val="{{ false }}">
+              <sc-if value="{{ otpNotSent }}" hint-placeholder-val="{{ true }}">
+                <div style="font-size:13.5px;color:rgba(247,244,236,0.55);margin-top:18px;line-height:1.5">We'll text a 6-digit code to verify it's you — no password needed.</div>
+                <div onClick="{{ sendOtp }}" style="margin-top:22px;height:58px;border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;background:{{ sendBg }};color:#10261B;font-size:17px;font-weight:700;box-shadow:0 0 32px rgba(231,163,60,0.4),0 14px 30px rgba(231,163,60,0.22)" style-hover="background:#F0B04E">
+                  <sc-if value="{{ busy }}" hint-placeholder-val="{{ false }}"><div style="width:16px;height:16px;border-radius:99px;border:2.5px solid rgba(16,38,27,0.3);border-top-color:#10261B;animation:agSpin 0.7s linear infinite"></div></sc-if>
+                  {{ sendLabel }}
+                </div>
+              </sc-if>
+              <sc-if value="{{ otpSent }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:rgba(247,244,236,0.5);margin-top:24px">ENTER CODE</div>
+                <div style="font-size:13.5px;color:rgba(247,244,236,0.55);margin-top:6px">Sent to {{ identifier }}</div>
+                <div style="position:relative;margin-top:14px">
+                  <input value="{{ otp }}" onChange="{{ setOtp }}" inputmode="numeric" maxlength="6" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px"></input>
+                  <div style="display:flex;gap:8px;pointer-events:none">
+                    <sc-for list="{{ otpCells }}" as="c" hint-placeholder-count="6"><div style="flex:1;height:56px;border-radius:14px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800;color:#F7F4EC;border:1.5px solid {{ c.border }}">{{ c.d }}</div></sc-for>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;margin-top:16px;font-size:13.5px;color:rgba(247,244,236,0.55)">Didn't get it? <span onClick="{{ resend }}" style="font-weight:700;color:{{ resendColor }};cursor:{{ resendCursor }}">{{ resendLabel }}</span></div>
+                <div onClick="{{ verifyOtp }}" style="margin-top:24px;height:58px;border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;background:{{ verifyBg }};color:#10261B;font-size:17px;font-weight:700;box-shadow:0 0 32px rgba(231,163,60,0.4),0 14px 30px rgba(231,163,60,0.22)" style-hover="background:#F0B04E">
+                  <sc-if value="{{ busy }}" hint-placeholder-val="{{ false }}"><div style="width:16px;height:16px;border-radius:99px;border:2.5px solid rgba(16,38,27,0.3);border-top-color:#10261B;animation:agSpin 0.7s linear infinite"></div></sc-if>
+                  {{ verifyLabel }}
+                </div>
+              </sc-if>
+            </sc-if>
+
+            <div style="display:flex;align-items:center;gap:14px;margin-top:22px">
+              <div style="flex:1;height:1px;background:rgba(247,244,236,0.14)"></div>
+              <div style="font-size:12.5px;color:rgba(247,244,236,0.45);font-weight:600">or</div>
+              <div style="flex:1;height:1px;background:rgba(247,244,236,0.14)"></div>
+            </div>
+            <div onClick="{{ switchMode }}" style="margin-top:22px;height:56px;border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;background:transparent;border:1.5px solid rgba(247,244,236,0.22);color:#F7F4EC;font-size:15.5px;font-weight:700" style-hover="border-color:rgba(247,244,236,0.5)">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M12 2.5l7.5 3v5.2c0 4.6-3.1 8.1-7.5 9.6-4.4-1.5-7.5-5-7.5-9.6V5.5l7.5-3z" stroke="#E7A33C" stroke-width="1.8" fill="none" stroke-linejoin="round"></path><path d="M9 12l2 2 4-4" stroke="#E7A33C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg>
+              {{ switchLabel }}
+            </div>
+
+            <div style="flex:1;min-height:26px"></div>
+            <div style="display:flex;justify-content:center;margin-bottom:16px">
+              <svg width="60" height="60" viewBox="0 0 24 24" fill="none" style="filter:drop-shadow(0 8px 18px rgba(31,157,92,0.32))"><path d="M12 2.5l7.5 3v5.2c0 4.6-3.1 8.1-7.5 9.6-4.4-1.5-7.5-5-7.5-9.6V5.5l7.5-3z" fill="rgba(31,157,92,0.2)" stroke="rgba(76,201,138,0.55)" stroke-width="1"></path><path d="M8.6 12l2.3 2.3 4.5-4.6" stroke="#4CC98A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg>
+            </div>
+            <div style="text-align:center;font-size:13px;color:rgba(247,244,236,0.45)">Trouble signing in? <span onClick="{{ contact }}" style="color:#E7A33C;font-weight:700;cursor:pointer">Contact society office</span></div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ MAIN APP ══════════ -->
+      <sc-if value="{{ isApp }}" hint-placeholder-val="{{ false }}">
+        <div style="height:100%;display:flex;flex-direction:column;position:relative;background:#F7F4EC;color:#17251D">
+          <sc-if value="{{ showBanner }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ respond }}" style="position:absolute;top:66px;left:12px;right:12px;z-index:40;cursor:pointer;background:rgba(16,38,27,0.96);border-radius:20px;padding:13px 14px;display:flex;gap:12px;align-items:center;box-shadow:0 14px 34px rgba(10,25,17,0.35);animation:slideDown 0.45s cubic-bezier(0.2,0.9,0.3,1)">
+              <div style="width:42px;height:42px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:18px;color:#10261B;background:{{ incomingBg }}">{{ incomingInitial }}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:10px;letter-spacing:0.14em;font-weight:700;color:#E7A33C">AGORA · GATE 1 · NOW</div>
+                <div style="font-size:15px;font-weight:700;color:#F7F4EC;margin-top:2px">{{ incomingName }} is at the gate</div>
+                <div style="font-size:12px;color:rgba(247,244,236,0.65);margin-top:1px">Tap to respond</div>
+              </div>
+              <div style="width:9px;height:9px;border-radius:99px;background:#E7A33C;animation:dotPulse 1.2s infinite"></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+            <div data-screen-label="Home" style="flex:1;min-height:0;overflow:auto;padding:70px 16px 118px;box-sizing:border-box">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:8px">
+                <div>
+                  <div style="font-size:13px;color:#75806F;font-weight:500">Good evening,</div>
+                  <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:28px;font-weight:800;line-height:1.1">Ananya</div>
+                </div>
+                <div style="width:46px;height:46px;border-radius:99px;background:#E7A33C;display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:19px;color:#10261B">A</div>
+              </div>
+              <div style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:600;color:#3E4A40">B-1204 · Maple Tower · Serenity Greens</div>
+              <sc-if value="{{ gateRinging }}" hint-placeholder-val="{{ false }}">
+                <div onClick="{{ respond }}" style="margin-top:18px;cursor:pointer;background:#10261B;border-radius:24px;padding:18px;color:#F7F4EC;box-shadow:0 16px 36px rgba(16,38,27,0.28)">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <div style="width:8px;height:8px;border-radius:99px;background:#E7A33C;animation:dotPulse 1.2s infinite"></div>
+                    <div style="font-size:11px;letter-spacing:0.16em;font-weight:700;color:#E7A33C">WAITING AT GATE 1</div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:14px;margin-top:14px">
+                    <div style="width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:22px;color:#10261B;background:{{ incomingBg }}">{{ incomingInitial }}</div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:17px;font-weight:700">{{ incomingName }}</div>
+                      <div style="font-size:13px;color:rgba(247,244,236,0.65);margin-top:2px">{{ incomingOrg }}</div>
+                    </div>
+                  </div>
+                  <div style="margin-top:16px;background:#F7F4EC;color:#10261B;border-radius:16px;height:48px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">Respond</div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ gateQuiet }}" hint-placeholder-val="{{ true }}">
+                <div style="margin-top:18px;background:#10261B;border-radius:24px;padding:20px;color:#F7F4EC">
+                  <div style="display:flex;align-items:center;gap:12px">
+                    <svg width="26" height="26" viewBox="0 0 24 24"><path d="M12 2l8 3.6v5.2c0 5.2-3.4 8.9-8 10.6-4.6-1.7-8-5.4-8-10.6V5.6L12 2z" fill="none" stroke="#E7A33C" stroke-width="1.8"></path><path d="M8.6 12l2.3 2.3 4.5-4.6" fill="none" stroke="#E7A33C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                    <div>
+                      <div style="font-size:16px;font-weight:700">All quiet at the gate</div>
+                      <div style="font-size:13px;color:rgba(247,244,236,0.6);margin-top:2px">Last visitor left at 4:12 PM</div>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ gateResolved }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:18px;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:24px;padding:18px">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <div style="width:10px;height:10px;border-radius:99px;flex-shrink:0;background:{{ resolvedDot }}"></div>
+                    <div style="font-size:14.5px;font-weight:600;color:#17251D">{{ resolvedLine }}</div>
+                  </div>
+                  <div onClick="{{ goGate }}" style="margin-top:12px;font-size:13.5px;font-weight:700;color:#1D5C45;cursor:pointer">View gate log →</div>
+                </div>
+              </sc-if>
+              <div style="display:flex;gap:12px;margin-top:14px">
+                <div onClick="{{ openPreapprove }}" style="flex:1;cursor:pointer;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:20px;padding:16px;min-height:56px" style-hover="border-color:#1D5C45">
+                  <div style="width:34px;height:34px;border-radius:12px;background:#E9F1EC;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="#1D5C45" stroke-width="2.4" stroke-linecap="round"></path></svg></div>
+                  <div style="font-size:14.5px;font-weight:700;margin-top:10px">Pre-approve a guest</div>
+                  <div style="font-size:12.5px;color:#75806F;margin-top:2px">Skip the gate call</div>
+                </div>
+                <div onClick="{{ goGate }}" style="flex:1;cursor:pointer;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:20px;padding:16px;min-height:56px" style-hover="border-color:#1D5C45">
+                  <div style="width:34px;height:34px;border-radius:12px;background:#F6ECD8;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h9" stroke="#9A6B14" stroke-width="2.2" stroke-linecap="round"></path></svg></div>
+                  <div style="font-size:14.5px;font-weight:700;margin-top:10px">Gate log</div>
+                  <div style="font-size:12.5px;color:#75806F;margin-top:2px">Today's movement</div>
+                </div>
+              </div>
+              <sc-if value="{{ duesUnpaid }}" hint-placeholder-val="{{ true }}">
+                <div onClick="{{ goDues }}" style="margin-top:12px;cursor:pointer;background:#F6ECD8;border:1px solid #EBD9B4;border-radius:18px;padding:14px 16px;display:flex;align-items:center;gap:12px" style-hover="border-color:#E7A33C">
+                  <div style="width:34px;height:34px;border-radius:12px;background:#E7A33C;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:16px;color:#10261B">₹</div>
+                  <div style="flex:1">
+                    <div style="font-size:14px;font-weight:700;color:#5C4408">₹8,450 maintenance due</div>
+                    <div style="font-size:12px;color:#9A6B14;margin-top:1px">Q2 · Pay by 25 July to skip the late fee</div>
+                  </div>
+                  <div style="font-size:13px;font-weight:700;color:#9A6B14">Pay →</div>
+                </div>
+              </sc-if>
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:26px">
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:17px;font-weight:700">At your gate today</div>
+                <div onClick="{{ goGate }}" style="font-size:13px;font-weight:700;color:#1D5C45;cursor:pointer">View all</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+                <sc-for list="{{ activityHome }}" as="item" hint-placeholder-count="3">
+                  <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:18px;padding:13px 14px;display:flex;align-items:center;gap:12px">
+                    <div style="width:40px;height:40px;border-radius:13px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:16px;color:#10261B;background:{{ item.avatarBg }}">{{ item.initial }}</div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ item.name }}</div>
+                      <div style="font-size:12.5px;color:#75806F;margin-top:1px">{{ item.sub }}</div>
+                    </div>
+                    <div style="text-align:right;flex-shrink:0">
+                      <div style="display:inline-block;font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;background:{{ item.statusBg }};color:{{ item.statusColor }}">{{ item.statusLabel }}</div>
+                      <div style="font-size:11px;color:#A9A794;margin-top:4px">{{ item.time }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isGate }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="Gate log" style="flex:1;min-height:0;overflow:auto;padding:70px 16px 118px;box-sizing:border-box">
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:26px;font-weight:800;margin-top:8px">Gate log</div>
+              <div style="font-size:13px;color:#75806F;margin-top:3px">Today, 13 July · Gate 1</div>
+              <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+                <sc-for list="{{ filterChips }}" as="chip" hint-placeholder-count="4"><button onClick="{{ chip.pick }}" style="padding:9px 15px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Schibsted Grotesk',sans-serif;background:{{ chip.bg }};color:{{ chip.color }};border:1.5px solid {{ chip.border }}">{{ chip.label }}</button></sc-for>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">
+                <sc-for list="{{ activityAll }}" as="item" hint-placeholder-count="4">
+                  <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:18px;padding:13px 14px;display:flex;align-items:center;gap:12px">
+                    <div style="width:40px;height:40px;border-radius:13px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:16px;color:#10261B;background:{{ item.avatarBg }}">{{ item.initial }}</div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ item.name }}</div>
+                      <div style="font-size:12.5px;color:#75806F;margin-top:1px">{{ item.sub }}</div>
+                    </div>
+                    <div style="text-align:right;flex-shrink:0">
+                      <div style="display:inline-block;font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;background:{{ item.statusBg }};color:{{ item.statusColor }}">{{ item.statusLabel }}</div>
+                      <div style="font-size:11px;color:#A9A794;margin-top:4px">{{ item.time }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isCommunity }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="Community" style="flex:1;min-height:0;overflow:auto;padding:70px 16px 118px;box-sizing:border-box">
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:26px;font-weight:800;margin-top:8px">Community</div>
+              <div style="font-size:13px;color:#75806F;margin-top:3px">Serenity Greens · 240 homes</div>
+              <div style="display:flex;background:#EBE6D8;border-radius:14px;padding:4px;margin-top:16px">
+                <div onClick="{{ segNotices }}" style="flex:1;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;cursor:pointer;background:{{ segNBg }};color:{{ segNColor }}">Notices</div>
+                <div onClick="{{ segPolls }}" style="flex:1;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;cursor:pointer;background:{{ segPBg }};color:{{ segPColor }}">Polls</div>
+              </div>
+              <sc-if value="{{ commNotices }}" hint-placeholder-val="{{ true }}">
+                <div onClick="{{ openPinned }}" style="margin-top:16px;cursor:pointer;background:#10261B;border-radius:22px;padding:18px;color:#F7F4EC">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <svg width="13" height="13" viewBox="0 0 24 24"><path d="M12 2l2.4 6.2H21l-5.2 4 2 6.6-5.8-4.1-5.8 4.1 2-6.6-5.2-4h6.6L12 2z" fill="#E7A33C"></path></svg>
+                    <div style="font-size:10.5px;letter-spacing:0.16em;font-weight:700;color:#E7A33C">PINNED · {{ pinnedCat }}</div>
+                  </div>
+                  <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:700;line-height:1.3;margin-top:10px">{{ pinnedTitle }}</div>
+                  <div style="font-size:12.5px;color:rgba(247,244,236,0.6);margin-top:8px">{{ pinnedMeta }} · Read more →</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+                  <sc-for list="{{ noticesList }}" as="n" hint-placeholder-count="3">
+                    <div onClick="{{ n.open }}" style="cursor:pointer;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:18px;padding:15px 16px" style-hover="border-color:#1D5C45">
+                      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+                        <div style="display:inline-block;font-size:10px;letter-spacing:0.12em;font-weight:700;padding:4px 9px;border-radius:999px;background:{{ n.catBg }};color:{{ n.catColor }}">{{ n.cat }}</div>
+                        <div style="font-size:11.5px;color:#A9A794">{{ n.date }}</div>
+                      </div>
+                      <div style="font-size:15px;font-weight:600;line-height:1.35;margin-top:9px">{{ n.title }}</div>
+                      <div style="font-size:12.5px;color:#75806F;margin-top:5px">{{ n.by }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ commPolls }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:16px;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:22px;padding:18px">
+                  <div style="display:flex;align-items:center;justify-content:space-between">
+                    <div style="display:inline-flex;align-items:center;gap:6px;font-size:10.5px;letter-spacing:0.14em;font-weight:700;color:#1F9D5C"><div style="width:7px;height:7px;border-radius:99px;background:#1F9D5C;animation:dotPulse 1.4s infinite"></div>ACTIVE POLL</div>
+                    <div style="font-size:11.5px;color:#A9A794">Closes Sun</div>
+                  </div>
+                  <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:17.5px;font-weight:700;line-height:1.3;margin-top:12px">Should the clubhouse stay open till 11 PM on weekends?</div>
+                  <div style="margin-top:6px">
+                    <sc-for list="{{ pollOptions }}" as="opt" hint-placeholder-count="3">
+                      <div onClick="{{ opt.pick }}" style="position:relative;overflow:hidden;border-radius:14px;margin-top:10px;cursor:pointer;min-height:48px;border:1.5px solid {{ opt.border }};background:#FFFFFF">
+                        <div style="position:absolute;top:0;left:0;bottom:0;background:#E9F1EC;width:{{ opt.width }};transition:width 0.6s cubic-bezier(0.2,0.9,0.3,1)"></div>
+                        <div style="position:relative;display:flex;align-items:center;justify-content:space-between;padding:13px 14px;gap:10px">
+                          <div style="display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:600;color:#17251D">{{ opt.label }}<sc-if value="{{ opt.check }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 7" stroke="#1D5C45" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></sc-if></div>
+                          <div style="font-size:13px;font-weight:700;color:#1D5C45">{{ opt.pctText }}</div>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="font-size:12.5px;color:#75806F;margin-top:12px">{{ pollFooter }}</div>
+                </div>
+                <div style="margin-top:12px;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:22px;padding:18px">
+                  <div style="display:flex;align-items:center;justify-content:space-between">
+                    <div style="font-size:10.5px;letter-spacing:0.14em;font-weight:700;color:#A9A794">CLOSED · 9 JUL</div>
+                    <div style="font-size:11.5px;color:#A9A794">204 votes</div>
+                  </div>
+                  <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:700;line-height:1.3;margin-top:10px;color:#3E4A40">Hire a second gardener for the central lawn?</div>
+                  <div style="margin-top:6px">
+                    <sc-for list="{{ closedOptions }}" as="opt" hint-placeholder-count="2">
+                      <div style="position:relative;overflow:hidden;border-radius:12px;margin-top:8px;border:1px solid #EEEAE0">
+                        <div style="position:absolute;top:0;left:0;bottom:0;background:#EEEDE4;width:{{ opt.width }}"></div>
+                        <div style="position:relative;display:flex;align-items:center;justify-content:space-between;padding:10px 13px">
+                          <div style="font-size:13.5px;font-weight:{{ opt.weight }};color:#3E4A40">{{ opt.label }}</div>
+                          <div style="font-size:12.5px;font-weight:700;color:#75806F">{{ opt.pctText }}</div>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isNotice }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="Notice detail" style="flex:1;min-height:0;overflow:auto;padding:70px 20px 50px;box-sizing:border-box">
+              <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+                <div onClick="{{ goCommunity }}" style="width:38px;height:38px;border-radius:99px;background:#FFFFFF;border:1px solid #E5E0D2;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5l-7 7 7 7" stroke="#17251D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+                <div style="display:inline-block;font-size:10px;letter-spacing:0.12em;font-weight:700;padding:5px 10px;border-radius:999px;background:{{ noticeCatBg }};color:{{ noticeCatColor }}">{{ noticeCat }}</div>
+              </div>
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:24px;font-weight:800;line-height:1.25;margin-top:18px">{{ noticeTitle }}</div>
+              <div style="font-size:13px;color:#75806F;margin-top:10px">{{ noticeMeta }}</div>
+              <div style="height:1px;background:#E5E0D2;margin:18px 0"></div>
+              <sc-for list="{{ noticeParas }}" as="para" hint-placeholder-count="2"><div style="font-size:15px;line-height:1.65;color:#2C3830;margin-bottom:14px">{{ para.text }}</div></sc-for>
+              <div style="margin-top:10px;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+                <div style="width:38px;height:38px;border-radius:99px;background:#E9F1EC;display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:700;color:#1D5C45">S</div>
+                <div>
+                  <div style="font-size:13.5px;font-weight:700">Society Office</div>
+                  <div style="font-size:12px;color:#75806F">Serenity Greens Admin</div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isRequest }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="Visitor request" style="flex:1;min-height:0;overflow:auto;padding:78px 22px 40px;box-sizing:border-box;background:#0F2C1F;color:#F7F4EC;display:flex;flex-direction:column">
+              <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;color:rgba(247,244,236,0.6)">
+                <div style="display:flex;align-items:center;gap:7px"><div style="width:7px;height:7px;border-radius:99px;background:#E7A33C;animation:dotPulse 1.2s infinite"></div>Gate 1 · Rajesh K</div>
+                <div>6:41 PM</div>
+              </div>
+              <div style="text-align:center;margin-top:34px;animation:fadeUp 0.4s ease">
+                <div style="width:104px;height:104px;border-radius:99px;margin:0 auto;display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:42px;color:#10261B;background:{{ incomingBg }};animation:ringPulse 1.8s infinite"> {{ incomingInitial }}</div>
+                <div style="display:inline-block;margin-top:22px;font-size:10.5px;letter-spacing:0.16em;font-weight:700;color:#E7A33C;border:1px solid rgba(231,163,60,0.4);border-radius:999px;padding:5px 12px">{{ incomingTag }}</div>
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:27px;font-weight:800;margin-top:12px">{{ incomingName }}</div>
+                <div style="font-size:15px;color:rgba(247,244,236,0.65);margin-top:5px">{{ incomingOrg }}</div>
+                <div style="font-size:13px;color:rgba(247,244,236,0.45);margin-top:2px">{{ incomingDetail }}</div>
+              </div>
+              <div style="margin-top:26px;background:rgba(247,244,236,0.07);border:1px solid rgba(247,244,236,0.1);border-radius:18px;padding:14px 16px">
+                <div style="font-size:10.5px;letter-spacing:0.14em;font-weight:700;color:rgba(247,244,236,0.45)">GUARD'S NOTE</div>
+                <div style="font-size:14.5px;line-height:1.5;margin-top:6px;color:rgba(247,244,236,0.9)">{{ incomingNote }}</div>
+              </div>
+              <div style="flex:1"></div>
+              <div style="display:flex;gap:12px;margin-top:26px">
+                <div onClick="{{ deny }}" style="flex:1;height:58px;border-radius:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(247,244,236,0.1);border:1px solid rgba(247,244,236,0.16);font-size:16px;font-weight:700;color:#FF9A8D" style-hover="background:rgba(247,244,236,0.16)"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="#FF9A8D" stroke-width="2.6" stroke-linecap="round"></path></svg>Deny</div>
+                <div onClick="{{ approve }}" style="flex:1.35;height:58px;border-radius:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;background:#1F9D5C;font-size:16px;font-weight:700;color:#FFFFFF;box-shadow:0 10px 26px rgba(31,157,92,0.35)" style-hover="background:#23AD66"><svg width="17" height="17" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 7" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg>Approve</div>
+              </div>
+              <sc-if value="{{ isDeliveryIncoming }}" hint-placeholder-val="{{ false }}">
+                <div onClick="{{ leaveAtGate }}" style="margin-top:12px;height:50px;border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14.5px;font-weight:600;color:#E7A33C;border:1px dashed rgba(231,163,60,0.5)" style-hover="background:rgba(231,163,60,0.08)">Ask to leave at the gate</div>
+              </sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isDecision }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="Decision" style="flex:1;min-height:0;overflow:auto;padding:78px 24px 40px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;text-align:center">
+              <div style="flex:1"></div>
+              <div style="width:96px;height:96px;border-radius:99px;display:flex;align-items:center;justify-content:center;animation:popIn 0.35s cubic-bezier(0.2,0.9,0.3,1.4);background:{{ decisionBg }}">
+                <sc-if value="{{ outcomeApproved }}" hint-placeholder-val="{{ true }}"><svg width="42" height="42" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 7" stroke="#1F9D5C" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></sc-if>
+                <sc-if value="{{ outcomeDenied }}" hint-placeholder-val="{{ false }}"><svg width="38" height="38" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="#D2483F" stroke-width="2.8" stroke-linecap="round"></path></svg></sc-if>
+                <sc-if value="{{ outcomeGate }}" hint-placeholder-val="{{ false }}"><svg width="40" height="40" viewBox="0 0 24 24"><path d="M4 8l8-4 8 4v9l-8 4-8-4V8z" fill="none" stroke="#9A6B14" stroke-width="1.9" stroke-linejoin="round"></path><path d="M4 8l8 4 8-4M12 12v9" fill="none" stroke="#9A6B14" stroke-width="1.9" stroke-linejoin="round"></path></svg></sc-if>
+              </div>
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:25px;font-weight:800;margin-top:24px;line-height:1.2">{{ decisionTitle }}</div>
+              <div style="font-size:14.5px;color:#75806F;margin-top:10px;line-height:1.55;max-width:280px">{{ decisionSub }}</div>
+              <div style="margin-top:20px;display:inline-flex;align-items:center;gap:8px;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:999px;padding:8px 14px;font-size:12.5px;font-weight:600;color:#3E4A40"><svg width="13" height="13" viewBox="0 0 24 24"><path d="M12 6v6l4 2" stroke="#75806F" stroke-width="2" stroke-linecap="round" fill="none"></path><circle cx="12" cy="12" r="9" stroke="#75806F" stroke-width="2" fill="none"></circle></svg>{{ decisionMeta }}</div>
+              <div style="flex:1.4"></div>
+              <div onClick="{{ decisionDone }}" style="width:100%;height:54px;border-radius:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:#10261B;color:#F7F4EC;font-size:15.5px;font-weight:700" style-hover="background:#1D5C45">Done</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isPreapprove }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="Pre-approve" style="flex:1;min-height:0;overflow:auto;padding:70px 20px 40px;box-sizing:border-box">
+              <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+                <div onClick="{{ goHome }}" style="width:38px;height:38px;border-radius:99px;background:#FFFFFF;border:1px solid #E5E0D2;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5l-7 7 7 7" stroke="#17251D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800">Pre-approve a visitor</div>
+              </div>
+              <div style="font-size:13.5px;color:#75806F;margin-top:10px;line-height:1.5">The guard lets them in with a pass code — no gate call needed.</div>
+              <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470;margin-top:24px">VISITOR NAME</div>
+              <input value="{{ guestName }}" onChange="{{ setGuestName }}" placeholder="e.g. Priya Nair" style="width:100%;box-sizing:border-box;margin-top:8px;padding:15px 16px;border-radius:16px;border:1.5px solid #E0DACA;background:#FFFFFF;font-size:16px;font-family:'Schibsted Grotesk',sans-serif;color:#17251D;outline:none" style-focus="border-color:#1D5C45"></input>
+              <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470;margin-top:22px">TYPE</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+                <sc-for list="{{ typeChips }}" as="chip" hint-placeholder-count="4"><button onClick="{{ chip.pick }}" style="padding:11px 16px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Schibsted Grotesk',sans-serif;background:{{ chip.bg }};color:{{ chip.color }};border:1.5px solid {{ chip.border }}">{{ chip.label }}</button></sc-for>
+              </div>
+              <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470;margin-top:22px">WHEN</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+                <sc-for list="{{ whenChips }}" as="chip" hint-placeholder-count="2"><button onClick="{{ chip.pick }}" style="padding:11px 16px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Schibsted Grotesk',sans-serif;background:{{ chip.bg }};color:{{ chip.color }};border:1.5px solid {{ chip.border }}">{{ chip.label }}</button></sc-for>
+              </div>
+              <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470;margin-top:22px">TIME WINDOW</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+                <sc-for list="{{ windowChips }}" as="chip" hint-placeholder-count="4"><button onClick="{{ chip.pick }}" style="padding:11px 16px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Schibsted Grotesk',sans-serif;background:{{ chip.bg }};color:{{ chip.color }};border:1.5px solid {{ chip.border }}">{{ chip.label }}</button></sc-for>
+              </div>
+              <div onClick="{{ createPass }}" style="margin-top:30px;height:54px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:15.5px;font-weight:700;cursor:pointer;background:{{ createBg }};color:{{ createColor }}">Create gate pass</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isPass }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="Gate pass" style="flex:1;min-height:0;overflow:auto;padding:78px 24px 40px;box-sizing:border-box;background:#0F2C1F;color:#F7F4EC;display:flex;flex-direction:column;align-items:center;text-align:center">
+              <div style="flex:0.6"></div>
+              <div style="width:64px;height:64px;border-radius:99px;background:rgba(31,157,92,0.18);display:flex;align-items:center;justify-content:center;animation:popIn 0.35s cubic-bezier(0.2,0.9,0.3,1.4)"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 7" stroke="#4CC98A" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:23px;font-weight:800;margin-top:18px">Gate pass created</div>
+              <div style="font-size:13.5px;color:rgba(247,244,236,0.6);margin-top:6px">Share the code — the guard will match it at Gate 1</div>
+              <div style="width:100%;box-sizing:border-box;margin-top:26px;border:1.5px dashed rgba(231,163,60,0.55);border-radius:22px;padding:24px 18px;background:rgba(231,163,60,0.06);animation:fadeUp 0.4s ease">
+                <div style="font-size:10.5px;letter-spacing:0.2em;font-weight:700;color:#E7A33C">AGORA GATE PASS</div>
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:44px;font-weight:800;letter-spacing:0.06em;margin-top:10px">{{ passCode }}</div>
+                <div style="font-size:15px;font-weight:600;margin-top:12px">{{ passName }}</div>
+                <div style="font-size:13px;color:rgba(247,244,236,0.6);margin-top:4px">{{ passMeta }}</div>
+              </div>
+              <div style="flex:1"></div>
+              <div onClick="{{ copyPass }}" style="width:100%;height:54px;border-radius:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;background:#E7A33C;color:#10261B;font-size:15.5px;font-weight:700" style-hover="background:#F0B04E"><svg width="16" height="16" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2.5" stroke="#10261B" stroke-width="2" fill="none"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke="#10261B" stroke-width="2" fill="none"></path></svg>Copy code to share</div>
+              <div onClick="{{ passDone }}" style="width:100%;height:50px;margin-top:10px;border-radius:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14.5px;font-weight:600;color:rgba(247,244,236,0.75)" style-hover="color:#F7F4EC">Done</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isDues }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="Maintenance dues" style="flex:1;min-height:0;overflow:auto;padding:70px 16px 118px;box-sizing:border-box">
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:26px;font-weight:800;margin-top:8px">Maintenance</div>
+              <div style="font-size:13px;color:#75806F;margin-top:3px">B-1204 · Maple Tower</div>
+              <sc-if value="{{ duesUnpaid }}" hint-placeholder-val="{{ true }}">
+                <div style="margin-top:16px;background:#10261B;border-radius:24px;padding:20px;color:#F7F4EC">
+                  <div style="font-size:10.5px;letter-spacing:0.16em;font-weight:700;color:#E7A33C">Q2 · JUL – SEP 2026</div>
+                  <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:38px;font-weight:800;margin-top:10px">₹8,450</div>
+                  <div style="font-size:13px;color:rgba(247,244,236,0.65);margin-top:4px">Due by 25 July · 2% late fee after</div>
+                  <div onClick="{{ openPayment }}" style="margin-top:18px;background:#E7A33C;color:#10261B;border-radius:16px;height:50px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;cursor:pointer" style-hover="background:#F0B04E">Pay now</div>
+                </div>
+                <div style="margin-top:12px;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:22px;padding:6px 18px">
+                  <sc-for list="{{ duesBreakup }}" as="row" hint-placeholder-count="4">
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid #F0ECE0">
+                      <div style="font-size:14px;color:#3E4A40">{{ row.label }}</div>
+                      <div style="font-size:14px;font-weight:700">{{ row.amount }}</div>
+                    </div>
+                  </sc-for>
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0">
+                    <div style="font-size:14px;font-weight:700">Total</div>
+                    <div style="font-size:14px;font-weight:800;color:#1D5C45">₹8,450</div>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ duesPaid }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:16px;background:#E3F2E9;border:1px solid #BFE0CE;border-radius:24px;padding:20px;display:flex;align-items:center;gap:14px">
+                  <div style="width:44px;height:44px;border-radius:99px;background:#1F9D5C;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 7" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+                  <div>
+                    <div style="font-size:16px;font-weight:700;color:#14532D">All dues cleared</div>
+                    <div style="font-size:13px;color:#3E6B50;margin-top:2px">Next invoice: Q3, on 1 October</div>
+                  </div>
+                </div>
+              </sc-if>
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:17px;font-weight:700;margin-top:26px">Payment history</div>
+              <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+                <sc-for list="{{ payHistory }}" as="h" hint-placeholder-count="2">
+                  <div style="background:#FFFFFF;border:1px solid #E5E0D2;border-radius:18px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+                    <div>
+                      <div style="font-size:14.5px;font-weight:600">{{ h.label }}</div>
+                      <div style="font-size:12.5px;color:#75806F;margin-top:2px">{{ h.sub }}</div>
+                    </div>
+                    <div style="text-align:right">
+                      <div style="font-size:14.5px;font-weight:700">{{ h.amount }}</div>
+                      <div style="display:inline-block;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:999px;background:#E3F2E9;color:#1F9D5C;margin-top:3px">PAID</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isPayment }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="Confirm payment" style="flex:1;min-height:0;overflow:auto;padding:70px 20px 40px;box-sizing:border-box;display:flex;flex-direction:column">
+              <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+                <div onClick="{{ goDues }}" style="width:38px;height:38px;border-radius:99px;background:#FFFFFF;border:1px solid #E5E0D2;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5l-7 7 7 7" stroke="#17251D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+                <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800">Confirm payment</div>
+              </div>
+              <div style="margin-top:20px;background:#FFFFFF;border:1px solid #E5E0D2;border-radius:20px;padding:18px;display:flex;align-items:center;justify-content:space-between">
+                <div>
+                  <div style="font-size:13px;color:#75806F">Q2 maintenance · B-1204</div>
+                  <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:28px;font-weight:800;margin-top:4px">₹8,450</div>
+                </div>
+                <div style="font-size:12px;color:#A9A794">Due 25 Jul</div>
+              </div>
+              <div style="font-size:11px;letter-spacing:0.14em;font-weight:700;color:#8A8470;margin-top:24px">PAY WITH</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+                <sc-for list="{{ payChips }}" as="chip" hint-placeholder-count="4"><button onClick="{{ chip.pick }}" style="padding:12px 17px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Schibsted Grotesk',sans-serif;background:{{ chip.bg }};color:{{ chip.color }};border:1.5px solid {{ chip.border }}">{{ chip.label }}</button></sc-for>
+              </div>
+              <div style="margin-top:16px;font-size:12.5px;color:#75806F;line-height:1.5">You'll be redirected to {{ payMethod }} to authorise. The receipt posts to the society ledger instantly.</div>
+              <div style="flex:1"></div>
+              <div onClick="{{ confirmPay }}" style="height:54px;border-radius:18px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:15.5px;font-weight:700;cursor:pointer;background:#10261B;color:#F7F4EC" style-hover="background:#1D5C45">
+                <sc-if value="{{ paying }}" hint-placeholder-val="{{ false }}"><div style="width:16px;height:16px;border-radius:99px;border:2.5px solid rgba(247,244,236,0.3);border-top-color:#F7F4EC;animation:spin 0.7s linear infinite"></div></sc-if>
+                {{ payButtonLabel }}
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isPaySuccess }}" hint-placeholder-val="{{ false }}">
+            <div data-screen-label="Payment success" style="flex:1;min-height:0;overflow:auto;padding:78px 24px 40px;box-sizing:border-box;background:#0F2C1F;color:#F7F4EC;display:flex;flex-direction:column;align-items:center;text-align:center">
+              <div style="flex:0.7"></div>
+              <div style="width:88px;height:88px;border-radius:99px;background:rgba(31,157,92,0.18);display:flex;align-items:center;justify-content:center;animation:popIn 0.35s cubic-bezier(0.2,0.9,0.3,1.4)"><svg width="40" height="40" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5L19.5 7" stroke="#4CC98A" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg></div>
+              <div style="font-family:'Bricolage Grotesque',sans-serif;font-size:25px;font-weight:800;margin-top:20px">₹8,450 paid</div>
+              <div style="font-size:13.5px;color:rgba(247,244,236,0.6);margin-top:6px">Q2 maintenance cleared for B-1204</div>
+              <div style="width:100%;box-sizing:border-box;margin-top:26px;border:1.5px dashed rgba(231,163,60,0.55);border-radius:22px;padding:20px 18px;background:rgba(231,163,60,0.06);animation:fadeUp 0.4s ease;text-align:left">
+                <div style="font-size:10.5px;letter-spacing:0.2em;font-weight:700;color:#E7A33C">RECEIPT</div>
+                <div style="display:flex;justify-content:space-between;margin-top:14px;font-size:13.5px"><div style="color:rgba(247,244,236,0.6)">Receipt no.</div><div style="font-weight:700">{{ receiptId }}</div></div>
+                <div style="display:flex;justify-content:space-between;margin-top:9px;font-size:13.5px"><div style="color:rgba(247,244,236,0.6)">Paid via</div><div style="font-weight:700">{{ payMethod }}</div></div>
+                <div style="display:flex;justify-content:space-between;margin-top:9px;font-size:13.5px"><div style="color:rgba(247,244,236,0.6)">Date</div><div style="font-weight:700">13 Jul 2026, 6:47 PM</div></div>
+                <div style="display:flex;justify-content:space-between;margin-top:9px;font-size:13.5px"><div style="color:rgba(247,244,236,0.6)">Period</div><div style="font-weight:700">Q2 · Jul – Sep</div></div>
+              </div>
+              <div style="flex:1"></div>
+              <div onClick="{{ paymentDone }}" style="width:100%;height:54px;border-radius:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:#E7A33C;color:#10261B;font-size:15.5px;font-weight:700" style-hover="background:#F0B04E">Done</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ showTabs }}" hint-placeholder-val="{{ true }}">
+            <div style="position:absolute;left:0;right:0;bottom:0;z-index:30;background:rgba(247,244,236,0.92);backdrop-filter:blur(14px);border-top:1px solid #E5E0D2;display:flex;padding:10px 10px 30px">
+              <div onClick="{{ goHome }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:6px 0;min-height:44px">
+                <svg width="23" height="23" viewBox="0 0 24 24"><path d="M12 3.5l8 6.8V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1v-9.7l8-6.8z" fill="{{ tabHome }}"></path></svg>
+                <div style="font-size:10.5px;font-weight:700;color:{{ tabHome }}">Home</div>
+              </div>
+              <div onClick="{{ goGate }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:6px 0;min-height:44px">
+                <svg width="23" height="23" viewBox="0 0 24 24"><path d="M12 2l8 3.6v5.2c0 5.2-3.4 8.9-8 10.6-4.6-1.7-8-5.4-8-10.6V5.6L12 2z" fill="{{ tabGate }}"></path><path d="M8.6 11.5l2.3 2.3 4.5-4.6" fill="none" stroke="#F7F4EC" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                <div style="font-size:10.5px;font-weight:700;color:{{ tabGate }}">Gate</div>
+              </div>
+              <div onClick="{{ goCommunity }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:6px 0;min-height:44px">
+                <svg width="23" height="23" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2" fill="{{ tabComm }}"></circle><path d="M3.2 19.5c0-3.1 2.6-5.2 5.8-5.2s5.8 2.1 5.8 5.2v0.5H3.2v-0.5z" fill="{{ tabComm }}"></path><circle cx="16.8" cy="9" r="2.6" fill="{{ tabComm }}" opacity="0.55"></circle><path d="M15.9 14.6c2.9 0.1 4.9 2 4.9 4.6v0.8h-4.2c0-2.1-0.2-3.9-0.7-5.4z" fill="{{ tabComm }}" opacity="0.55"></path></svg>
+                <div style="font-size:10.5px;font-weight:700;color:{{ tabComm }}">Community</div>
+              </div>
+              <div onClick="{{ goDues }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:6px 0;min-height:44px;position:relative">
+                <svg width="23" height="23" viewBox="0 0 24 24"><path d="M6 4h12M6 8.5h12M6 8.5c4 0 6 1.8 6 4.2 0 2.6-2.2 4.3-5.3 4.3H6l7 7" fill="none" stroke="{{ tabPay }}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                <div style="font-size:10.5px;font-weight:700;color:{{ tabPay }}">Pay</div>
+                <sc-if value="{{ duesUnpaid }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;top:4px;right:26%;width:8px;height:8px;border-radius:99px;background:#E7A33C"></div></sc-if>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- shared toast -->
+      <sc-if value="{{ toastOn }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;left:24px;right:24px;bottom:104px;z-index:50;background:#10261B;color:#F7F4EC;border-radius:16px;padding:13px 16px;font-size:13.5px;font-weight:600;text-align:center;box-shadow:0 12px 30px rgba(10,25,17,0.35);animation:fadeUp 0.3s ease">{{ toastMsg }}</div>
+      </sc-if>
+
+    </div>
+  </x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 520, &quot;height&quot;: 990}, &quot;visitorType&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;Delivery&quot;, &quot;Guest&quot;, &quot;Cab&quot;], &quot;default&quot;: &quot;Delivery&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Gate simulation&quot;}, &quot;autoRing&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Gate simulation&quot;}, &quot;ringDelay&quot;: {&quot;editor&quot;: &quot;range&quot;, &quot;min&quot;: 0, &quot;max&quot;: 10, &quot;step&quot;: 1, &quot;unit&quot;: &quot;s&quot;, &quot;default&quot;: 3, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Gate simulation&quot;}}">
+class Component extends DCLogic {
+  state = {
+    phase: 'splash',
+    obIdx: 0,
+    authMode: 'password', identifier: '', password: '', showPw: false,
+    otpSent: false, otp: '', busy: false, resendIn: 0,
+    screen: 'home', incoming: false, banner: false, outcome: null,
+    filter: 'All', guestName: '', gType: 'Guest', gWhen: 'Today', gWindow: 'Evening',
+    passCode: null, commTab: 'Notices', noticeId: null, pollVoted: null, pollCounts: [86, 34, 41],
+    duesPaid: false, payMethod: 'GPay', paying: false, receiptId: null,
+    toastOn: false, toastMsg: '',
+    activity: [
+      { kind: 'Delivery', name: 'Amazon · Prakash S', sub: 'Package delivery', initial: 'A', avatarBg: '#E7A33C', statusLabel: 'Left at gate', time: '4:12 PM' },
+      { kind: 'Service', name: 'Urban Company · Salim', sub: 'AC service · B-1204', initial: 'U', avatarBg: '#8FB3C7', statusLabel: 'Exited', time: '3:35 PM' },
+      { kind: 'Guest', name: 'Nikhil Rao', sub: 'Guest of Ananya', initial: 'N', avatarBg: '#B9A7D6', statusLabel: 'Inside', time: '1:20 PM' },
+      { kind: 'Delivery', name: 'BlueDart · Courier', sub: 'Document', initial: 'B', avatarBg: '#D6C9A8', statusLabel: 'Denied', time: '11:04 AM' },
+    ],
+  };
+  profiles = {
+    Delivery: { name: 'Ravi Kumar', org: 'Swiggy · Food delivery', detail: 'Order #4821', note: '"Sir has a food order for B-1204. Please confirm."', tag: 'DELIVERY', bg: '#E7A33C', initial: 'R', kind: 'Delivery' },
+    Guest: { name: 'Meera Sharma', org: 'Guest visit', detail: 'Says she is here to meet you', note: '"Madam says she is a friend of Ananya from B-1204."', tag: 'GUEST', bg: '#B9A7D6', initial: 'M', kind: 'Guest' },
+    Cab: { name: 'Santosh D', org: 'Uber · KA 05 MX 4432', detail: 'White Dzire · Pickup', note: '"Cab has arrived for pickup from B-1204."', tag: 'CAB', bg: '#8FB3C7', initial: 'S', kind: 'Cab' },
+  };
+  windows = { 'Morning': '8 AM – 12 PM', 'Afternoon': '12 – 4 PM', 'Evening': '4 – 9 PM', 'All day': '8 AM – 9 PM' };
+  catStyles = { 'WATER SUPPLY': ['#2E6E8E', '#E4EFF5'], 'EVENT': ['#7B5EA7', '#EFEAF7'], 'BILLING': ['#9A6B14', '#F6ECD8'], 'SECURITY': ['#1D5C45', '#E9F1EC'] };
+  notices = [
+    { cat: 'WATER SUPPLY', title: 'Water shutdown for tank cleaning — Tue, 15 Jul', date: '12 Jul', by: 'Society Office', pinned: true, paras: ['Annual cleaning of the overhead tanks is scheduled for Tuesday, 15 July. Water supply will be paused from 10 AM to 2 PM across all towers.', 'Please store water in advance for the afternoon. Supply will resume in phases and normalise by 3 PM.', 'A tanker will be stationed at the clubhouse for any urgent needs during the shutdown.'] },
+    { cat: 'EVENT', title: 'Independence Day celebrations — volunteers needed', date: '10 Jul', by: 'Cultural Committee', paras: ['Flag hoisting at 8 AM on the central lawn, followed by breakfast and games for kids.', 'We need 10 volunteers for decorations on the evening of 14 August. Sign up at the society office or reply on this notice.'] },
+    { cat: 'BILLING', title: 'Q2 maintenance invoices issued', date: '8 Jul', by: 'Society Office', paras: ['Maintenance invoices for July–September have been issued to all flats. The due date is 25 July.', 'Payments made after the due date attract a 2% late fee as per the AGM resolution. Pay from the app or at the office.'] },
+    { cat: 'SECURITY', title: 'Agora gate passes are now live at all gates', date: '5 Jul', by: 'Security Committee', paras: ['Guests with a pre-approved Agora gate pass can now enter by sharing their 6-digit code at any gate — no call to your flat needed.', 'Guards will continue to call for visitors without a pass. Delivery partners are verified against the order name.'] },
+  ];
+  pollLabels = ['Yes, till 11 PM', 'No, keep it 10 PM', 'Only Fri & Sat'];
+  closedPoll = [ { label: 'Yes, hire one more', pct: 68, win: true }, { label: 'No, not needed', pct: 32, win: false } ];
+  componentDidMount() {
+    this._splash = setTimeout(() => { if (this.state.phase === 'splash') this.setState({ phase: 'onboarding' }); }, 2300);
+  }
+  componentWillUnmount() { clearTimeout(this._splash); clearTimeout(this._ring); clearTimeout(this._t); clearTimeout(this._b); clearInterval(this._r); clearTimeout(this._pt); }
+  goLogin() { clearTimeout(this._splash); this.setState({ phase: 'login' }); }
+  enterApp() {
+    this.setState({ phase: 'app', busy: false });
+    const auto = this.props.autoRing ?? true;
+    const delay = (this.props.ringDelay ?? 2.5) * 1000;
+    clearTimeout(this._ring);
+    if (auto) this._ring = setTimeout(() => { if (this.state.phase === 'app') this.setState({ incoming: true, banner: true }); }, delay);
+  }
+  showToast(msg) {
+    clearTimeout(this._t);
+    this.setState({ toastOn: true, toastMsg: msg });
+    this._t = setTimeout(() => this.setState({ toastOn: false }), 2600);
+  }
+  startResend() {
+    clearInterval(this._r);
+    this.setState({ resendIn: 30 });
+    this._r = setInterval(() => {
+      this.setState((s) => { if (s.resendIn <= 1) { clearInterval(this._r); return { resendIn: 0 }; } return { resendIn: s.resendIn - 1 }; });
+    }, 1000);
+  }
+  profile() { return this.profiles[this.props.visitorType ?? 'Delivery'] || this.profiles.Delivery; }
+  statusStyle(label) {
+    const map = { 'Inside': ['#1F9D5C', '#E3F2E9'], 'Left at gate': ['#9A6B14', '#F6ECD8'], 'Exited': ['#6F7A70', '#EEEDE4'], 'Denied': ['#C0392B', '#F9E4E1'], 'Expected': ['#1D5C45', '#E9F1EC'] };
+    return map[label] || map['Exited'];
+  }
+  decorate(items) { return items.map((it) => { const [c, b] = this.statusStyle(it.statusLabel); return { ...it, statusColor: c, statusBg: b }; }); }
+  chip(label, active, pick) {
+    return active ? { label, pick, bg: '#10261B', color: '#F7F4EC', border: '#10261B' } : { label, pick, bg: '#FFFFFF', color: '#3E4A40', border: '#E0DACA' };
+  }
+  decide(outcome) {
+    const p = this.profile();
+    const label = outcome === 'approved' ? 'Inside' : outcome === 'denied' ? 'Denied' : 'Left at gate';
+    const entry = { kind: p.kind === 'Cab' ? 'Guest' : p.kind, name: p.name + (p.org.includes('·') ? ' · ' + p.org.split('·')[0].trim() : ''), sub: p.detail, initial: p.initial, avatarBg: p.bg, statusLabel: label, time: '6:42 PM' };
+    this.setState({ outcome, screen: 'decision', banner: false, activity: [entry, ...this.state.activity] });
+  }
+  renderVals() {
+    const s = this.state, p = this.profile();
+    const phase = s.phase;
+    const screen = s.screen;
+    const resolved = !!s.outcome;
+    const firstName = p.name.split(' ')[0];
+    const decision = {
+      approved: { title: firstName + ' is on the way up', sub: 'Rajesh at Gate 1 has been notified. Entry has been logged against B-1204.', bg: '#E3F2E9', meta: 'Entry logged · Gate 1 · 6:42 PM', dot: '#1F9D5C', line: 'You let ' + p.name + ' in · 6:42 PM' },
+      denied: { title: 'Turned away at the gate', sub: 'Rajesh will inform them at Gate 1. No entry was logged.', bg: '#F9E4E1', meta: 'Denied · Gate 1 · 6:42 PM', dot: '#D2483F', line: 'You turned away ' + p.name + ' · 6:42 PM' },
+      gate: { title: "They'll leave it at the gate", sub: 'Rajesh will collect the package at Gate 1. Pick it up whenever convenient.', bg: '#F6ECD8', meta: 'Left at gate · Gate 1 · 6:42 PM', dot: '#E7A33C', line: 'Package left at Gate 1 · 6:42 PM' },
+    }[s.outcome || 'approved'];
+    const canCreate = s.guestName.trim().length > 1;
+    const filtered = s.filter === 'All' ? s.activity : s.activity.filter((a) => a.kind === s.filter);
+    const nav = (screen2) => () => this.setState({ screen: screen2 });
+
+    // login helpers
+    const isPassword = s.authMode === 'password';
+    const hasId = s.identifier.trim().length > 2;
+    const canLogin = hasId && s.password.length > 0 && !s.busy;
+    const canSend = hasId && !s.busy;
+    const canVerify = s.otp.length === 6 && !s.busy;
+    const obLast = s.obIdx === 3;
+    const obGo = (i) => () => this.setState({ obIdx: i });
+
+    return {
+      // phase
+      isSplash: phase === 'splash', isOnboarding: phase === 'onboarding', isLogin: phase === 'login', isApp: phase === 'app',
+      splashTap: () => { clearTimeout(this._splash); this.setState({ phase: 'onboarding' }); },
+
+      // onboarding
+      trackX: (-s.obIdx * 25) + '%',
+      isLast: obLast, notLast: !obLast, showSkip: !obLast,
+      dots: [0, 1, 2, 3].map((i) => ({ w: i === s.obIdx ? '26px' : '8px', bg: i === s.obIdx ? '#E7A33C' : 'rgba(247,244,236,0.28)', go: obGo(i) })),
+      skip: () => this.goLogin(),
+      obPrimary: () => { if (obLast) { this.goLogin(); return; } this.setState({ obIdx: s.obIdx + 1 }); },
+
+      // login
+      subheading: isPassword ? 'Log in to your Agora account.' : 'Log in with a one-time code.',
+      isPassword, isOtp: !isPassword,
+      identifier: s.identifier,
+      setId: (e) => this.setState({ identifier: e.target.value }),
+      password: s.password,
+      setPw: (e) => this.setState({ password: e.target.value }),
+      pwType: s.showPw ? 'text' : 'password',
+      showPw: s.showPw, hidePw: !s.showPw,
+      togglePw: () => this.setState({ showPw: !s.showPw }),
+      forgot: () => this.showToast('Reset link sent to your email & phone'),
+      busy: s.busy,
+      loginBg: canLogin ? '#E7A33C' : '#B79A5E',
+      loginLabel: s.busy ? 'Logging in…' : 'Log in',
+      doLogin: () => {
+        if (!hasId) { this.showToast('Enter your email or phone'); return; }
+        if (!s.password) { this.showToast('Enter your password'); return; }
+        if (s.busy) return;
+        this.setState({ busy: true });
+        this._b = setTimeout(() => this.enterApp(), 1300);
+      },
+      otpSent: s.otpSent, otpNotSent: !s.otpSent,
+      sendBg: canSend ? '#E7A33C' : '#B79A5E',
+      sendLabel: s.busy ? 'Sending…' : 'Send OTP',
+      sendOtp: () => {
+        if (!hasId) { this.showToast('Enter your email or phone'); return; }
+        if (s.busy) return;
+        this.setState({ busy: true });
+        this._b = setTimeout(() => { this.setState({ busy: false, otpSent: true, otp: '' }); this.startResend(); this.showToast('Code sent — check your messages'); }, 1200);
+      },
+      otp: s.otp,
+      setOtp: (e) => this.setState({ otp: (e.target.value || '').replace(/\D/g, '').slice(0, 6) }),
+      otpCells: [0, 1, 2, 3, 4, 5].map((i) => ({ d: s.otp[i] || '', border: i === s.otp.length ? '#E7A33C' : (s.otp[i] ? '#1D5C45' : '#E3DDCD') })),
+      resendLabel: s.resendIn > 0 ? 'Resend in ' + s.resendIn + 's' : 'Resend code',
+      resendColor: s.resendIn > 0 ? 'rgba(247,244,236,0.4)' : '#E7A33C',
+      resendCursor: s.resendIn > 0 ? 'default' : 'pointer',
+      resend: () => { if (s.resendIn > 0) return; this.startResend(); this.showToast('New code sent'); },
+      verifyBg: canVerify ? '#E7A33C' : '#B79A5E',
+      verifyLabel: s.busy ? 'Verifying…' : 'Verify & log in',
+      verifyOtp: () => {
+        if (s.otp.length !== 6) { this.showToast('Enter the 6-digit code'); return; }
+        if (s.busy) return;
+        this.setState({ busy: true });
+        this._b = setTimeout(() => this.enterApp(), 1200);
+      },
+      switchLabel: isPassword ? 'Log in with OTP' : 'Use password instead',
+      switchMode: () => { clearInterval(this._r); this.setState({ authMode: isPassword ? 'otp' : 'password', otpSent: false, otp: '', password: '', busy: false, resendIn: 0 }); },
+      contact: () => this.showToast('Society office · +91 80 4123 5566'),
+
+      // app
+      isHome: screen === 'home', isGate: screen === 'gate', isCommunity: screen === 'community',
+      isRequest: screen === 'request', isDecision: screen === 'decision',
+      isPreapprove: screen === 'preapprove', isPass: screen === 'pass',
+      showTabs: ['home', 'gate', 'community', 'dues'].includes(screen),
+      showBanner: s.banner && ['home', 'gate', 'community', 'dues'].includes(screen),
+      gateRinging: s.incoming && !resolved && screen === 'home',
+      gateQuiet: !s.incoming && !resolved,
+      gateResolved: resolved && screen === 'home',
+      resolvedLine: decision.line, resolvedDot: decision.dot,
+      incomingName: p.name, incomingOrg: p.org, incomingDetail: p.detail, incomingNote: p.note,
+      incomingTag: p.tag + ' · WAITING AT GATE 1', incomingBg: p.bg, incomingInitial: p.initial,
+      isDeliveryIncoming: p.kind === 'Delivery',
+      outcomeApproved: s.outcome === 'approved', outcomeDenied: s.outcome === 'denied', outcomeGate: s.outcome === 'gate',
+      decisionTitle: decision.title, decisionSub: decision.sub, decisionBg: decision.bg, decisionMeta: decision.meta,
+      respond: () => this.setState({ screen: 'request', banner: false }),
+      approve: () => this.decide('approved'),
+      deny: () => this.decide('denied'),
+      leaveAtGate: () => this.decide('gate'),
+      decisionDone: nav('home'),
+      goHome: nav('home'), goGate: nav('gate'), goCommunity: nav('community'),
+      openPreapprove: () => this.setState({ screen: 'preapprove' }),
+      guestName: s.guestName,
+      setGuestName: (e) => this.setState({ guestName: e.target.value }),
+      typeChips: ['Guest', 'Delivery', 'Cab', 'Home help'].map((t) => this.chip(t, s.gType === t, () => this.setState({ gType: t }))),
+      whenChips: ['Today', 'Tomorrow'].map((t) => this.chip(t, s.gWhen === t, () => this.setState({ gWhen: t }))),
+      windowChips: Object.keys(this.windows).map((t) => this.chip(t, s.gWindow === t, () => this.setState({ gWindow: t }))),
+      createBg: canCreate ? '#10261B' : '#DDD8C8', createColor: canCreate ? '#F7F4EC' : '#9B9682',
+      createPass: () => {
+        if (!canCreate) { this.showToast('Add the visitor\u2019s name first'); return; }
+        const code = (100 + Math.floor(Math.random() * 900)) + ' ' + (100 + Math.floor(Math.random() * 900));
+        const entry = { kind: s.gType === 'Cab' ? 'Guest' : s.gType, name: s.guestName.trim(), sub: 'Pre-approved · ' + s.gWhen + ', ' + this.windows[s.gWindow], initial: s.guestName.trim()[0].toUpperCase(), avatarBg: '#A7C4B5', statusLabel: 'Expected', time: '—' };
+        this.setState({ passCode: code, screen: 'pass', activity: [entry, ...this.state.activity] });
+      },
+      passCode: s.passCode || '', passName: s.guestName.trim() || 'Guest',
+      passMeta: s.gType + ' · ' + s.gWhen + ', ' + this.windows[s.gWindow] + ' · Serenity Greens, Gate 1',
+      copyPass: () => {
+        const text = 'Agora gate pass ' + (s.passCode || '') + ' for ' + s.guestName + ' \u2014 valid ' + s.gWhen.toLowerCase() + ', ' + this.windows[s.gWindow] + ' at Serenity Greens (Gate 1).';
+        try { navigator.clipboard.writeText(text); } catch (e) {}
+        this.showToast('Pass copied — share it with your guest');
+      },
+      passDone: nav('home'),
+      filterChips: ['All', 'Delivery', 'Guest', 'Service'].map((t) => this.chip(t, s.filter === t, () => this.setState({ filter: t }))),
+      activityHome: this.decorate(s.activity.slice(0, 3)),
+      activityAll: this.decorate(filtered),
+      tabHome: screen === 'home' ? '#123528' : '#9BA394',
+      tabGate: screen === 'gate' ? '#123528' : '#9BA394',
+      tabComm: screen === 'community' ? '#123528' : '#9BA394',
+      toastOn: s.toastOn, toastMsg: s.toastMsg,
+      isNotice: screen === 'notice',
+      commNotices: s.commTab === 'Notices', commPolls: s.commTab === 'Polls',
+      segNotices: () => this.setState({ commTab: 'Notices' }),
+      segPolls: () => this.setState({ commTab: 'Polls' }),
+      segNBg: s.commTab === 'Notices' ? '#10261B' : 'transparent', segNColor: s.commTab === 'Notices' ? '#F7F4EC' : '#75806F',
+      segPBg: s.commTab === 'Polls' ? '#10261B' : 'transparent', segPColor: s.commTab === 'Polls' ? '#F7F4EC' : '#75806F',
+      pinnedCat: this.notices[0].cat, pinnedTitle: this.notices[0].title,
+      pinnedMeta: this.notices[0].date + ' · ' + this.notices[0].by,
+      openPinned: () => this.setState({ screen: 'notice', noticeId: 0 }),
+      noticesList: this.notices.slice(1).map((n, i) => {
+        const [c, b] = this.catStyles[n.cat] || ['#3E4A40', '#EEEDE4'];
+        return { cat: n.cat, title: n.title, date: n.date, by: n.by, catColor: c, catBg: b, open: () => this.setState({ screen: 'notice', noticeId: i + 1 }) };
+      }),
+      noticeCat: (this.notices[s.noticeId ?? 0]).cat,
+      noticeCatColor: (this.catStyles[(this.notices[s.noticeId ?? 0]).cat] || ['#3E4A40'])[0],
+      noticeCatBg: (this.catStyles[(this.notices[s.noticeId ?? 0]).cat] || ['#3E4A40', '#EEEDE4'])[1],
+      noticeTitle: (this.notices[s.noticeId ?? 0]).title,
+      noticeMeta: 'Posted ' + (this.notices[s.noticeId ?? 0]).date + ' · ' + (this.notices[s.noticeId ?? 0]).by,
+      noticeParas: (this.notices[s.noticeId ?? 0]).paras.map((t) => ({ text: t })),
+      pollOptions: this.pollLabels.map((label, i) => {
+        const voted = s.pollVoted !== null;
+        const total = s.pollCounts.reduce((a, b) => a + b, 0);
+        const pct = Math.round((s.pollCounts[i] / total) * 100);
+        return {
+          label, check: s.pollVoted === i,
+          width: voted ? pct + '%' : '0%',
+          pctText: voted ? pct + '%' : '',
+          border: s.pollVoted === i ? '#1D5C45' : '#E0DACA',
+          pick: () => { if (s.pollVoted !== null) return; const counts = s.pollCounts.slice(); counts[i] += 1; this.setState({ pollVoted: i, pollCounts: counts }); this.showToast('Vote recorded — thanks!'); },
+        };
+      }),
+      pollFooter: s.pollVoted !== null
+        ? s.pollCounts.reduce((a, b) => a + b, 0) + ' votes · You voted “' + this.pollLabels[s.pollVoted] + '”'
+        : s.pollCounts.reduce((a, b) => a + b, 0) + ' votes so far · Tap an option to vote',
+      closedOptions: this.closedPoll.map((o) => ({ label: o.label, pctText: o.pct + '%', width: o.pct + '%', weight: o.win ? 700 : 500 })),
+      isDues: screen === 'dues', isPayment: screen === 'payment', isPaySuccess: screen === 'paysuccess',
+      duesUnpaid: !s.duesPaid, duesPaid: s.duesPaid,
+      goDues: nav('dues'),
+      tabPay: screen === 'dues' ? '#123528' : '#9BA394',
+      duesBreakup: [
+        { label: 'Maintenance charge', amount: '₹6,200' },
+        { label: 'Sinking fund', amount: '₹1,000' },
+        { label: 'Water charges', amount: '₹750' },
+        { label: 'Covered parking', amount: '₹500' },
+      ],
+      payHistory: (s.duesPaid ? [{ label: 'Q2 · Jul – Sep 2026', sub: 'Paid 13 Jul · ' + s.payMethod + ' · ' + (s.receiptId || ''), amount: '₹8,450' }] : []).concat([
+        { label: 'Q1 · Apr – Jun 2026', sub: 'Paid 12 Apr · UPI · SG-2604-1187', amount: '₹8,450' },
+        { label: 'Q4 · Jan – Mar 2026', sub: 'Paid 9 Jan · UPI · SG-2601-0912', amount: '₹8,100' },
+      ]),
+      openPayment: nav('payment'),
+      payMethod: s.payMethod,
+      payChips: ['GPay', 'PhonePe', 'Paytm', 'Card'].map((m) => this.chip(m, s.payMethod === m, () => this.setState({ payMethod: m }))),
+      paying: s.paying,
+      payButtonLabel: s.paying ? 'Processing…' : 'Pay ₹8,450',
+      confirmPay: () => {
+        if (s.paying) return;
+        this.setState({ paying: true });
+        this._pt = setTimeout(() => {
+          const rid = 'SG-2607-' + (1000 + Math.floor(Math.random() * 9000));
+          this.setState({ paying: false, duesPaid: true, receiptId: rid, screen: 'paysuccess' });
+        }, 1400);
+      },
+      receiptId: s.receiptId || '',
+      paymentDone: nav('dues'),
+    };
+  }
+}
+</script>
+</body>
+</html>
