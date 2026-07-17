@@ -13,11 +13,11 @@ import {
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { router, Stack } from 'expo-router';
-import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { loadNotificationsModule } from '@/commonFunctions';
 import { ToastHost } from '@/components/toast-host';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { useRegisterPushToken } from '@/features/notifications/api';
@@ -27,25 +27,21 @@ import { useAuthStore } from '@/stores/auth-store';
 
 SplashScreen.preventAutoHideAsync();
 
-// Expo Go on Android (SDK 53+) throws synchronously the moment any
-// expo-notifications API touching remote/push handling is called — the
-// native module for that was removed from Expo Go entirely, so a real
-// development/production build is required for actual push delivery. This
-// call is otherwise unguarded module-scope code, so a throw here would take
-// down the whole app before a single route could mount; push is always a
-// convenience layer (AGENTS.md), never a blocking dependency, including here.
-try {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-    }),
-  });
-} catch (error) {
-  console.warn('expo-notifications setNotificationHandler unavailable in this runtime', error);
-}
+// Push is a convenience layer and must never prevent the route tree from
+// mounting. The lazy loader returns null on Android Expo Go, where the native
+// remote-notification module is intentionally unavailable.
+void loadNotificationsModule()
+  .then((Notifications) => {
+    Notifications?.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+  })
+  .catch((error) => console.warn('expo-notifications handler unavailable in this runtime', error));
 
 function RootNavigator() {
   const session = useAuthStore((state) => state.session);
@@ -59,22 +55,29 @@ function RootNavigator() {
 
   useEffect(() => {
     if (!profile) return;
-    try {
-      const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-        // A push payload is only a hint — the destination screen re-fetches the
-        // record itself and RLS re-authorizes it before showing anything.
-        const data = response.notification.request.content.data as { type?: string; requestId?: string } | undefined;
-        if (data?.type === 'VISITOR_REQUEST' && data.requestId && profile.role === 'RESIDENT') {
-          router.push(`/(resident)/visitor-request/${data.requestId}`);
-        } else if (data?.type === 'VISITOR_DECISION' && profile.role === 'GUARD') {
-          router.push('/(guard)/(tabs)');
-        }
-      });
-      return () => subscription.remove();
-    } catch (error) {
-      console.warn('expo-notifications listener unavailable in this runtime', error);
-      return undefined;
-    }
+    let cancelled = false;
+    let subscription: { remove: () => void } | undefined;
+
+    loadNotificationsModule()
+      .then((Notifications) => {
+        if (!Notifications || cancelled) return;
+        subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+          // A push payload is only a hint — the destination screen re-fetches the
+          // record itself and RLS re-authorizes it before showing anything.
+          const data = response.notification.request.content.data as { type?: string; requestId?: string } | undefined;
+          if (data?.type === 'VISITOR_REQUEST' && data.requestId && profile.role === 'RESIDENT') {
+            router.push(`/(resident)/visitor-request/${data.requestId}`);
+          } else if (data?.type === 'VISITOR_DECISION' && profile.role === 'GUARD') {
+            router.push('/(guard)/(tabs)');
+          }
+        });
+      })
+      .catch((error) => console.warn('expo-notifications listener unavailable in this runtime', error));
+
+    return () => {
+      cancelled = true;
+      subscription?.remove();
+    };
   }, [profile]);
 
   if (isInitializing) return null;

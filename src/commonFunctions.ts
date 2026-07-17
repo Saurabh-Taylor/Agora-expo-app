@@ -1,4 +1,19 @@
+import Constants, { AppOwnership } from 'expo-constants';
+import { Platform } from 'react-native';
+
 import { AvatarPalette, Colors } from '@/constants/commonConstants';
+
+// Android Expo Go no longer includes the native remote-notification module.
+// Keep the import lazy so merely rendering the app cannot evaluate the
+// unsupported module; development and production builds still load it.
+export async function loadNotificationsModule() {
+  const isAndroidExpoGo =
+    Platform.OS === 'android' &&
+    (Constants.appOwnership === AppOwnership.Expo || Constants.expoGoConfig !== null);
+
+  if (isAndroidExpoGo) return null;
+  return import('expo-notifications');
+}
 
 export function getInitials(fullName: string) {
   return fullName.trim().charAt(0).toUpperCase() || '?';

@@ -1,8 +1,8 @@
 import Constants from 'expo-constants';
-import * as Notifications from 'expo-notifications';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
+import { loadNotificationsModule } from '@/commonFunctions';
 import { supabase } from '@/lib/supabase';
 
 type SendPushInput = {
@@ -37,6 +37,9 @@ export function useRegisterPushToken(profileId: string | undefined, societyId: s
     (async () => {
       const projectId = Constants.expoConfig?.extra?.eas?.projectId;
       if (!projectId) return;
+
+      const Notifications = await loadNotificationsModule();
+      if (!Notifications || cancelled) return;
 
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
