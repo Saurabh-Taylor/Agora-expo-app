@@ -124,5 +124,10 @@ export function useTowerStats() {
     data,
     isLoading: towers.isLoading || flats.isLoading || residents.isLoading,
     isError: towers.isError || flats.isError || residents.isError,
+    refetch: () => {
+      towers.refetch();
+      flats.refetch();
+      residents.refetch();
+    },
   };
 }

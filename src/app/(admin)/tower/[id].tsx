@@ -27,7 +27,16 @@ export default function TowerDetailScreen() {
   if (isLoading || isError || !tower) {
     return (
       <View style={styles.root}>
-        <AsyncState isLoading={isLoading} isError={isError} isEmpty={!tower} emptyMessage="Tower not found." />
+        <AsyncState
+          isLoading={isLoading}
+          isError={isError}
+          onRetry={() => {
+            towerStatsQuery.refetch();
+            residentsQuery.refetch();
+          }}
+          isEmpty={!tower}
+          emptyMessage="Tower not found."
+        />
       </View>
     );
   }

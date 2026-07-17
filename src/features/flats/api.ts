@@ -22,6 +22,24 @@ export function useFlats() {
   });
 }
 
+export type FlatWithTower = Flat & { tower: { name: string; code: string } | null };
+
+export function useFlatWithTower(flatId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['flats', flatId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('flats')
+        .select('*, tower:towers(name, code)')
+        .eq('id', flatId as string)
+        .single();
+      if (error) throw error;
+      return data as unknown as FlatWithTower;
+    },
+    enabled: !!flatId,
+  });
+}
+
 export async function findOrCreateFlat(params: { societyId: string; towerId: string; number: string; floor: number }) {
   const { societyId, towerId, number, floor } = params;
   const { data: existing, error: findError } = await supabase

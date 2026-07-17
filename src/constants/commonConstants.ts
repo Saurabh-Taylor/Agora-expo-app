@@ -46,6 +46,7 @@ export const Colors = {
   danger300: '#FF9A8D',
 
   // Category tags: [text, background]
+  categoryGeneral: { text: '#5B6B5E', bg: '#EEEDE4' },
   categoryWater: { text: '#2E6E8E', bg: '#E4EFF5' },
   categoryEvent: { text: '#7B5EA7', bg: '#EFEAF7' },
   categoryBilling: { text: '#9A6B14', bg: '#F6ECD8' },
@@ -55,6 +56,11 @@ export const Colors = {
 // Person-avatar background palette (residents/staff/bookings) — cycled
 // deterministically by name, see commonFunctions#avatarColorForName.
 export const AvatarPalette = ['#E7A33C', '#B9A7D6', '#8FB3C7', '#A7C4B5', '#D6C9A8', '#E0A9A0'] as const;
+
+// complaints.category is freeform text (no DB enum) — this fixed set is the
+// UI's own vocabulary, shared between the resident raise-complaint chips and
+// the admin complaint list/triage labels.
+export const ComplaintCategories = ['Plumbing', 'Electrical', 'Cleanliness', 'Security', 'Noise', 'Other'] as const;
 
 export const FontFamily = {
   headingExtraLight: 'BricolageGrotesque_200ExtraLight',

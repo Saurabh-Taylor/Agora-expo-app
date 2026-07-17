@@ -24,7 +24,16 @@ export default function ResidentDetailScreen() {
   if (isLoading || isError || !resident) {
     return (
       <View style={styles.root}>
-        <AsyncState isLoading={isLoading} isError={isError} isEmpty={!resident} emptyMessage="Resident not found." />
+        <AsyncState
+          isLoading={isLoading}
+          isError={isError}
+          onRetry={() => {
+            residentQuery.refetch();
+            towersQuery.refetch();
+          }}
+          isEmpty={!resident}
+          emptyMessage="Resident not found."
+        />
       </View>
     );
   }

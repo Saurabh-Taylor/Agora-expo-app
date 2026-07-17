@@ -2,13 +2,19 @@ import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
+import { avatarColorForName, getInitials, getTimeBasedGreeting, titleCase } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { AgoraLogo } from '@/components/icons/agora-logo';
-import { avatarColorForName, getInitials, getTimeBasedGreeting } from '@/commonFunctions';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { useProfile } from '@/features/profile/api';
-import { usePendingVisitorRequests, useTodaysVisitorRequestsCount } from '@/features/visitors/api';
-import { useAuthStore } from '@/stores/auth-store';
+import {
+  useAwaitingEntryCount,
+  usePendingVisitorRequests,
+  useSocietyVisitorRequests,
+  useTodaysVisitorRequestsCount,
+  useVisitorRequestsRealtimeSync,
+} from '@/features/visitors/api';
+import { confirmSignOut, useAuthStore } from '@/stores/auth-store';
 
 function PlusIcon() {
   return (
@@ -36,13 +42,29 @@ function TodayIcon() {
   );
 }
 
+function VerifyIcon() {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Path d="M4.5 12.5l5 5L19.5 7" stroke={Colors.success700} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
 export default function GuardHomeScreen() {
   const session = useAuthStore((state) => state.session);
   const profileQuery = useProfile(session?.user.id);
   const pendingQuery = usePendingVisitorRequests();
   const todaysCountQuery = useTodaysVisitorRequestsCount();
+  const societyRequestsQuery = useSocietyVisitorRequests();
+  const { data: awaitingEntryCount } = useAwaitingEntryCount();
 
   const profile = profileQuery.data;
+
+  useVisitorRequestsRealtimeSync('society_id', profile?.society_id);
+
+  const readyToVerify = (societyRequestsQuery.data ?? [])
+    .filter((request) => request.status === 'APPROVED' && !request.entry_at)
+    .slice(0, 4);
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.scrollContent}>
@@ -52,9 +74,9 @@ export default function GuardHomeScreen() {
             <AgoraLogo size={24} />
             <Text style={styles.brandLabel}>Agora</Text>
           </View>
-          <View style={styles.avatar}>
+          <Pressable style={styles.avatar} onPress={confirmSignOut} hitSlop={8}>
             <Text style={styles.avatarLabel}>{profile ? getInitials(profile.full_name) : ''}</Text>
-          </View>
+          </Pressable>
         </View>
         <Text style={styles.greeting}>
           {getTimeBasedGreeting()}, {profile?.full_name.split(' ')[0] ?? ''}
@@ -91,6 +113,7 @@ export default function GuardHomeScreen() {
           <AsyncState
             isLoading={pendingQuery.isLoading}
             isError={pendingQuery.isError}
+            onRetry={() => pendingQuery.refetch()}
             isEmpty={pendingQuery.data?.length === 0}
             emptyMessage="No pending requests. Register a visitor to get started."
           />
@@ -110,6 +133,40 @@ export default function GuardHomeScreen() {
                 <Text style={styles.waitingLabel}>Waiting</Text>
               </View>
             </View>
+          ))}
+        </View>
+
+        <View style={styles.sectionTitleRow}>
+          <Text style={styles.sectionTitle}>Ready to Verify</Text>
+          {(awaitingEntryCount ?? 0) > 0 && (
+            <Pressable onPress={() => router.push('/movement-log')}>
+              <Text style={styles.viewAllLabel}>View all</Text>
+            </Pressable>
+          )}
+        </View>
+        <View style={styles.opsCard}>
+          <AsyncState
+            isLoading={societyRequestsQuery.isLoading}
+            isError={societyRequestsQuery.isError}
+            onRetry={() => societyRequestsQuery.refetch()}
+            isEmpty={readyToVerify.length === 0}
+            emptyMessage="Nothing approved and waiting on entry right now."
+          />
+          {readyToVerify.map((request) => (
+            <Pressable key={request.id} style={styles.requestRow} onPress={() => router.push(`/(guard)/verify/${request.id}`)}>
+              <View style={[styles.requestAvatar, { backgroundColor: avatarColorForName(request.visitor?.name ?? '?') }]}>
+                <Text style={styles.requestInitial}>{getInitials(request.visitor?.name ?? '?')}</Text>
+              </View>
+              <View style={styles.flex}>
+                <Text style={styles.requestName}>{request.visitor?.name ?? 'Visitor'}</Text>
+                <Text style={styles.requestSub}>
+                  {request.visitor ? titleCase(request.visitor.category) : '—'} ·{' '}
+                  {request.flat?.tower ? `${request.flat.tower.code}-${request.flat.number}` : (request.flat?.number ?? '—')}
+                  {request.gate_pass_code ? ` · Pass ${request.gate_pass_code}` : ''}
+                </Text>
+              </View>
+              <VerifyIcon />
+            </Pressable>
           ))}
         </View>
       </View>
@@ -167,6 +224,8 @@ const styles = StyleSheet.create({
   statValue: { fontFamily: FontFamily.headingExtraBold, fontSize: 23, marginTop: 10 },
   statLabel: { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
   sectionTitle: { fontFamily: FontFamily.headingBold, fontSize: 17, marginTop: 24 },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 24 },
+  viewAllLabel: { fontSize: 13, fontWeight: '700', color: Colors.success700 },
   opsCard: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 20, marginTop: 12 },
   requestRow: {
     flexDirection: 'row',

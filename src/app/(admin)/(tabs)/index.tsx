@@ -211,6 +211,7 @@ export default function AdminHomeScreen() {
           <AsyncState
             isLoading={todaysBookingsQuery.isLoading}
             isError={todaysBookingsQuery.isError}
+            onRetry={() => todaysBookingsQuery.refetch()}
             isEmpty={todaysBookingsQuery.data?.length === 0}
             emptyMessage="Nothing scheduled for today."
           />
@@ -239,6 +240,7 @@ export default function AdminHomeScreen() {
           <AsyncState
             isLoading={auditQuery.isLoading}
             isError={auditQuery.isError}
+            onRetry={() => auditQuery.refetch()}
             isEmpty={auditQuery.data?.length === 0}
             emptyMessage="No recent activity yet."
           />

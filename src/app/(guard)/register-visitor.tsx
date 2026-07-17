@@ -105,7 +105,7 @@ export default function RegisterVisitorScreen() {
         <Pressable style={styles.secondaryButton} onPress={resetToDetails}>
           <Text style={styles.secondaryButtonLabel}>Register Another Visitor</Text>
         </Pressable>
-        <Pressable style={styles.doneButton} onPress={() => router.replace('/(guard)')}>
+        <Pressable style={styles.doneButton} onPress={() => router.replace('/(guard)/(tabs)')}>
           <Text style={styles.doneButtonLabel}>Done</Text>
         </Pressable>
       </View>
@@ -131,6 +131,7 @@ export default function RegisterVisitorScreen() {
             <AsyncState
               isLoading={residentsQuery.isLoading}
               isError={residentsQuery.isError}
+              onRetry={() => residentsQuery.refetch()}
               isEmpty={filteredResidents.length === 0}
               emptyMessage="No residents match your search."
             />

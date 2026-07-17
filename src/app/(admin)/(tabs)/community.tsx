@@ -120,6 +120,7 @@ export default function CommunityScreen() {
               <AsyncState
                 isLoading={towerStatsQuery.isLoading}
                 isError={towerStatsQuery.isError}
+                onRetry={() => towerStatsQuery.refetch()}
                 isEmpty={filteredTowers.length === 0}
                 emptyMessage="No towers match your search."
               />
@@ -152,6 +153,7 @@ export default function CommunityScreen() {
               <AsyncState
                 isLoading={towerStatsQuery.isLoading}
                 isError={towerStatsQuery.isError}
+                onRetry={() => towerStatsQuery.refetch()}
                 isEmpty={filteredTowers.length === 0}
                 emptyMessage="No flats match your search."
               />
@@ -183,6 +185,7 @@ export default function CommunityScreen() {
               <AsyncState
                 isLoading={residentsQuery.isLoading}
                 isError={residentsQuery.isError}
+                onRetry={() => residentsQuery.refetch()}
                 isEmpty={filteredResidents.length === 0}
                 emptyMessage="No residents match your search."
               />

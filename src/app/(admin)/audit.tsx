@@ -26,6 +26,7 @@ export default function AuditTrailScreen() {
           <AsyncState
             isLoading={auditQuery.isLoading}
             isError={auditQuery.isError}
+            onRetry={() => auditQuery.refetch()}
             isEmpty={auditQuery.data?.length === 0}
             emptyMessage="No admin actions logged yet."
           />

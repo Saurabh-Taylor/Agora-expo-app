@@ -7,7 +7,9 @@ create extension if not exists "pgcrypto";
 create type user_role as enum ('RESIDENT', 'GUARD', 'ADMIN');
 create type occupancy_type as enum ('OWNER', 'TENANT');
 create type visitor_category as enum ('DELIVERY', 'GUEST', 'SERVICE', 'CAB');
-create type visitor_request_status as enum ('PENDING', 'APPROVED', 'REJECTED', 'ENTERED', 'EXITED');
+-- LEFT_AT_GATE: delivery-only soft outcome — guard collects the package,
+-- nobody enters, so it never proceeds to ENTERED/EXITED.
+create type visitor_request_status as enum ('PENDING', 'APPROVED', 'REJECTED', 'LEFT_AT_GATE', 'ENTERED', 'EXITED');
 create type notice_category as enum ('GENERAL', 'WATER', 'EVENT', 'BILLING', 'SECURITY');
 create type notice_state as enum ('SCHEDULED', 'PUBLISHED');
 create type poll_state as enum ('ACTIVE', 'CLOSED');
@@ -82,6 +84,30 @@ $$ select role from profiles where id = auth.uid() $$;
 create function current_flat_id() returns uuid
   language sql stable security definer set search_path = public as
 $$ select flat_id from profiles where id = auth.uid() $$;
+
+-- profiles_update_self's WITH CHECK only tests id = auth.uid(), so it does not
+-- restrict which columns a self-update may change. A non-admin could otherwise
+-- PATCH their own row and set role/society_id/flat_id to anything (privilege
+-- escalation). This trigger blocks that regardless of which policy allowed the
+-- update through.
+create function prevent_self_privilege_escalation() returns trigger
+  language plpgsql security definer set search_path = public as
+$$
+begin
+  if current_user_role() <> 'ADMIN' then
+    if new.role <> old.role
+      or new.society_id <> old.society_id
+      or new.flat_id is distinct from old.flat_id then
+      raise exception 'insufficient_privilege: cannot change role, society_id, or flat_id';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger profiles_protect_privileged_columns
+  before update on profiles
+  for each row execute function prevent_self_privilege_escalation();
 
 -- ══════════════════════════ visitors ══════════════════════════
 
@@ -347,20 +373,20 @@ create policy profiles_admin_write on profiles for insert
   with check (current_user_role() = 'ADMIN' and society_id = current_society_id());
 create policy profiles_admin_update on profiles for update
   using (current_user_role() = 'ADMIN' and society_id = current_society_id())
-  with check (society_id = current_society_id());
+  with check (current_user_role() = 'ADMIN' and society_id = current_society_id());
 
 -- towers / flats: society members read; admin writes
 create policy towers_select on towers for select
   using (society_id = current_society_id());
 create policy towers_admin_write on towers for all
   using (current_user_role() = 'ADMIN' and society_id = current_society_id())
-  with check (society_id = current_society_id());
+  with check (current_user_role() = 'ADMIN' and society_id = current_society_id());
 
 create policy flats_select on flats for select
   using (society_id = current_society_id());
 create policy flats_admin_write on flats for all
   using (current_user_role() = 'ADMIN' and society_id = current_society_id())
-  with check (society_id = current_society_id());
+  with check (current_user_role() = 'ADMIN' and society_id = current_society_id());
 
 -- visitors: guards create; society members (guard/admin) can read; residents
 -- read only visitors tied to their own flat's requests
@@ -375,8 +401,11 @@ create policy visitors_select on visitors for select
       )
     )
   );
-create policy visitors_guard_write on visitors for insert
-  with check (current_user_role() = 'GUARD' and society_id = current_society_id());
+-- guard registers a visitor at the gate; resident inserts one when
+-- pre-approving a guest (the paired visitor_requests insert below is what
+-- actually restricts this to their own flat)
+create policy visitors_write on visitors for insert
+  with check (current_user_role() in ('GUARD', 'RESIDENT') and society_id = current_society_id());
 
 -- visitor_requests: guard creates/updates entry-exit; resident reads/decides own
 -- flat's requests; admin has no operational visitor workflow (read-only, none granted)
@@ -393,12 +422,29 @@ create policy visitor_requests_guard_insert on visitor_requests for insert
       or (current_user_role() = 'RESIDENT' and is_pre_approved and flat_id = current_flat_id())
     )
   );
-create policy visitor_requests_update on visitor_requests for update
+-- Split by role rather than one shared policy: a single `with check
+-- (society_id = ...)` would let a resident's update "borrow" the guard
+-- policy's blanket check and slip status through to ENTERED/EXITED, since
+-- Postgres ORs every permissive policy's WITH CHECK regardless of which
+-- policy's USING matched the row. Repeating the role test in both clauses
+-- of each policy is what actually closes that.
+create policy visitor_requests_resident_decide on visitor_requests for update
   using (
-    society_id = current_society_id()
-    and (current_user_role() = 'GUARD' or flat_id = current_flat_id())
+    current_user_role() = 'RESIDENT' and society_id = current_society_id()
+    and flat_id = current_flat_id() and status = 'PENDING'
   )
-  with check (society_id = current_society_id());
+  with check (
+    current_user_role() = 'RESIDENT' and society_id = current_society_id()
+    and flat_id = current_flat_id() and status in ('APPROVED', 'REJECTED', 'LEFT_AT_GATE')
+  );
+-- guard's writes are always entry/exit marking — never a decision on the
+-- resident's behalf, so the resulting status is locked to those two values.
+create policy visitor_requests_guard_update on visitor_requests for update
+  using (current_user_role() = 'GUARD' and society_id = current_society_id())
+  with check (
+    current_user_role() = 'GUARD' and society_id = current_society_id()
+    and status in ('ENTERED', 'EXITED')
+  );
 
 -- notices: published notices readable by all society members; scheduled only by admin;
 -- only admin writes
@@ -409,20 +455,20 @@ create policy notices_select on notices for select
   );
 create policy notices_admin_write on notices for all
   using (current_user_role() = 'ADMIN' and society_id = current_society_id())
-  with check (society_id = current_society_id());
+  with check (current_user_role() = 'ADMIN' and society_id = current_society_id());
 
 -- polls: readable by society members; admin manages; residents vote (insert only)
 create policy polls_select on polls for select
   using (society_id = current_society_id());
 create policy polls_admin_write on polls for all
   using (current_user_role() = 'ADMIN' and society_id = current_society_id())
-  with check (society_id = current_society_id());
+  with check (current_user_role() = 'ADMIN' and society_id = current_society_id());
 
 create policy poll_options_select on poll_options for select
   using (society_id = current_society_id());
 create policy poll_options_admin_write on poll_options for all
   using (current_user_role() = 'ADMIN' and society_id = current_society_id())
-  with check (society_id = current_society_id());
+  with check (current_user_role() = 'ADMIN' and society_id = current_society_id());
 
 create policy poll_votes_select on poll_votes for select
   using (society_id = current_society_id());
@@ -448,7 +494,7 @@ create policy complaints_resident_insert on complaints for insert
   );
 create policy complaints_admin_update on complaints for update
   using (current_user_role() = 'ADMIN' and society_id = current_society_id())
-  with check (society_id = current_society_id());
+  with check (current_user_role() = 'ADMIN' and society_id = current_society_id());
 
 create policy complaint_events_select on complaint_events for select
   using (
@@ -469,7 +515,7 @@ create policy amenities_select on amenities for select
   using (society_id = current_society_id());
 create policy amenities_admin_write on amenities for all
   using (current_user_role() = 'ADMIN' and society_id = current_society_id())
-  with check (society_id = current_society_id());
+  with check (current_user_role() = 'ADMIN' and society_id = current_society_id());
 
 create policy amenity_bookings_select on amenity_bookings for select
   using (
@@ -485,7 +531,7 @@ create policy amenity_bookings_resident_insert on amenity_bookings for insert
   );
 create policy amenity_bookings_admin_update on amenity_bookings for update
   using (current_user_role() = 'ADMIN' and society_id = current_society_id())
-  with check (society_id = current_society_id());
+  with check (current_user_role() = 'ADMIN' and society_id = current_society_id());
 
 -- dues & payments: resident reads/pays own flat's dues; admin reads all (no
 -- dues-management UI required, but data stays society-scoped and readable)
@@ -500,26 +546,51 @@ create policy payments_select on payments for select
     society_id = current_society_id()
     and (current_user_role() = 'ADMIN' or flat_id = current_flat_id())
   );
+-- The `and exists (...)` guard blocks paying a due that isn't UNPAID at
+-- insert time — the RLS-level duplicate-submission guard for payments, since
+-- maintenance_dues has no update policy for residents to double-check
+-- against client-side.
 create policy payments_resident_insert on payments for insert
   with check (
     current_user_role() = 'RESIDENT'
     and society_id = current_society_id()
     and flat_id = current_flat_id()
     and paid_by = auth.uid()
+    and exists (
+      select 1 from maintenance_dues d
+      where d.id = payments.due_id and d.status = 'UNPAID' and d.flat_id = current_flat_id()
+    )
   );
+
+-- maintenance_dues has no direct write policy for any role — a paid due is
+-- never client-writable directly. This trigger is the only path that flips
+-- UNPAID -> PAID, and it only fires as a side effect of a payments insert
+-- that already passed payments_resident_insert's RLS check above.
+create function mark_due_paid_on_payment() returns trigger
+  language plpgsql security definer set search_path = public as
+$$
+begin
+  update maintenance_dues set status = 'PAID' where id = new.due_id;
+  return new;
+end;
+$$;
+
+create trigger payments_mark_due_paid
+  after insert on payments
+  for each row execute function mark_due_paid_on_payment();
 
 -- staff / service providers: admin manages; guards can read for visitor routing context
 create policy staff_select on staff for select
   using (society_id = current_society_id() and current_user_role() in ('ADMIN', 'GUARD'));
 create policy staff_admin_write on staff for all
   using (current_user_role() = 'ADMIN' and society_id = current_society_id())
-  with check (society_id = current_society_id());
+  with check (current_user_role() = 'ADMIN' and society_id = current_society_id());
 
 create policy service_providers_select on service_providers for select
   using (society_id = current_society_id() and current_user_role() in ('ADMIN', 'GUARD'));
 create policy service_providers_admin_write on service_providers for all
   using (current_user_role() = 'ADMIN' and society_id = current_society_id())
-  with check (society_id = current_society_id());
+  with check (current_user_role() = 'ADMIN' and society_id = current_society_id());
 
 -- push tokens: a user manages only their own token
 create policy push_tokens_own on push_tokens for all
@@ -545,3 +616,15 @@ grant select, insert, update, delete on
   amenity_bookings, maintenance_dues, payments, staff, service_providers,
   push_tokens, audit_events
   to authenticated, service_role;
+
+-- ══════════════════════════════════ realtime ══════════════════════════════════
+-- Resident's gate banner and guard's live pending list both react to
+-- visitor_requests changes; full replica identity so update payloads carry the
+-- old row too (needed once movement-log/history reads before/after status).
+
+alter table visitor_requests replica identity full;
+alter publication supabase_realtime add table visitor_requests;
+
+-- Admin's poll-results screen shows live vote counts as residents vote.
+alter table poll_votes replica identity full;
+alter publication supabase_realtime add table poll_votes;

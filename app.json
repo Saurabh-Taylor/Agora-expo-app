@@ -32,7 +32,13 @@
         }
       ],
       "expo-sqlite",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "color": "#10261B"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
