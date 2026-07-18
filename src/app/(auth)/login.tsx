@@ -3,7 +3,7 @@ import * as Linking from 'expo-linking';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import Svg, { Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 import { AgoraLogo } from '@/components/icons/agora-logo';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
@@ -38,25 +38,18 @@ function LockIcon() {
   );
 }
 
-function EyeIcon({ hidden }: { hidden: boolean }) {
-  const stroke = 'rgba(247,244,236,0.55)';
-  if (hidden) {
-    return (
-      <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-        <Path d="M4 4l16 16" stroke={stroke} strokeWidth={1.8} strokeLinecap="round" />
-        <Path
-          d="M9.5 5.4A9.9 9.9 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3 3.7M6.5 6.9C3.7 8.6 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 3.5-.6"
-          stroke={stroke}
-          strokeWidth={1.8}
-          strokeLinecap="round"
-        />
-      </Svg>
-    );
-  }
+function EyeIcon({ visible }: { visible: boolean }) {
+  const stroke = 'rgba(247,244,236,0.72)';
   return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z" stroke={stroke} strokeWidth={1.8} />
-      <Path d="M12 12" stroke={stroke} strokeWidth={1.8} />
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"
+        stroke={stroke}
+        strokeWidth={1.8}
+        strokeLinejoin="round"
+      />
+      <Circle cx={12} cy={12} r={2.75} stroke={stroke} strokeWidth={1.8} />
+      {!visible && <Path d="M3.5 3.5l17 17" stroke={stroke} strokeWidth={2} strokeLinecap="round" />}
     </Svg>
   );
 }
@@ -245,12 +238,7 @@ export default function LoginScreen() {
                 <LockIcon />
               </View>
               <View style={styles.fieldBody}>
-                <View style={styles.fieldLabelRow}>
-                  <Text style={styles.fieldLabel}>PASSWORD</Text>
-                  <Pressable onPress={forgot} hitSlop={8}>
-                    <Text style={styles.forgotLabel}>Forgot password?</Text>
-                  </Pressable>
-                </View>
+                <Text style={styles.fieldLabel}>PASSWORD</Text>
                 <View style={styles.passwordRow}>
                   <TextInput
                     value={password}
@@ -260,13 +248,22 @@ export default function LoginScreen() {
                     secureTextEntry={!showPw}
                     style={[styles.input, styles.flex]}
                   />
-                  <Pressable onPress={() => setShowPw(!showPw)} hitSlop={8}>
-                    <EyeIcon hidden={!showPw} />
+                  <Pressable
+                    style={styles.eyeButton}
+                    onPress={() => setShowPw(!showPw)}
+                    accessibilityRole="button"
+                    accessibilityLabel={showPw ? 'Hide password' : 'Show password'}>
+                    <EyeIcon visible={showPw} />
                   </Pressable>
                 </View>
               </View>
             </View>
-            <Pressable style={[styles.primaryButton, { backgroundColor: canLogin ? Colors.gold : '#B79A5E' }]} onPress={doLogin}>
+            <Pressable style={styles.forgotButton} onPress={forgot} accessibilityRole="button">
+              <Text style={styles.forgotLabel}>Forgot password?</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.primaryButton, styles.passwordLoginButton, { backgroundColor: canLogin ? Colors.gold : '#B79A5E' }]}
+              onPress={doLogin}>
               {busy && <ActivityIndicator size="small" color={Colors.green500} />}
               <Text style={styles.primaryButtonLabel}>{busy ? 'Logging in…' : 'Log in'}</Text>
             </Pressable>
@@ -385,9 +382,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   fieldBody: { flex: 1, minWidth: 0 },
-  fieldLabelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   fieldLabel: { fontFamily: FontFamily.bodyBold, fontSize: 11, letterSpacing: 1.5, color: 'rgba(247,244,236,0.5)' },
-  forgotLabel: { fontFamily: FontFamily.bodyBold, fontSize: 12.5, color: Colors.gold },
+  forgotButton: { alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center', paddingHorizontal: 2 },
+  forgotLabel: { fontFamily: FontFamily.bodyBold, fontSize: 13, color: Colors.gold },
   input: {
     fontFamily: FontFamily.bodyRegular,
     fontSize: 16,
@@ -395,7 +392,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
     padding: 0,
   },
-  passwordRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  passwordRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  eyeButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -10 },
   primaryButton: {
     marginTop: 24,
     height: 58,
@@ -405,6 +403,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
   },
+  passwordLoginButton: { marginTop: 8 },
   primaryButtonLabel: { fontFamily: FontFamily.bodyBold, fontSize: 17, color: Colors.green500 },
   otpButtonSpacing: { marginTop: 22 },
   otpHint: { fontFamily: FontFamily.bodyRegular, fontSize: 13.5, color: 'rgba(247,244,236,0.55)', marginTop: 18, lineHeight: 20 },

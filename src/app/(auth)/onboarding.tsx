@@ -1,8 +1,9 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useRef, useState } from 'react';
-import { NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { Animated, NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { AgoraLogo } from '@/components/icons/agora-logo';
@@ -75,9 +76,37 @@ function SlideBackground({ source, contentFit, overlay }: { source: number; cont
 
 export default function OnboardingScreen() {
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [activeIndex, setActiveIndex] = useState(0);
+  const [scrollX] = useState(() => new Animated.Value(0));
   const scrollRef = useRef<ScrollView>(null);
   const isLast = activeIndex === SLIDE_COUNT - 1;
+
+  const slideMotionStyles = useMemo(
+    () =>
+      Array.from({ length: SLIDE_COUNT }, (_, index) => {
+        const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
+        return {
+          foreground: {
+            opacity: scrollX.interpolate({
+              inputRange,
+              outputRange: [0.58, 1, 0.58],
+              extrapolate: 'clamp',
+            }),
+            transform: [
+              {
+                translateY: scrollX.interpolate({
+                  inputRange,
+                  outputRange: [10, 0, 10],
+                  extrapolate: 'clamp',
+                }),
+              },
+            ],
+          },
+        };
+      }),
+    [scrollX, width],
+  );
 
   function goToSlide(index: number) {
     scrollRef.current?.scrollTo({ x: index * width, animated: true });
@@ -99,17 +128,21 @@ export default function OnboardingScreen() {
 
   return (
     <View style={styles.root}>
-      <ScrollView
+      <Animated.ScrollView
         ref={scrollRef}
         horizontal
         pagingEnabled
+        disableIntervalMomentum
+        decelerationRate="fast"
         showsHorizontalScrollIndicator={false}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: true })}
+        scrollEventThrottle={16}
         onMomentumScrollEnd={handleScrollEnd}
         style={styles.flex}>
         {/* Slide 1 */}
-        <View style={{ width }}>
+        <View style={[styles.slide, { width }]}>
           <SlideBackground source={require('@/assets/images/onboarding/hero-gate-night.png')} contentFit="cover" overlay="hero" />
-          <View style={styles.slide1Content}>
+          <Animated.View style={[styles.slide1Content, slideMotionStyles[0].foreground]}>
             <AgoraLogo size={72} />
             <Text style={styles.wordmarkLarge}>Agora</Text>
             <Text style={styles.slideHeadingSmall}>One Community. One App.</Text>
@@ -124,13 +157,13 @@ export default function OnboardingScreen() {
                 <Text style={styles.trustSub}>to simplify daily operations</Text>
               </View>
             </View>
-          </View>
+          </Animated.View>
         </View>
 
         {/* Slide 2 */}
-        <View style={{ width }}>
-          <SlideBackground source={require('@/assets/images/onboarding/slide2-hologram.png')} contentFit="contain" overlay="approve" />
-          <View style={styles.slide2Content}>
+        <View style={[styles.slide, { width }]}>
+          <SlideBackground source={require('@/assets/images/onboarding/slide2-hologram.png')} contentFit="cover" overlay="approve" />
+          <Animated.View style={[styles.slide2Content, { paddingTop: insets.top + 68 }, slideMotionStyles[1].foreground]}>
             <View style={styles.gateCard}>
               <View style={styles.gateCardTopRow}>
                 <View style={styles.liveDot} />
@@ -163,30 +196,33 @@ export default function OnboardingScreen() {
                 Every guest, delivery and cab is verified at the gate — you clear them from your phone in seconds.
               </Text>
             </View>
-          </View>
+          </Animated.View>
         </View>
 
         {/* Slide 3 */}
-        <View style={{ width }}>
-          <SlideBackground source={require('@/assets/images/onboarding/slide3-community.png')} contentFit="contain" overlay="plain" />
-          <View style={styles.slideBottomOnly}>
+        <View style={[styles.slide, { width }]}>
+          <SlideBackground source={require('@/assets/images/onboarding/slide3-community.png')} contentFit="cover" overlay="plain" />
+          <Animated.View style={[styles.slideBottomOnly, slideMotionStyles[2].foreground]}>
             <Text style={styles.slideHeading}>Your community, in one place</Text>
             <Text style={styles.slideBody}>Notices, polls and society updates land in a single shared feed — never miss what matters.</Text>
-          </View>
+          </Animated.View>
         </View>
 
         {/* Slide 4 */}
-        <View style={{ width }}>
-          <SlideBackground source={require('@/assets/images/onboarding/slide4-dues.png')} contentFit="contain" overlay="plain" />
-          <View style={[styles.slideBottomOnly, { paddingBottom: 168 }]}>
+        <View style={[styles.slide, { width }]}>
+          <SlideBackground source={require('@/assets/images/onboarding/slide4-dues.png')} contentFit="cover" overlay="plain" />
+          <Animated.View style={[styles.slideBottomOnly, { paddingBottom: 168 }, slideMotionStyles[3].foreground]}>
             <Text style={styles.slideHeading}>Dues, minus the hassle</Text>
             <Text style={styles.slideBody}>Pay maintenance and keep every receipt in one place — no paperwork, no follow-ups.</Text>
-          </View>
+          </Animated.View>
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {!isLast && (
-        <Pressable style={styles.skip} onPress={() => router.replace('/(auth)/login')} hitSlop={8}>
+        <Pressable
+          style={[styles.skip, { top: insets.top + 10 }]}
+          onPress={() => router.replace('/(auth)/login')}
+          hitSlop={8}>
           <Text style={styles.skipLabel}>Skip</Text>
         </Pressable>
       )}
@@ -220,6 +256,7 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.green600 },
   flex: { flex: 1 },
+  slide: { overflow: 'hidden' },
   slide1Content: {
     flex: 1,
     alignItems: 'center',
@@ -353,9 +390,9 @@ const styles = StyleSheet.create({
   approveLabel: { fontFamily: FontFamily.bodyBold, fontSize: 14.5, color: '#FFFFFF' },
   skip: {
     position: 'absolute',
-    top: 70,
     right: 22,
     padding: 6,
+    zIndex: 1,
   },
   skipLabel: {
     fontFamily: FontFamily.bodySemiBold,
@@ -391,6 +428,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 9,
+    marginTop: 20,
     marginBottom: 20,
   },
   primaryButtonLabel: { fontFamily: FontFamily.bodyBold, fontSize: 16, color: '#10261B' },
