@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { isValidEmail } from '@/commonFunctions';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { findOrCreateFlat } from '@/features/flats/api';
@@ -13,10 +14,6 @@ import { useAuthStore } from '@/stores/auth-store';
 import { showToast } from '@/stores/toast-store';
 
 type OccupancyType = 'OWNER' | 'TENANT';
-
-function isValidEmail(value: string) {
-  return /\S+@\S+\.\S+/.test(value.trim());
-}
 
 function parseFloorFromFlatNumber(number: string) {
   const digitsOnly = number.replace(/\D/g, '');

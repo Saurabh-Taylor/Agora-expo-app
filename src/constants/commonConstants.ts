@@ -62,6 +62,8 @@ export const AvatarPalette = ['#E7A33C', '#B9A7D6', '#8FB3C7', '#A7C4B5', '#D6C9
 // the admin complaint list/triage labels.
 export const ComplaintCategories = ['Plumbing', 'Electrical', 'Cleanliness', 'Security', 'Noise', 'Other'] as const;
 
+export const AUTH_RESEND_SECONDS = 30;
+
 export const FontFamily = {
   headingExtraLight: 'BricolageGrotesque_200ExtraLight',
   headingLight: 'BricolageGrotesque_300Light',

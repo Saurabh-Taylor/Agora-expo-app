@@ -61,7 +61,7 @@ export default function ResidentHomeScreen() {
   const profileQuery = useProfile(session?.user.id);
   const profile = profileQuery.data;
   const flatQuery = useFlatWithTower(profile?.flat_id);
-  const requestsQuery = useFlatVisitorRequests(profile?.flat_id);
+  const requestsQuery = useFlatVisitorRequests(profile?.flat_id, profile?.society_id);
   const duesQuery = useFlatDues(profile?.flat_id);
 
   useVisitorRequestsRealtimeSync('flat_id', profile?.flat_id);

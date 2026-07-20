@@ -1,31 +1,43 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { avatarColorForName, formatTime, getInitials, getVisitorRequestStatusStyle, titleCase } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { StatusPill } from '@/components/status-pill';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
+import { useProfile } from '@/features/profile/api';
 import { useMarkEntry, useMarkExit, useVisitorRequestDetail } from '@/features/visitors/api';
+import { useAuthStore } from '@/stores/auth-store';
 import { showToast } from '@/stores/toast-store';
 
 export default function VerifyVisitorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const detailQuery = useVisitorRequestDetail(id);
+  const insets = useSafeAreaInsets();
+  const session = useAuthStore((state) => state.session);
+  const profileQuery = useProfile(session?.user.id);
+  const detailQuery = useVisitorRequestDetail(id, profileQuery.data?.society_id);
   const markEntry = useMarkEntry();
   const markExit = useMarkExit();
 
   const request = detailQuery.data;
 
-  if (detailQuery.isLoading || detailQuery.isError || !request) {
+  const isLoading = profileQuery.isLoading || detailQuery.isLoading;
+  const isError = profileQuery.isError || detailQuery.isError;
+
+  if (isLoading || isError || !request) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { paddingTop: insets.top + 16 }]}>
         <BackArrowButton onPress={() => router.back()} />
         <AsyncState
-          isLoading={detailQuery.isLoading}
-          isError={detailQuery.isError}
-          onRetry={() => detailQuery.refetch()}
-          isEmpty={!request}
+          isLoading={isLoading}
+          isError={isError}
+          onRetry={() => {
+            profileQuery.refetch();
+            detailQuery.refetch();
+          }}
+          isEmpty={!isLoading && !isError && !request}
           emptyMessage="Request not found."
         />
       </View>
@@ -61,7 +73,9 @@ export default function VerifyVisitorScreen() {
   const flatLabel = request.flat?.tower ? `${request.flat.tower.code}-${request.flat.number}` : (request.flat?.number ?? '—');
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={[styles.root, { paddingTop: insets.top + 16 }]}
+      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}>
       <BackArrowButton onPress={() => router.back()} />
       <View style={styles.profileRow}>
         <View style={[styles.avatar, { backgroundColor: avatarColorForName(request.visitor?.name ?? '?') }]}>
@@ -109,13 +123,23 @@ export default function VerifyVisitorScreen() {
       </View>
 
       {canMarkEntry && (
-        <Pressable style={styles.actionButton} onPress={handleMarkEntry} disabled={markEntry.isPending}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Mark visitor entry"
+          style={styles.actionButton}
+          onPress={handleMarkEntry}
+          disabled={markEntry.isPending}>
           {markEntry.isPending && <ActivityIndicator size="small" color="#fff" />}
           <Text style={styles.actionLabel}>Mark Entry</Text>
         </Pressable>
       )}
       {canMarkExit && (
-        <Pressable style={[styles.actionButton, styles.exitButton]} onPress={handleMarkExit} disabled={markExit.isPending}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Mark visitor exit"
+          style={[styles.actionButton, styles.exitButton]}
+          onPress={handleMarkExit}
+          disabled={markExit.isPending}>
           {markExit.isPending && <ActivityIndicator size="small" color="#fff" />}
           <Text style={styles.actionLabel}>Mark Exit</Text>
         </Pressable>
@@ -128,9 +152,9 @@ export default function VerifyVisitorScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.adminCanvas, paddingTop: 66, paddingHorizontal: 20 },
+  root: { flex: 1, backgroundColor: Colors.adminCanvas, paddingHorizontal: 20 },
   flex: { flex: 1 },
-  content: { paddingBottom: 40 },
+  content: {},
   profileRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 18 },
   avatar: { width: 64, height: 64, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   avatarLabel: { fontFamily: FontFamily.headingBold, fontSize: 24, color: Colors.green500 },

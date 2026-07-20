@@ -1,7 +1,8 @@
 import Constants, { AppOwnership } from 'expo-constants';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
-import { AvatarPalette, Colors } from '@/constants/commonConstants';
+import { AUTH_RESEND_SECONDS, AvatarPalette, Colors } from '@/constants/commonConstants';
 
 // Android Expo Go no longer includes the native remote-notification module.
 // Keep the import lazy so merely rendering the app cannot evaluate the
@@ -13,6 +14,38 @@ export async function loadNotificationsModule() {
 
   if (isAndroidExpoGo) return null;
   return import('expo-notifications');
+}
+
+export function isValidEmail(value: string) {
+  return /\S+@\S+\.\S+/.test(value.trim());
+}
+
+export function useResendCountdown() {
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const timer = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+
+  const startCountdown = useCallback(() => {
+    clearInterval(timer.current);
+    setRemainingSeconds(AUTH_RESEND_SECONDS);
+    timer.current = setInterval(() => {
+      setRemainingSeconds((current) => {
+        if (current <= 1) {
+          clearInterval(timer.current);
+          return 0;
+        }
+        return current - 1;
+      });
+    }, 1000);
+  }, []);
+
+  const resetCountdown = useCallback(() => {
+    clearInterval(timer.current);
+    setRemainingSeconds(0);
+  }, []);
+
+  useEffect(() => resetCountdown, [resetCountdown]);
+
+  return { remainingSeconds, startCountdown, resetCountdown };
 }
 
 export function getInitials(fullName: string) {

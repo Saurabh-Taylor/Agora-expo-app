@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { SetPasswordForm } from '@/components/set-password-form';
 import { Colors, FontFamily } from '@/constants/commonConstants';
 import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/stores/auth-store';
 import { showToast } from '@/stores/toast-store';
 
 function extractRecoveryTokens(url: string | null) {
@@ -24,14 +25,18 @@ export default function ResetPasswordScreen() {
   const tokens = useMemo(() => extractRecoveryTokens(url), [url]);
   const [sessionStatus, setSessionStatus] = useState<'checking' | 'ready' | 'invalid'>('checking');
   const [busy, setBusy] = useState(false);
+  const beginPasswordRecovery = useAuthStore((state) => state.beginPasswordRecovery);
+  const finishPasswordRecovery = useAuthStore((state) => state.finishPasswordRecovery);
   const status = tokens ? sessionStatus : 'invalid';
 
   useEffect(() => {
     if (!tokens) return;
+    beginPasswordRecovery();
     supabase.auth.setSession({ access_token: tokens.accessToken, refresh_token: tokens.refreshToken }).then(({ error }) => {
+      if (error) finishPasswordRecovery();
       setSessionStatus(error ? 'invalid' : 'ready');
     });
-  }, [tokens]);
+  }, [beginPasswordRecovery, finishPasswordRecovery, tokens]);
 
   async function handleSubmit(password: string) {
     setBusy(true);
@@ -42,7 +47,18 @@ export default function ResetPasswordScreen() {
       return;
     }
     showToast('Password updated');
-    // root navigator picks up the now-authenticated session automatically
+    const { error: signOutError } = await supabase.auth.signOut();
+    if (signOutError) {
+      showToast('Password updated. Sign out before continuing.');
+      return;
+    }
+    finishPasswordRecovery();
+    router.replace('/(auth)/login');
+  }
+
+  function returnToLogin() {
+    finishPasswordRecovery();
+    router.replace('/(auth)/login');
   }
 
   if (status === 'checking') {
@@ -58,7 +74,7 @@ export default function ResetPasswordScreen() {
       <View style={styles.center}>
         <Text style={styles.heading}>This link has expired</Text>
         <Text style={styles.subheading}>Request a new reset link from the login screen.</Text>
-        <Pressable style={styles.backButton} onPress={() => router.replace('/(auth)/login')}>
+        <Pressable style={styles.backButton} onPress={returnToLogin}>
           <Text style={styles.backButtonLabel}>Back to login</Text>
         </Pressable>
       </View>

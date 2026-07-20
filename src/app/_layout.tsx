@@ -46,9 +46,10 @@ void loadNotificationsModule()
 function RootNavigator() {
   const session = useAuthStore((state) => state.session);
   const isInitializing = useAuthStore((state) => state.isInitializing);
+  const isPasswordRecovery = useAuthStore((state) => state.isPasswordRecovery);
   const profileQuery = useProfile(session?.user.id);
 
-  const profile = session && profileQuery.isSuccess ? profileQuery.data : undefined;
+  const profile = session && !isPasswordRecovery && profileQuery.isSuccess ? profileQuery.data : undefined;
   const mustChangePassword = !!profile?.must_change_password;
 
   useRegisterPushToken(profile?.id, profile?.society_id);
@@ -80,12 +81,16 @@ function RootNavigator() {
     };
   }, [profile]);
 
-  if (isInitializing) return null;
-
-  if (session && profileQuery.isPending) {
+  if (isInitializing || (session && !isPasswordRecovery && profileQuery.isPending)) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.green600 }}>
+      <View
+        style={sessionErrorStyles.bootRoot}
+        accessibilityRole="progressbar"
+        accessibilityLabel={isInitializing ? 'Restoring your session' : 'Loading your account'}>
         <ActivityIndicator color={Colors.gold} />
+        <Text style={sessionErrorStyles.bootLabel}>
+          {isInitializing ? 'Opening Agora...' : 'Loading your account...'}
+        </Text>
       </View>
     );
   }
@@ -96,7 +101,7 @@ function RootNavigator() {
   // group would strand the user in the splash/onboarding carousel with the
   // stale session still in the store — this gives them an actionable choice
   // instead, per AGENTS.md's expired/revoked-session requirement.
-  if (session && profileQuery.isError) {
+  if (session && !isPasswordRecovery && profileQuery.isError) {
     return (
       <View style={sessionErrorStyles.root}>
         <Text style={sessionErrorStyles.title}>We couldn&apos;t verify your session</Text>
@@ -124,23 +129,23 @@ function RootNavigator() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={!session}>
+      <Stack.Protected guard={!session || isPasswordRecovery}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
 
-      <Stack.Protected guard={!!profile && mustChangePassword}>
+      <Stack.Protected guard={!isPasswordRecovery && !!profile && mustChangePassword}>
         <Stack.Screen name="change-password" />
       </Stack.Protected>
 
-      <Stack.Protected guard={!!profile && !mustChangePassword && profile.role === 'RESIDENT'}>
+      <Stack.Protected guard={!isPasswordRecovery && !!profile && !mustChangePassword && profile.role === 'RESIDENT'}>
         <Stack.Screen name="(resident)" />
       </Stack.Protected>
 
-      <Stack.Protected guard={!!profile && !mustChangePassword && profile.role === 'GUARD'}>
+      <Stack.Protected guard={!isPasswordRecovery && !!profile && !mustChangePassword && profile.role === 'GUARD'}>
         <Stack.Screen name="(guard)" />
       </Stack.Protected>
 
-      <Stack.Protected guard={!!profile && !mustChangePassword && profile.role === 'ADMIN'}>
+      <Stack.Protected guard={!isPasswordRecovery && !!profile && !mustChangePassword && profile.role === 'ADMIN'}>
         <Stack.Screen name="(admin)" />
       </Stack.Protected>
     </Stack>
@@ -174,6 +179,8 @@ export default function RootLayout() {
 }
 
 const sessionErrorStyles = StyleSheet.create({
+  bootRoot: { flex: 1, backgroundColor: Colors.green600, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  bootLabel: { fontFamily: FontFamily.bodyMedium, fontSize: 14, color: Colors.textOnDark },
   root: { flex: 1, backgroundColor: Colors.canvas, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
   title: { fontFamily: FontFamily.headingExtraBold, fontSize: 20, textAlign: 'center' },
   subtitle: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', marginTop: 10, lineHeight: 21 },

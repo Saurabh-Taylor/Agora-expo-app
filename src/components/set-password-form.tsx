@@ -54,7 +54,7 @@ export function SetPasswordForm({ busy, submitLabel, busyLabel, onSubmit }: SetP
         />
       </View>
 
-      <Pressable style={styles.primaryButton} onPress={handleSubmit}>
+      <Pressable style={styles.primaryButton} onPress={handleSubmit} disabled={busy}>
         {busy && <ActivityIndicator size="small" color={Colors.green500} />}
         <Text style={styles.primaryButtonLabel}>{busy ? busyLabel : submitLabel}</Text>
       </Pressable>

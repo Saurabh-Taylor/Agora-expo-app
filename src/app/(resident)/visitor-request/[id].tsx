@@ -1,11 +1,14 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { avatarColorForName, formatTime, getInitials, getVisitorRequestStatusStyle, titleCase } from '@/commonFunctions';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
+import { useProfile } from '@/features/profile/api';
 import { useDecideVisitorRequest, useVisitorRequestDetail } from '@/features/visitors/api';
+import { useAuthStore } from '@/stores/auth-store';
 import { showToast } from '@/stores/toast-store';
 
 function DenyIcon() {
@@ -26,7 +29,10 @@ function ApproveIcon() {
 
 export default function VisitorRequestScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const detailQuery = useVisitorRequestDetail(id);
+  const insets = useSafeAreaInsets();
+  const session = useAuthStore((state) => state.session);
+  const profileQuery = useProfile(session?.user.id);
+  const detailQuery = useVisitorRequestDetail(id, profileQuery.data?.society_id);
   const decide = useDecideVisitorRequest();
   const [pendingDecision, setPendingDecision] = useState<'APPROVED' | 'REJECTED' | 'LEFT_AT_GATE' | null>(null);
 
@@ -58,20 +64,29 @@ export default function VisitorRequestScreen() {
     }
   }
 
-  if (detailQuery.isLoading) {
+  if (profileQuery.isLoading || detailQuery.isLoading) {
     return (
-      <View style={[styles.root, styles.center]}>
+      <View style={[styles.root, styles.center, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <ActivityIndicator color={Colors.gold} />
       </View>
     );
   }
 
-  if (detailQuery.isError || !request) {
+  if (profileQuery.isError || detailQuery.isError || !request) {
     return (
-      <View style={[styles.root, styles.center]}>
+      <View style={[styles.root, styles.center, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <Text style={styles.errorText}>This request isn&apos;t available.</Text>
-        <Pressable style={styles.errorButton} onPress={() => router.replace('/(resident)/(tabs)')}>
-          <Text style={styles.errorButtonLabel}>Back to Home</Text>
+        <Pressable
+          accessibilityRole="button"
+          style={styles.errorButton}
+          onPress={() => {
+            profileQuery.refetch();
+            detailQuery.refetch();
+          }}>
+          <Text style={styles.errorButtonLabel}>Try again</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" style={styles.homeButton} onPress={() => router.replace('/(resident)/(tabs)')}>
+          <Text style={styles.homeButtonLabel}>Back to Home</Text>
         </Pressable>
       </View>
     );
@@ -80,7 +95,7 @@ export default function VisitorRequestScreen() {
   if (request.status !== 'PENDING') {
     const style = getVisitorRequestStatusStyle(request.status);
     return (
-      <View style={[styles.root, styles.center]}>
+      <View style={[styles.root, styles.center, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <Text style={styles.resolvedTitle}>{request.visitor?.name ?? 'This visitor'}</Text>
         <Text style={[styles.resolvedStatus, { color: style.color }]}>Already {style.label.toLowerCase()}</Text>
         <Pressable style={styles.errorButton} onPress={() => router.replace('/(resident)/(tabs)')}>
@@ -94,7 +109,7 @@ export default function VisitorRequestScreen() {
   const avatarBg = avatarColorForName(request.visitor?.name ?? '?');
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { paddingTop: insets.top + 20, paddingBottom: Math.max(insets.bottom, 24) }]}>
       <View style={styles.topRow}>
         <View style={styles.topRowLeft}>
           <View style={styles.liveDot} />
@@ -120,6 +135,8 @@ export default function VisitorRequestScreen() {
 
       <View style={styles.actionsRow}>
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Deny visitor entry"
           style={[styles.denyButton, decide.isPending && styles.buttonDisabled]}
           disabled={decide.isPending}
           onPress={() => handleDecide('REJECTED')}>
@@ -127,6 +144,8 @@ export default function VisitorRequestScreen() {
           <Text style={styles.denyLabel}>Deny</Text>
         </Pressable>
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Approve visitor entry"
           style={[styles.approveButton, decide.isPending && styles.buttonDisabled]}
           disabled={decide.isPending}
           onPress={() => handleDecide('APPROVED')}>
@@ -137,6 +156,8 @@ export default function VisitorRequestScreen() {
 
       {isDelivery && (
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Ask delivery visitor to leave the item at the gate"
           style={[styles.gateButton, decide.isPending && styles.buttonDisabled]}
           disabled={decide.isPending}
           onPress={() => handleDecide('LEFT_AT_GATE')}>
@@ -148,7 +169,7 @@ export default function VisitorRequestScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.green600, paddingTop: 78, paddingHorizontal: 22, paddingBottom: 40 },
+  root: { flex: 1, backgroundColor: Colors.green600, paddingHorizontal: 22 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   topRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 },
@@ -213,6 +234,8 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 14.5, color: Colors.textOnDark, textAlign: 'center' },
   errorButton: { marginTop: 20, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 14, backgroundColor: Colors.gold },
   errorButtonLabel: { fontSize: 14, fontWeight: '700', color: Colors.green500 },
+  homeButton: { minHeight: 44, marginTop: 6, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
+  homeButtonLabel: { fontSize: 14, fontWeight: '700', color: Colors.textOnDark },
   resolvedTitle: { fontFamily: FontFamily.headingExtraBold, fontSize: 22, color: Colors.textOnDark },
   resolvedStatus: { fontSize: 15, fontWeight: '700', marginTop: 8 },
 });

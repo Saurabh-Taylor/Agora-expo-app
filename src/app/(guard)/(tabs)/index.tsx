@@ -53,12 +53,11 @@ function VerifyIcon() {
 export default function GuardHomeScreen() {
   const session = useAuthStore((state) => state.session);
   const profileQuery = useProfile(session?.user.id);
-  const pendingQuery = usePendingVisitorRequests();
-  const todaysCountQuery = useTodaysVisitorRequestsCount();
-  const societyRequestsQuery = useSocietyVisitorRequests();
-  const { data: awaitingEntryCount } = useAwaitingEntryCount();
-
   const profile = profileQuery.data;
+  const pendingQuery = usePendingVisitorRequests(profile?.society_id);
+  const todaysCountQuery = useTodaysVisitorRequestsCount(profile?.society_id);
+  const societyRequestsQuery = useSocietyVisitorRequests(profile?.society_id);
+  const { data: awaitingEntryCount } = useAwaitingEntryCount(profile?.society_id);
 
   useVisitorRequestsRealtimeSync('society_id', profile?.society_id);
 

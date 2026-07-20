@@ -1,112 +1,84 @@
-// Setup type definitions for built-in Supabase Runtime APIs
 import "@supabase/functions-js/edge-runtime.d.ts";
 import { withSupabase } from "@supabase/server";
 
+type Role = "RESIDENT" | "GUARD" | "ADMIN";
+type NotificationType = "VISITOR_REQUEST" | "VISITOR_DECISION" | "NOTICE" | "BOOKING_DECISION";
+
 type SendPushBody = {
-  profileIds?: string[];
-  flatId?: string;
-  notifyAllResidents?: boolean;
-  title?: string;
-  body?: string;
-  data?: Record<string, unknown>;
+  data?: {
+    type?: NotificationType;
+    requestId?: string;
+    noticeId?: string;
+    bookingId?: string;
+  };
 };
 
-function badRequest(message: string) {
-  return Response.json({ error: message }, { status: 400 });
+type NotificationAudience = {
+  profileIds: string[];
+  title: string;
+  body: string;
+};
+
+function jsonError(message: string, status: number) {
+  return Response.json({ error: message }, { status });
 }
 
-// Generic push sender reused across every notification trigger (visitor
-// requests now; notices/complaint-status changes in later phases). Callers
-// pass either explicit profileIds or a flatId (resolved server-side to that
-// flat's residents); every target is re-checked against the caller's own
-// society_id before a token is looked up — never trust client-supplied ids.
+function titleCase(value: string) {
+  return value.charAt(0) + value.slice(1).toLowerCase();
+}
+
 export default {
   fetch: withSupabase({ auth: "user" }, async (req, ctx) => {
-    if (req.method !== "POST") {
-      return Response.json({ error: "Method not allowed" }, { status: 405 });
-    }
+    if (req.method !== "POST") return jsonError("Method not allowed", 405);
 
     const callerId = ctx.userClaims?.id;
-    if (!callerId) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!callerId) return jsonError("Unauthorized", 401);
 
-    const { data: callerProfile, error: callerError } = await ctx.supabase
+    const { data: caller, error: callerError } = await ctx.supabase
       .from("profiles")
-      .select("society_id")
+      .select("id, role, society_id, flat_id")
       .eq("id", callerId)
       .single();
 
-    if (callerError || !callerProfile) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const societyId = callerProfile.society_id;
+    if (callerError || !caller) return jsonError("Unauthorized", 401);
 
     const body = (await req.json().catch(() => null)) as SendPushBody | null;
-    if (!body) return badRequest("Invalid request body");
+    const type = body?.data?.type;
+    if (!type) return jsonError("A supported notification type is required", 400);
 
-    const title = body.title?.trim();
-    const message = body.body?.trim();
-    if (!title || !message) return badRequest("title and body are required");
+    const audienceResult = await resolveAudience(type, body.data ?? {}, caller as {
+      id: string;
+      role: Role;
+      society_id: string;
+      flat_id: string | null;
+    }, ctx.supabaseAdmin);
 
-    let profileIds = (body.profileIds ?? []).filter(Boolean);
+    if (audienceResult instanceof Response) return audienceResult;
+    if (audienceResult.profileIds.length === 0) return Response.json({ sent: 0 });
 
-    if (body.flatId) {
-      const { data: flat, error: flatError } = await ctx.supabaseAdmin
-        .from("flats")
-        .select("id, society_id")
-        .eq("id", body.flatId)
-        .single();
-      if (flatError || !flat || flat.society_id !== societyId) {
-        return badRequest("Flat does not belong to your society");
-      }
-
-      const { data: residents, error: residentsError } = await ctx.supabaseAdmin
-        .from("profiles")
-        .select("id")
-        .eq("flat_id", body.flatId)
-        .eq("role", "RESIDENT");
-      if (residentsError) return badRequest(residentsError.message);
-      profileIds = profileIds.concat((residents ?? []).map((r) => r.id));
-    }
-
-    if (body.notifyAllResidents) {
-      const { data: residents, error: residentsError } = await ctx.supabaseAdmin
-        .from("profiles")
-        .select("id")
-        .eq("society_id", societyId)
-        .eq("role", "RESIDENT");
-      if (residentsError) return badRequest(residentsError.message);
-      profileIds = profileIds.concat((residents ?? []).map((r) => r.id));
-    }
-
-    profileIds = [...new Set(profileIds)];
-    if (profileIds.length === 0) return Response.json({ sent: 0 });
-
-    // Re-scope every target to the caller's own society before trusting it.
     const { data: recipients, error: recipientsError } = await ctx.supabaseAdmin
       .from("profiles")
       .select("id")
-      .in("id", profileIds)
-      .eq("society_id", societyId);
-    if (recipientsError) return badRequest(recipientsError.message);
+      .in("id", audienceResult.profileIds)
+      .eq("society_id", caller.society_id);
+    if (recipientsError) return jsonError("Could not authorize notification recipients", 500);
 
-    const allowedIds = (recipients ?? []).map((r) => r.id);
+    const allowedIds = (recipients ?? []).map((profile) => profile.id);
     if (allowedIds.length === 0) return Response.json({ sent: 0 });
 
     const { data: tokens, error: tokensError } = await ctx.supabaseAdmin
       .from("push_tokens")
       .select("token")
+      .eq("society_id", caller.society_id)
       .in("profile_id", allowedIds);
-    if (tokensError) return badRequest(tokensError.message);
-    if (!tokens || tokens.length === 0) return Response.json({ sent: 0 });
+    if (tokensError) return jsonError("Could not load notification tokens", 500);
+    if (!tokens?.length) return Response.json({ sent: 0 });
 
-    const messages = tokens.map((t) => ({
-      to: t.token,
-      title,
-      body: message,
-      data: body.data ?? {},
+    const messages = tokens.map(({ token }) => ({
+      to: token,
+      title: audienceResult.title,
+      body: audienceResult.body,
+      data: body.data,
     }));
 
     const pushResponse = await fetch("https://exp.host/--/api/v2/push/send", {
@@ -115,22 +87,120 @@ export default {
       body: JSON.stringify(messages),
     });
 
-    if (!pushResponse.ok) {
-      return Response.json({ error: "Expo push service error" }, { status: 502 });
-    }
-
+    if (!pushResponse.ok) return jsonError("Expo push service error", 502);
     return Response.json({ sent: messages.length });
   }),
 };
 
-/* To invoke locally:
+async function resolveAudience(
+  type: NotificationType,
+  data: NonNullable<SendPushBody["data"]>,
+  caller: { id: string; role: Role; society_id: string; flat_id: string | null },
+  admin: any,
+): Promise<NotificationAudience | Response> {
+  if (type === "VISITOR_REQUEST") {
+    if (caller.role !== "GUARD" || !data.requestId) return jsonError("Guard visitor request required", 403);
 
-  1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
-  2. Make an HTTP request with a signed-in user's access token:
+    const { data: request, error } = await admin
+      .from("visitor_requests")
+      .select("id, society_id, flat_id, raised_by, status, visitor:visitors(name, category)")
+      .eq("id", data.requestId)
+      .eq("society_id", caller.society_id)
+      .single();
+    if (error || !request || request.raised_by !== caller.id || request.status !== "PENDING") {
+      return jsonError("Visitor request is not available", 403);
+    }
 
-  curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/send-push-notification' \
-    --header 'Authorization: Bearer <access-token>' \
-    --header 'Content-Type: application/json' \
-    --data '{"flatId":"<flat-uuid>","title":"Visitor at the gate","body":"Ravi Kumar is waiting at Gate 1","data":{"type":"VISITOR_REQUEST","requestId":"<request-uuid>"}}'
+    const { data: residents } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("society_id", caller.society_id)
+      .eq("flat_id", request.flat_id)
+      .eq("role", "RESIDENT");
 
-*/
+    return {
+      profileIds: (residents ?? []).map((profile: { id: string }) => profile.id),
+      title: `${request.visitor?.name ?? "A visitor"} is at the gate`,
+      body: `${titleCase(request.visitor?.category ?? "Guest")} - Tap to respond`,
+    };
+  }
+
+  if (type === "VISITOR_DECISION") {
+    if (caller.role !== "RESIDENT" || !caller.flat_id || !data.requestId) {
+      return jsonError("Resident visitor decision required", 403);
+    }
+
+    const { data: request, error } = await admin
+      .from("visitor_requests")
+      .select("id, society_id, flat_id, raised_by, decision_by, status, visitor:visitors(name)")
+      .eq("id", data.requestId)
+      .eq("society_id", caller.society_id)
+      .single();
+    if (
+      error ||
+      !request ||
+      request.flat_id !== caller.flat_id ||
+      request.decision_by !== caller.id ||
+      !["APPROVED", "REJECTED", "LEFT_AT_GATE"].includes(request.status)
+    ) {
+      return jsonError("Visitor decision is not available", 403);
+    }
+
+    const decision =
+      request.status === "APPROVED" ? "approved" : request.status === "REJECTED" ? "denied" : "left at the gate";
+    return {
+      profileIds: request.raised_by ? [request.raised_by] : [],
+      title: `${request.visitor?.name ?? "Visitor"} - ${decision}`,
+      body: `The resident marked this request as ${decision}.`,
+    };
+  }
+
+  if (type === "NOTICE") {
+    if (caller.role !== "ADMIN" || !data.noticeId) return jsonError("Admin notice required", 403);
+
+    const { data: notice, error } = await admin
+      .from("notices")
+      .select("id, society_id, title, state, created_by")
+      .eq("id", data.noticeId)
+      .eq("society_id", caller.society_id)
+      .single();
+    if (error || !notice || notice.created_by !== caller.id || notice.state !== "PUBLISHED") {
+      return jsonError("Notice is not available", 403);
+    }
+
+    const { data: residents } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("society_id", caller.society_id)
+      .eq("role", "RESIDENT");
+
+    return {
+      profileIds: (residents ?? []).map((profile: { id: string }) => profile.id),
+      title: "New notice published",
+      body: notice.title,
+    };
+  }
+
+  if (type === "BOOKING_DECISION") {
+    if (caller.role !== "ADMIN" || !data.bookingId) return jsonError("Admin booking decision required", 403);
+
+    const { data: booking, error } = await admin
+      .from("amenity_bookings")
+      .select("id, society_id, booked_by, status, slot_start, amenity:amenities(name)")
+      .eq("id", data.bookingId)
+      .eq("society_id", caller.society_id)
+      .single();
+    if (error || !booking || !["CONFIRMED", "CANCELLED"].includes(booking.status)) {
+      return jsonError("Booking decision is not available", 403);
+    }
+
+    const decision = booking.status === "CONFIRMED" ? "confirmed" : "declined";
+    return {
+      profileIds: [booking.booked_by],
+      title: `${booking.amenity?.name ?? "Amenity"} booking ${decision}`,
+      body: `Your requested slot was ${decision}.`,
+    };
+  }
+
+  return jsonError("Unsupported notification type", 400);
+}

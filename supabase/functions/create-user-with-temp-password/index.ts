@@ -27,7 +27,7 @@ function badRequest(message: string) {
 }
 
 // Admin-only: provisions a login-capable account (auth user + profile row) for
-// a resident/guard/admin, scoped to the caller's own society. Returns a temp
+// a resident or guard, scoped to the caller's own society. Returns a temp
 // password shown once in the UI; the user is forced to change it on first login
 // (profiles.must_change_password), per AGENTS.md's account-provisioning model.
 export default {
@@ -64,9 +64,14 @@ export default {
     const occupancyType = body.occupancyType ?? null;
 
     if (!fullName || fullName.length < 2) return badRequest("Full name is required");
-    if (!role || !["RESIDENT", "GUARD", "ADMIN"].includes(role)) return badRequest("A valid role is required");
+    if (!role || !["RESIDENT", "GUARD"].includes(role)) {
+      return badRequest("Only resident and guard accounts can be provisioned");
+    }
     if (!email || !/\S+@\S+\.\S+/.test(email)) return badRequest("A valid email is required");
     if (role === "RESIDENT" && !flatId) return badRequest("Residents require a flat");
+    if (role !== "RESIDENT" && (flatId || occupancyType)) {
+      return badRequest("Only residents can be assigned a flat or occupancy type");
+    }
 
     const societyId = callerProfile.society_id;
 

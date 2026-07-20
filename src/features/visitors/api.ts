@@ -18,34 +18,38 @@ export type VisitorRequestWithVisitor = {
   flat: { number: string; tower: { code: string } | null } | null;
 };
 
-export function usePendingVisitorRequests() {
+export function usePendingVisitorRequests(societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['visitor-requests', 'pending'],
+    queryKey: ['visitor-requests', 'pending', societyId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('visitor_requests')
         .select('id, status, created_at, flat_id, visitor:visitors(name, category), flat:flats(number, tower:towers(code))')
+        .eq('society_id', societyId as string)
         .eq('status', 'PENDING')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as unknown as VisitorRequestWithVisitor[];
     },
+    enabled: !!societyId,
   });
 }
 
-export function useTodaysVisitorRequestsCount() {
+export function useTodaysVisitorRequestsCount(societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['visitor-requests', 'today-count'],
+    queryKey: ['visitor-requests', 'today-count', societyId],
     queryFn: async () => {
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
       const { count, error } = await supabase
         .from('visitor_requests')
         .select('id', { count: 'exact', head: true })
+        .eq('society_id', societyId as string)
         .gte('created_at', startOfDay.toISOString());
       if (error) throw error;
       return count ?? 0;
     },
+    enabled: !!societyId,
   });
 }
 
@@ -120,20 +124,25 @@ export type VisitorRequestForFlat = {
 const FLAT_REQUEST_SELECT =
   'id, status, is_pre_approved, created_at, decision_at, entry_at, exit_at, gate_pass_code, flat_id, raised_by, visitor:visitors(name, category, phone)';
 
-export function useFlatVisitorRequests(flatId: string | null | undefined, limit = 10) {
+export function useFlatVisitorRequests(
+  flatId: string | null | undefined,
+  societyId: string | null | undefined,
+  limit = 10,
+) {
   return useQuery({
-    queryKey: ['visitor-requests', 'flat', flatId],
+    queryKey: ['visitor-requests', 'flat', societyId, flatId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('visitor_requests')
         .select(FLAT_REQUEST_SELECT)
         .eq('flat_id', flatId as string)
+        .eq('society_id', societyId as string)
         .order('created_at', { ascending: false })
         .limit(limit);
       if (error) throw error;
       return data as unknown as VisitorRequestForFlat[];
     },
-    enabled: !!flatId,
+    enabled: !!flatId && !!societyId,
   });
 }
 
@@ -141,34 +150,37 @@ export type VisitorRequestDetail = VisitorRequestForFlat & {
   flat: { number: string; tower: { code: string; name: string } | null } | null;
 };
 
-export function useVisitorRequestDetail(id: string | undefined) {
+export function useVisitorRequestDetail(id: string | undefined, societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['visitor-requests', 'detail', id],
+    queryKey: ['visitor-requests', 'detail', societyId, id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('visitor_requests')
         .select(`${FLAT_REQUEST_SELECT}, flat:flats(number, tower:towers(code, name))`)
         .eq('id', id as string)
+        .eq('society_id', societyId as string)
         .single();
       if (error) throw error;
       return data as unknown as VisitorRequestDetail;
     },
-    enabled: !!id,
+    enabled: !!id && !!societyId,
   });
 }
 
-export function useAwaitingEntryCount() {
+export function useAwaitingEntryCount(societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['visitor-requests', 'awaiting-entry-count'],
+    queryKey: ['visitor-requests', 'awaiting-entry-count', societyId],
     queryFn: async () => {
       const { count, error } = await supabase
         .from('visitor_requests')
         .select('id', { count: 'exact', head: true })
+        .eq('society_id', societyId as string)
         .eq('status', 'APPROVED')
         .is('entry_at', null);
       if (error) throw error;
       return count ?? 0;
     },
+    enabled: !!societyId,
   });
 }
 
@@ -178,18 +190,20 @@ export function useAwaitingEntryCount() {
 // history" AGENTS.md calls for, rather than building two near-duplicate
 // screens. Ordered by created_at, so a just-exited visitor doesn't jump back
 // to the top on exit; acceptable for a hackathon-scale demo.
-export function useSocietyVisitorRequests(limit = 50) {
+export function useSocietyVisitorRequests(societyId: string | null | undefined, limit = 50) {
   return useQuery({
-    queryKey: ['visitor-requests', 'society'],
+    queryKey: ['visitor-requests', 'society', societyId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('visitor_requests')
         .select(`${FLAT_REQUEST_SELECT}, flat:flats(number, tower:towers(code, name))`)
+        .eq('society_id', societyId as string)
         .order('created_at', { ascending: false })
         .limit(limit);
       if (error) throw error;
       return data as unknown as VisitorRequestDetail[];
     },
+    enabled: !!societyId,
   });
 }
 
@@ -199,17 +213,7 @@ export function useMarkEntry() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id }: MarkEntryInput) => {
-      // Mirrors the resident decide guard: matches zero rows (already
-      // entered, or not actually approved) and .single() throws instead of
-      // silently re-marking.
-      const { data, error } = await supabase
-        .from('visitor_requests')
-        .update({ status: 'ENTERED', entry_at: new Date().toISOString() })
-        .eq('id', id)
-        .eq('status', 'APPROVED')
-        .is('entry_at', null)
-        .select('id, status')
-        .single();
+      const { data, error } = await supabase.rpc('mark_visitor_entry', { request_id: id });
       if (error) throw error;
       return data;
     },
@@ -225,14 +229,7 @@ export function useMarkExit() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id }: MarkExitInput) => {
-      const { data, error } = await supabase
-        .from('visitor_requests')
-        .update({ status: 'EXITED', exit_at: new Date().toISOString() })
-        .eq('id', id)
-        .eq('status', 'ENTERED')
-        .is('exit_at', null)
-        .select('id, status')
-        .single();
+      const { data, error } = await supabase.rpc('mark_visitor_exit', { request_id: id });
       if (error) throw error;
       return data;
     },
@@ -291,19 +288,10 @@ export function useDecideVisitorRequest() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, decision }: DecideVisitorRequestInput) => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      // .eq('status', 'PENDING') is the duplicate-submission guard: a request
-      // already decided (by this resident's other device, or stale UI) simply
-      // matches zero rows and .single() throws instead of silently re-deciding.
-      const { data, error } = await supabase
-        .from('visitor_requests')
-        .update({ status: decision, decision_by: user?.id, decision_at: new Date().toISOString() })
-        .eq('id', id)
-        .eq('status', 'PENDING')
-        .select('id, status')
-        .single();
+      const { data, error } = await supabase.rpc('decide_visitor_request', {
+        request_id: id,
+        decision,
+      });
       if (error) throw error;
       return data;
     },

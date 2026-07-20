@@ -1,33 +1,21 @@
 import { Image } from 'expo-image';
-import * as Linking from 'expo-linking';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useRef, useState } from 'react';
+import { router } from 'expo-router';
+import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
+import { isValidEmail, useResendCountdown } from '@/commonFunctions';
+import { AuthEmailField } from '@/components/auth-email-field';
 import { AgoraLogo } from '@/components/icons/agora-logo';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { supabase } from '@/lib/supabase';
 import { showToast } from '@/stores/toast-store';
 
 const OTP_LENGTH = 6;
-const RESEND_SECONDS = 30;
 const SUPPORT_LINE = 'Society office · +91 80 4123 5566';
 
 type AuthMode = 'password' | 'otp';
-
-function isEmail(value: string) {
-  return /\S+@\S+\.\S+/.test(value.trim());
-}
-
-function EmailIcon() {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Rect x={3} y={5.5} width={18} height={13} rx={2.5} stroke={Colors.gold} strokeWidth={1.8} />
-      <Path d="M4 7l8 6 8-6" stroke={Colors.gold} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
 
 function LockIcon() {
   return (
@@ -70,40 +58,22 @@ export default function LoginScreen() {
   const [showPw, setShowPw] = useState(false);
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
-  const [resendIn, setResendIn] = useState(0);
   const [busy, setBusy] = useState(false);
-  const resendTimer = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
-
-  useEffect(() => () => clearInterval(resendTimer.current), []);
-
-  function startResend() {
-    clearInterval(resendTimer.current);
-    setResendIn(RESEND_SECONDS);
-    resendTimer.current = setInterval(() => {
-      setResendIn((current) => {
-        if (current <= 1) {
-          clearInterval(resendTimer.current);
-          return 0;
-        }
-        return current - 1;
-      });
-    }, 1000);
-  }
+  const { remainingSeconds: resendIn, startCountdown: startResend, resetCountdown: resetResend } = useResendCountdown();
 
   const isPassword = authMode === 'password';
-  const hasId = isEmail(identifier);
+  const hasId = isValidEmail(identifier);
   const canLogin = hasId && password.length > 0 && !busy;
   const canSend = hasId && !busy;
   const canVerify = otp.length === OTP_LENGTH && !busy;
 
   function switchMode() {
-    clearInterval(resendTimer.current);
+    resetResend();
     setAuthMode(isPassword ? 'otp' : 'password');
     setOtpSent(false);
     setOtp('');
     setPassword('');
     setBusy(false);
-    setResendIn(0);
   }
 
   async function doLogin() {
@@ -175,15 +145,8 @@ export default function LoginScreen() {
     }
   }
 
-  async function forgot() {
-    if (!hasId) {
-      showToast('Enter your email to reset your password');
-      return;
-    }
-    const { error } = await supabase.auth.resetPasswordForEmail(identifier.trim(), {
-      redirectTo: Linking.createURL('reset-password'),
-    });
-    showToast(error ? error.message : 'Reset link sent to your email');
+  function forgot() {
+    router.push({ pathname: '/(auth)/forgot-password', params: { email: identifier.trim() } });
   }
 
   function contact() {
@@ -213,23 +176,7 @@ export default function LoginScreen() {
         <Text style={styles.heading}>Welcome back</Text>
         <Text style={styles.subheading}>{isPassword ? 'Log in to your Agora account.' : 'Log in with a one-time code.'}</Text>
 
-        <View style={styles.field}>
-          <View style={styles.fieldIconWrap}>
-            <EmailIcon />
-          </View>
-          <View style={styles.fieldBody}>
-            <Text style={styles.fieldLabel}>EMAIL</Text>
-            <TextInput
-              value={identifier}
-              onChangeText={setIdentifier}
-              placeholder="you@email.com"
-              placeholderTextColor={Colors.textFaint}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              style={styles.input}
-            />
-          </View>
-        </View>
+        <AuthEmailField value={identifier} onChangeText={setIdentifier} />
 
         {isPassword ? (
           <>

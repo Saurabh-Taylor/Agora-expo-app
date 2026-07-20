@@ -43,7 +43,7 @@ function normalizeCode(value: string) {
 export default function MovementLogScreen() {
   const session = useAuthStore((state) => state.session);
   const profileQuery = useProfile(session?.user.id);
-  const requestsQuery = useSocietyVisitorRequests();
+  const requestsQuery = useSocietyVisitorRequests(profileQuery.data?.society_id);
   const [filter, setFilter] = useState<StatusFilter>('ALL');
   const [code, setCode] = useState('');
 

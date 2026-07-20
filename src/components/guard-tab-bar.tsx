@@ -4,7 +4,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HomeTabIcon } from '@/components/icons/admin-tab-icons';
 import { MovementTabIcon } from '@/components/icons/guard-tab-icons';
 import { Colors, FontFamily } from '@/constants/commonConstants';
+import { useProfile } from '@/features/profile/api';
 import { useAwaitingEntryCount } from '@/features/visitors/api';
+import { useAuthStore } from '@/stores/auth-store';
 
 // Same minimal local shape as AdminTabBarProps — see admin-tab-bar.tsx for why
 // this doesn't import @react-navigation/bottom-tabs directly.
@@ -27,7 +29,9 @@ const TAB_META: Record<(typeof TAB_ORDER)[number], { label: string; Icon: typeof
 
 export function GuardTabBar({ state, navigation }: GuardTabBarProps) {
   const insets = useSafeAreaInsets();
-  const { data: awaitingEntryCount } = useAwaitingEntryCount();
+  const session = useAuthStore((store) => store.session);
+  const profileQuery = useProfile(session?.user.id);
+  const { data: awaitingEntryCount } = useAwaitingEntryCount(profileQuery.data?.society_id);
   const hasAwaitingEntry = (awaitingEntryCount ?? 0) > 0;
 
   const orderedRoutes = TAB_ORDER.map((name) => state.routes.find((route) => route.name === name)).filter(
