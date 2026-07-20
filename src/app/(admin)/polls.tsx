@@ -1,14 +1,18 @@
 import { router } from 'expo-router';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { formatDate } from '@/commonFunctions';
+import { computePollResults, formatDate, getPollDisplayState } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { usePolls } from '@/features/polls/api';
+import { useProfile } from '@/features/profile/api';
+import { useAuthStore } from '@/stores/auth-store';
 
 export default function PollsScreen() {
-  const pollsQuery = usePolls();
+  const session = useAuthStore((state) => state.session);
+  const profileQuery = useProfile(session?.user.id);
+  const pollsQuery = usePolls(profileQuery.data?.society_id);
   const polls = pollsQuery.data ?? [];
 
   return (
@@ -33,15 +37,17 @@ export default function PollsScreen() {
           />
         }
         renderItem={({ item }) => {
-          const stateColor = item.state === 'ACTIVE' ? Colors.success600 : Colors.textFaint;
+          const displayState = getPollDisplayState(item);
+          const stateColor = displayState === 'ACTIVE' ? Colors.success600 : Colors.textFaint;
+          const { totalVotes } = computePollResults(item);
           return (
             <Pressable style={styles.card} onPress={() => router.push(`/(admin)/poll/${item.id}`)}>
               <View style={styles.cardTopRow}>
                 <View style={styles.stateRow}>
                   <View style={[styles.stateDot, { backgroundColor: stateColor }]} />
-                  <Text style={[styles.stateLabel, { color: stateColor }]}>{item.state}</Text>
+                  <Text style={[styles.stateLabel, { color: stateColor }]}>{displayState}</Text>
                 </View>
-                <Text style={styles.votesLabel}>{item.poll_votes.length} votes</Text>
+                <Text style={styles.votesLabel}>{totalVotes} votes</Text>
               </View>
               <Text style={styles.question}>{item.question}</Text>
               <Text style={styles.meta}>

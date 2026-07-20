@@ -6,10 +6,14 @@ import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { useNoticeDetail } from '@/features/notices/api';
+import { useProfile } from '@/features/profile/api';
+import { useAuthStore } from '@/stores/auth-store';
 
 export default function NoticeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const noticeQuery = useNoticeDetail(id);
+  const session = useAuthStore((state) => state.session);
+  const profileQuery = useProfile(session?.user.id);
+  const noticeQuery = useNoticeDetail(id, profileQuery.data?.society_id);
   const notice = noticeQuery.data;
 
   if (!notice) {

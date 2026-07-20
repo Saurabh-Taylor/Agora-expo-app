@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 
@@ -11,32 +11,116 @@ export type Flat = {
   created_at: string;
 };
 
-export function useFlats() {
+export function useFlats(societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['flats'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('flats').select('*');
-      if (error) throw error;
-      return data as Flat[];
-    },
-  });
-}
-
-export type FlatWithTower = Flat & { tower: { name: string; code: string } | null };
-
-export function useFlatWithTower(flatId: string | null | undefined) {
-  return useQuery({
-    queryKey: ['flats', flatId],
+    queryKey: ['flats', societyId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('flats')
-        .select('*, tower:towers(name, code)')
+        .select('*')
+        .eq('society_id', societyId as string)
+        .order('floor')
+        .order('number');
+      if (error) throw error;
+      return data as Flat[];
+    },
+    enabled: !!societyId,
+  });
+}
+
+export type FlatWithTower = Flat & {
+  tower: { id: string; name: string; code: string; floors: number } | null;
+};
+
+export function useFlatWithTower(flatId: string | null | undefined, societyId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['flats', societyId, flatId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('flats')
+        .select('*, tower:towers(id, name, code, floors)')
         .eq('id', flatId as string)
+        .eq('society_id', societyId as string)
         .single();
       if (error) throw error;
       return data as unknown as FlatWithTower;
     },
-    enabled: !!flatId,
+    enabled: !!flatId && !!societyId,
+  });
+}
+
+type CreateFlatInput = {
+  societyId: string;
+  towerId: string;
+  number: string;
+  floor: number;
+};
+
+export function useCreateFlat() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CreateFlatInput) => {
+      const { data, error } = await supabase.rpc('create_admin_flat', {
+        target_tower_id: input.towerId,
+        requested_number: input.number.trim(),
+        requested_floor: input.floor,
+      });
+      if (error) throw error;
+      const flat = data as Flat;
+      if (!flat || flat.society_id !== input.societyId) throw new Error('The flat could not be created in this society');
+      return flat;
+    },
+    onSuccess: (flat) => {
+      queryClient.invalidateQueries({ queryKey: ['flats', flat.society_id] });
+      queryClient.invalidateQueries({ queryKey: ['towers', flat.society_id] });
+      queryClient.invalidateQueries({ queryKey: ['audit-events', flat.society_id] });
+    },
+  });
+}
+
+type UpdateFlatInput = {
+  id: string;
+  societyId: string;
+  number: string;
+  floor: number;
+};
+
+export function useUpdateFlat() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: UpdateFlatInput) => {
+      const { data, error } = await supabase.rpc('update_admin_flat', {
+        target_flat_id: input.id,
+        requested_number: input.number.trim(),
+        requested_floor: input.floor,
+      });
+      if (error) throw error;
+      const flat = data as Flat;
+      if (!flat || flat.society_id !== input.societyId) throw new Error('The flat could not be updated in this society');
+      return flat;
+    },
+    onSuccess: (flat) => {
+      queryClient.invalidateQueries({ queryKey: ['flats', flat.society_id] });
+      queryClient.invalidateQueries({ queryKey: ['flats', flat.society_id, flat.id] });
+      queryClient.invalidateQueries({ queryKey: ['audit-events', flat.society_id] });
+    },
+  });
+}
+
+export function useDeleteEmptyFlat() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id }: { id: string; societyId: string }) => {
+      const { data, error } = await supabase.rpc('delete_empty_admin_flat', { target_flat_id: id });
+      if (error) throw error;
+      if (data !== true) throw new Error('The flat could not be deleted');
+      return true;
+    },
+    onSuccess: (_data, input) => {
+      queryClient.invalidateQueries({ queryKey: ['flats', input.societyId] });
+      queryClient.invalidateQueries({ queryKey: ['towers', input.societyId] });
+      queryClient.invalidateQueries({ queryKey: ['audit-events', input.societyId] });
+    },
   });
 }
 
@@ -45,17 +129,20 @@ export async function findOrCreateFlat(params: { societyId: string; towerId: str
   const { data: existing, error: findError } = await supabase
     .from('flats')
     .select('*')
+    .eq('society_id', societyId)
     .eq('tower_id', towerId)
-    .eq('number', number)
+    .eq('number', number.trim().toUpperCase())
     .maybeSingle();
   if (findError) throw findError;
   if (existing) return existing as Flat;
 
-  const { data: created, error: createError } = await supabase
-    .from('flats')
-    .insert({ society_id: societyId, tower_id: towerId, number, floor })
-    .select()
-    .single();
-  if (createError) throw createError;
-  return created as Flat;
+  const { data, error } = await supabase.rpc('create_admin_flat', {
+    target_tower_id: towerId,
+    requested_number: number.trim(),
+    requested_floor: floor,
+  });
+  if (error) throw error;
+  const created = data as Flat;
+  if (!created || created.society_id !== societyId) throw new Error('The flat could not be created in this society');
+  return created;
 }

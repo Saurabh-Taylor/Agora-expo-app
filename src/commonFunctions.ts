@@ -1,3 +1,4 @@
+import type { QueryClient } from '@tanstack/react-query';
 import Constants, { AppOwnership } from 'expo-constants';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
@@ -46,6 +47,10 @@ export function useResendCountdown() {
   useEffect(() => resetCountdown, [resetCountdown]);
 
   return { remainingSeconds, startCountdown, resetCountdown };
+}
+
+export function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
 }
 
 export function getInitials(fullName: string) {
@@ -130,6 +135,10 @@ export function getComplaintStatusStyle(status: keyof typeof COMPLAINT_STATUS_ST
   return COMPLAINT_STATUS_STYLES[status];
 }
 
+export function formatCurrency(amount: number) {
+  return "₹" + amount.toLocaleString("en-IN", { maximumFractionDigits: 0 });
+}
+
 export function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString([], { day: 'numeric', month: 'short' });
 }
@@ -162,22 +171,75 @@ export function getServiceProviderStatusStyle(status: keyof typeof SERVICE_PROVI
   return SERVICE_PROVIDER_STATUS_STYLES[status];
 }
 
-type PollOptionRow = { id: string; label: string; sort_order: number };
-type PollVoteRow = { option_id: string };
+export function invalidateSocietyDirectory(queryClient: QueryClient, societyId: string) {
+  return queryClient.invalidateQueries({ queryKey: ['directory', societyId] });
+}
+
+export function isValidDirectoryPhone(phone: string) {
+  const value = phone.trim();
+  return !value || (value.length >= 7 && value.length <= 20 && value.split("").every((character) => "0123456789+() -".includes(character)));
+}
+
+export function matchesDirectorySearch(entry: { name: string }, search: string, details: string[]) {
+  const needle = search.trim().toLowerCase();
+  return !needle || [entry.name, ...details].some((value) => value.toLowerCase().includes(needle));
+}
+
+export function formatMonthYear(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+}
+
+export function invalidateSocietyAmenities(queryClient: QueryClient, societyId: string) {
+  return queryClient.invalidateQueries({ queryKey: ['amenities', societyId] });
+}
+
+export function formatAmenityTimings(openTime: string | null, closeTime: string | null) {
+  if (!openTime || !closeTime) return 'Timing not set';
+  return `${openTime.slice(0, 5)} – ${closeTime.slice(0, 5)}`;
+}
+
+export function formatBookingSlot(start: string, end: string) {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const day = startDate.toLocaleDateString([], { day: 'numeric', month: 'short' });
+  const startTime = startDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const endTime = endDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return `${day} · ${startTime} – ${endTime}`;
+}
+
+export function isValidAmenityTimeRange(openTime: string, closeTime: string) {
+  const timePattern = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  return timePattern.test(openTime) && timePattern.test(closeTime) && openTime < closeTime;
+}
+
+export function invalidateSocietyComplaints(queryClient: QueryClient, societyId: string) {
+  return queryClient.invalidateQueries({ queryKey: ['complaints', societyId] });
+}
+
+export function isPollOpen(poll: { state: 'ACTIVE' | 'CLOSED'; closes_at: string | null; archived_at: string | null }) {
+  return poll.state === 'ACTIVE' && !poll.archived_at && (!poll.closes_at || new Date(poll.closes_at).getTime() > Date.now());
+}
+
+export function getPollDisplayState(poll: { state: 'ACTIVE' | 'CLOSED'; closes_at: string | null; archived_at: string | null }) {
+  if (poll.archived_at) return 'ARCHIVED' as const;
+  return isPollOpen(poll) ? ('ACTIVE' as const) : ('CLOSED' as const);
+}
+
+export function invalidateSocietyPolls(queryClient: QueryClient, societyId: string) {
+  return queryClient.invalidateQueries({ queryKey: ['polls', societyId] });
+}
+
+type PollOptionRow = { id: string; label: string; sort_order: number; vote_count: number };
 
 // Shared by the admin live-results screen and the resident poll-voting card
 // so vote-tally math (count, percentage, leading option) lives in one place.
-export function computePollResults(poll: { poll_options: PollOptionRow[]; poll_votes: PollVoteRow[] }) {
-  const counts = new Map<string, number>();
-  for (const vote of poll.poll_votes) {
-    counts.set(vote.option_id, (counts.get(vote.option_id) ?? 0) + 1);
-  }
-  const totalVotes = poll.poll_votes.length;
-  const maxCount = Math.max(0, ...poll.poll_options.map((option) => counts.get(option.id) ?? 0));
+export function computePollResults(poll: { poll_options: PollOptionRow[] }) {
+  const totalVotes = poll.poll_options.reduce((sum, option) => sum + option.vote_count, 0);
+  const maxCount = Math.max(0, ...poll.poll_options.map((option) => option.vote_count));
   const options = [...poll.poll_options]
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((option) => {
-      const count = counts.get(option.id) ?? 0;
+      const count = option.vote_count;
       return {
         ...option,
         count,

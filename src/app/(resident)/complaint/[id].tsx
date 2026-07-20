@@ -6,11 +6,16 @@ import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { StatusPill } from '@/components/status-pill';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
-import { useComplaintDetail } from '@/features/complaints/api';
+import { useComplaintDetail, useComplaintRealtimeSync } from '@/features/complaints/api';
+import { useProfile } from '@/features/profile/api';
+import { useAuthStore } from '@/stores/auth-store';
 
 export default function ResidentComplaintDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const detailQuery = useComplaintDetail(id);
+  const session = useAuthStore((state) => state.session);
+  const profileQuery = useProfile(session?.user.id);
+  const detailQuery = useComplaintDetail(id, profileQuery.data?.society_id);
+  useComplaintRealtimeSync(profileQuery.data?.society_id);
   const complaint = detailQuery.data?.complaint;
 
   if (!complaint) {
@@ -18,9 +23,9 @@ export default function ResidentComplaintDetailScreen() {
       <View style={styles.root}>
         <BackArrowButton onPress={() => router.back()} />
         <AsyncState
-          isLoading={detailQuery.isLoading}
-          isError={detailQuery.isError}
-          onRetry={() => detailQuery.refetch()}
+          isLoading={profileQuery.isLoading || detailQuery.isLoading}
+          isError={profileQuery.isError || detailQuery.isError}
+          onRetry={() => { profileQuery.refetch(); detailQuery.refetch(); }}
           isEmpty={!detailQuery.isLoading && !detailQuery.isError}
           emptyMessage="This complaint isn't available."
         />
@@ -29,13 +34,7 @@ export default function ResidentComplaintDetailScreen() {
   }
 
   const statusStyle = getComplaintStatusStyle(complaint.status);
-  // Synthesize the "raised" entry from the complaint row itself — residents
-  // can't insert complaint_events (admin-only per AGENTS.md's write scope),
-  // so the timeline always has at least this one entry.
-  const timeline = [
-    { id: 'raised', status: 'OPEN' as const, note: null, created_at: complaint.created_at, isRaised: true },
-    ...(detailQuery.data?.events ?? []).map((event) => ({ ...event, isRaised: false })),
-  ];
+  const events = detailQuery.data?.events ?? [];
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
@@ -54,14 +53,14 @@ export default function ResidentComplaintDetailScreen() {
 
       <Text style={styles.label}>TIMELINE</Text>
       <View style={styles.timeline}>
-        {timeline.map((event) => {
+        {events.map((event) => {
           const eventStyle = getComplaintStatusStyle(event.status);
           return (
             <View key={event.id} style={styles.timelineRow}>
               <View style={[styles.timelineDot, { backgroundColor: eventStyle.color }]} />
               <View style={styles.flex}>
-                <Text style={styles.timelineStatus}>{event.isRaised ? 'Raised' : eventStyle.label}</Text>
-                {'note' in event && event.note && <Text style={styles.timelineNote}>{event.note}</Text>}
+                <Text style={styles.timelineStatus}>{event.note === 'Complaint raised' ? 'Raised' : eventStyle.label}</Text>
+                {event.note && event.note !== 'Complaint raised' && <Text style={styles.timelineNote}>{event.note}</Text>}
                 <Text style={styles.timelineMeta}>{formatDate(event.created_at)}</Text>
               </View>
             </View>

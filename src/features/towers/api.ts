@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
-import { logAuditEvent } from '@/features/audit/api';
 import { useFlats } from '@/features/flats/api';
 import { useResidents } from '@/features/residents/api';
 import { supabase } from '@/lib/supabase';
@@ -16,25 +15,20 @@ export type Tower = {
   created_at: string;
 };
 
-export function useTowers() {
+export function useTowers(societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['towers'],
+    queryKey: ['towers', societyId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('towers').select('*').order('name');
+      const { data, error } = await supabase
+        .from('towers')
+        .select('*')
+        .eq('society_id', societyId as string)
+        .order('name');
       if (error) throw error;
       return data as Tower[];
     },
+    enabled: !!societyId,
   });
-}
-
-function generateFlatNumbers(floors: number, unitsPerFloor: number) {
-  const numbers: { number: string; floor: number }[] = [];
-  for (let floor = 1; floor <= floors; floor++) {
-    for (let unit = 1; unit <= unitsPerFloor; unit++) {
-      numbers.push({ number: `${floor}${String(unit).padStart(2, '0')}`, floor });
-    }
-  }
-  return numbers;
 }
 
 type CreateTowerInput = {
@@ -48,41 +42,65 @@ export function useCreateTower() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ name, floors, unitsPerFloor, societyId }: CreateTowerInput) => {
-      const code = name.trim().replace(/[^a-zA-Z]/g, '').slice(0, 2).toUpperCase() || 'TW';
-      const { data: tower, error: towerError } = await supabase
-        .from('towers')
-        .insert({ name: name.trim(), code, floors, units_per_floor: unitsPerFloor, society_id: societyId })
-        .select()
-        .single();
-      if (towerError) throw towerError;
-
-      const flats = generateFlatNumbers(floors, unitsPerFloor);
-      const { error: flatsError } = await supabase.from('flats').insert(
-        flats.map((flat) => ({
-          society_id: societyId,
-          tower_id: tower.id,
-          number: flat.number,
-          floor: flat.floor,
-        })),
-      );
-      if (flatsError) throw flatsError;
-
-      const { data: session } = await supabase.auth.getSession();
-      if (session.session) {
-        await logAuditEvent({
-          societyId,
-          actorId: session.session.user.id,
-          action: `Added ${tower.name}`,
-          detail: `${flats.length} flats created`,
-        });
-      }
-
-      return tower as Tower;
+      const { data, error } = await supabase.rpc('create_admin_tower', {
+        requested_name: name.trim(),
+        requested_floors: floors,
+        requested_units_per_floor: unitsPerFloor,
+      });
+      if (error) throw error;
+      const tower = data as Tower;
+      if (!tower || tower.society_id !== societyId) throw new Error('The tower could not be created in this society');
+      return tower;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['towers'] });
-      queryClient.invalidateQueries({ queryKey: ['flats'] });
-      queryClient.invalidateQueries({ queryKey: ['audit-events'] });
+    onSuccess: (tower) => {
+      queryClient.invalidateQueries({ queryKey: ['towers', tower.society_id] });
+      queryClient.invalidateQueries({ queryKey: ['flats', tower.society_id] });
+      queryClient.invalidateQueries({ queryKey: ['audit-events', tower.society_id] });
+    },
+  });
+}
+
+type UpdateTowerInput = {
+  id: string;
+  societyId: string;
+  name: string;
+  code: string;
+};
+
+export function useUpdateTower() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: UpdateTowerInput) => {
+      const { data, error } = await supabase.rpc('update_admin_tower', {
+        target_tower_id: input.id,
+        requested_name: input.name.trim(),
+        requested_code: input.code.trim(),
+      });
+      if (error) throw error;
+      const tower = data as Tower;
+      if (!tower || tower.society_id !== input.societyId) throw new Error('The tower could not be updated in this society');
+      return tower;
+    },
+    onSuccess: (tower) => {
+      queryClient.invalidateQueries({ queryKey: ['towers', tower.society_id] });
+      queryClient.invalidateQueries({ queryKey: ['audit-events', tower.society_id] });
+    },
+  });
+}
+
+export function useDeleteEmptyTower() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id }: { id: string; societyId: string }) => {
+      const { data, error } = await supabase.rpc('delete_empty_admin_tower', { target_tower_id: id });
+      if (error) throw error;
+      if (data !== true) throw new Error('The tower could not be deleted');
+      return true;
+    },
+    onSuccess: (_data, input) => {
+      queryClient.invalidateQueries({ queryKey: ['towers', input.societyId] });
+      queryClient.invalidateQueries({ queryKey: ['flats', input.societyId] });
+      queryClient.invalidateQueries({ queryKey: ['audit-events', input.societyId] });
     },
   });
 }
@@ -95,27 +113,27 @@ export type TowerStats = Tower & {
   tenants: number;
 };
 
-// Combines towers + flats + residents into per-tower occupancy rollups —
-// shared by the Home overview, Community Towers/Flats tabs, and Tower detail.
-export function useTowerStats() {
-  const towers = useTowers();
-  const flats = useFlats();
-  const residents = useResidents();
+// Combines towers + flats + residents into per-tower occupancy rollups.
+// Shared by Home, Community, and Tower detail.
+export function useTowerStats(societyId: string | null | undefined) {
+  const towers = useTowers(societyId);
+  const flats = useFlats(societyId);
+  const residents = useResidents(societyId);
 
   const data = useMemo<TowerStats[] | undefined>(() => {
     if (!towers.data || !flats.data || !residents.data) return undefined;
     return towers.data.map((tower) => {
-      const towerFlats = flats.data.filter((f) => f.tower_id === tower.id);
-      const flatIds = new Set(towerFlats.map((f) => f.id));
-      const towerResidents = residents.data.filter((r) => r.flat_id && flatIds.has(r.flat_id));
-      const occupiedFlatIds = new Set(towerResidents.map((r) => r.flat_id));
+      const towerFlats = flats.data.filter((flat) => flat.tower_id === tower.id);
+      const flatIds = new Set(towerFlats.map((flat) => flat.id));
+      const towerResidents = residents.data.filter((resident) => resident.flat_id && flatIds.has(resident.flat_id));
+      const occupiedFlatIds = new Set(towerResidents.map((resident) => resident.flat_id));
       return {
         ...tower,
         totalFlats: towerFlats.length,
         occupiedFlats: occupiedFlatIds.size,
         vacantFlats: towerFlats.length - occupiedFlatIds.size,
-        owners: towerResidents.filter((r) => r.occupancy_type === 'OWNER').length,
-        tenants: towerResidents.filter((r) => r.occupancy_type === 'TENANT').length,
+        owners: towerResidents.filter((resident) => resident.occupancy_type === 'OWNER').length,
+        tenants: towerResidents.filter((resident) => resident.occupancy_type === 'TENANT').length,
       };
     });
   }, [towers.data, flats.data, residents.data]);

@@ -22,10 +22,7 @@ export default function ChangePasswordScreen() {
       showToast(authError.message);
       return;
     }
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ must_change_password: false })
-      .eq('id', session.user.id);
+    const { error: profileError } = await supabase.rpc('complete_password_change');
     setBusy(false);
     if (profileError) {
       showToast(profileError.message);

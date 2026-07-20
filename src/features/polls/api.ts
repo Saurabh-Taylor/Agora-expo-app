@@ -1,12 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
+import { invalidateSocietyPolls } from '@/commonFunctions';
 import { supabase } from '@/lib/supabase';
 
 export type PollState = 'ACTIVE' | 'CLOSED';
 
-export type PollOption = { id: string; label: string; sort_order: number };
-export type PollVoteRow = { id: string; option_id: string; profile_id: string };
+export type PollOption = {
+  id: string;
+  label: string;
+  sort_order: number;
+  vote_count: number;
+};
+
+export type PollVoteRow = {
+  id: string;
+  option_id: string;
+  profile_id: string;
+};
 
 export type PollWithVotes = {
   id: string;
@@ -16,34 +27,44 @@ export type PollWithVotes = {
   created_by: string | null;
   created_at: string;
   closes_at: string | null;
+  archived_at: string | null;
   poll_options: PollOption[];
   poll_votes: PollVoteRow[];
 };
 
-const POLL_SELECT = '*, poll_options(id, label, sort_order), poll_votes(id, option_id, profile_id)';
+const POLL_SELECT =
+  'id, society_id, question, state, created_by, created_at, closes_at, archived_at, poll_options(id, label, sort_order, vote_count), poll_votes(id, option_id, profile_id)';
 
-// RLS scopes both to the caller's own society; readable by every society
-// member (resident + admin use the same query, one list per role's screen).
-export function usePolls() {
+export function usePolls(societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['polls'],
+    queryKey: ['polls', societyId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('polls').select(POLL_SELECT).order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('polls')
+        .select(POLL_SELECT)
+        .eq('society_id', societyId as string)
+        .order('created_at', { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as PollWithVotes[];
     },
+    enabled: !!societyId,
   });
 }
 
-export function usePollDetail(id: string | undefined) {
+export function usePollDetail(id: string | undefined, societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['polls', 'detail', id],
+    queryKey: ['polls', societyId, 'detail', id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('polls').select(POLL_SELECT).eq('id', id as string).single();
+      const { data, error } = await supabase
+        .from('polls')
+        .select(POLL_SELECT)
+        .eq('id', id as string)
+        .eq('society_id', societyId as string)
+        .single();
       if (error) throw error;
       return data as unknown as PollWithVotes;
     },
-    enabled: !!id,
+    enabled: !!id && !!societyId,
   });
 }
 
@@ -58,37 +79,19 @@ export function useCreatePoll() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreatePollInput) => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const { data: poll, error: pollError } = await supabase
-        .from('polls')
-        .insert({
-          society_id: input.societyId,
-          question: input.question,
-          state: 'ACTIVE',
-          created_by: user?.id,
-          closes_at: input.closesAt,
+      const { data, error } = await supabase
+        .rpc('create_admin_poll', {
+          requested_question: input.question,
+          requested_options: input.options,
+          requested_closes_at: input.closesAt,
         })
-        .select()
         .single();
-      if (pollError) throw pollError;
-
-      const { error: optionsError } = await supabase.from('poll_options').insert(
-        input.options.map((label, index) => ({
-          poll_id: poll.id,
-          society_id: input.societyId,
-          label,
-          sort_order: index,
-        })),
-      );
-      if (optionsError) throw optionsError;
-
-      return poll as { id: string };
+      if (error) throw error;
+      const result = data as { id: string; society_id: string } | null;
+      if (!result || result.society_id !== input.societyId) throw new Error('Created poll returned an invalid society scope');
+      return result;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['polls'] });
-    },
+    onSuccess: (_data, input) => invalidateSocietyPolls(queryClient, input.societyId),
   });
 }
 
@@ -98,61 +101,75 @@ export function useCastVote() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: CastVoteInput) => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      // unique(poll_id, profile_id) — upsert lets a resident change their
-      // vote instead of erroring on the second tap.
-      const { error } = await supabase
-        .from('poll_votes')
-        .upsert(
-          { poll_id: input.pollId, option_id: input.optionId, society_id: input.societyId, profile_id: user?.id },
-          { onConflict: 'poll_id,profile_id' },
-        );
+      const { data, error } = await supabase
+        .rpc('cast_poll_vote', { target_poll_id: input.pollId, target_option_id: input.optionId })
+        .single();
       if (error) throw error;
+      const result = data as { society_id: string; poll_id: string } | null;
+      if (!result || result.society_id !== input.societyId || result.poll_id !== input.pollId) {
+        throw new Error('Vote returned an invalid poll scope');
+      }
+      return result;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['polls'] });
-    },
+    onSuccess: (_data, input) => invalidateSocietyPolls(queryClient, input.societyId),
   });
 }
 
 export function useClosePoll() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('polls').update({ state: 'CLOSED' }).eq('id', id);
+    mutationFn: async ({ id, societyId }: { id: string; societyId: string }) => {
+      const { data, error } = await supabase.rpc('close_admin_poll', { target_poll_id: id }).single();
       if (error) throw error;
+      const result = data as { society_id: string } | null;
+      if (!result || result.society_id !== societyId) throw new Error('Closed poll returned an invalid society scope');
+      return result;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['polls'] });
-    },
+    onSuccess: (_data, input) => invalidateSocietyPolls(queryClient, input.societyId),
   });
 }
 
-// In-app Realtime fallback (poll_votes is in the realtime publication) so
-// vote counts update live without relying on push.
+export function useArchivePoll() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, societyId }: { id: string; societyId: string }) => {
+      const { data, error } = await supabase.rpc('archive_admin_poll', { target_poll_id: id }).single();
+      if (error) throw error;
+      const result = data as { society_id: string } | null;
+      if (!result || result.society_id !== societyId) throw new Error('Archived poll returned an invalid society scope');
+      return result;
+    },
+    onSuccess: (_data, input) => invalidateSocietyPolls(queryClient, input.societyId),
+  });
+}
+
 let pollRealtimeSequence = 0;
 
-export function usePollVotesRealtimeSync(pollId: string | undefined) {
+export function usePollVotesRealtimeSync(societyId: string | null | undefined) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!pollId) return;
+    if (!societyId) return;
     pollRealtimeSequence += 1;
+    const refreshPolls = () => {
+      invalidateSocietyPolls(queryClient, societyId);
+    };
     const channel = supabase
-      .channel(`poll_votes:${pollId}:${pollRealtimeSequence}`)
+      .channel(`poll-results:${societyId}:${pollRealtimeSequence}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'poll_votes', filter: `poll_id=eq.${pollId}` },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['polls'] });
-        },
+        { event: 'UPDATE', schema: 'public', table: 'poll_options', filter: `society_id=eq.${societyId}` },
+        refreshPolls,
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'polls', filter: `society_id=eq.${societyId}` },
+        refreshPolls,
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [pollId, queryClient]);
+  }, [societyId, queryClient]);
 }

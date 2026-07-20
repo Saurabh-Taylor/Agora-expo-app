@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
@@ -7,8 +7,11 @@ import { AsyncState } from '@/components/async-state';
 import { StatusPill } from '@/components/status-pill';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { avatarColorForName, getInitials, getVerificationStatusStyle } from '@/commonFunctions';
+import { useFlats } from '@/features/flats/api';
+import { useProfile } from '@/features/profile/api';
 import { useTowerStats } from '@/features/towers/api';
 import { useResidents } from '@/features/residents/api';
+import { useAuthStore } from '@/stores/auth-store';
 
 const RING_RADIUS = 15.5;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
@@ -59,14 +62,35 @@ function OccupancyRing({ pct }: { pct: number }) {
 export default function CommunityScreen() {
   const [activeTab, setActiveTab] = useState<CommunityTab>('Towers');
   const [search, setSearch] = useState('');
-  const towerStatsQuery = useTowerStats();
-  const residentsQuery = useResidents();
+  const session = useAuthStore((state) => state.session);
+  const profileQuery = useProfile(session?.user.id);
+  const societyId = profileQuery.data?.society_id;
+  const towerStatsQuery = useTowerStats(societyId);
+  const flatsQuery = useFlats(societyId);
+  const residentsQuery = useResidents(societyId);
 
   const query = search.trim().toLowerCase();
 
   const filteredTowers = useMemo(
     () => (towerStatsQuery.data ?? []).filter((t) => !query || t.name.toLowerCase().includes(query)),
     [towerStatsQuery.data, query],
+  );
+  const filteredFlats = useMemo(
+    () =>
+      (flatsQuery.data ?? [])
+        .map((flat) => ({
+          ...flat,
+          tower: towerStatsQuery.data?.find((tower) => tower.id === flat.tower_id),
+          resident: residentsQuery.data?.find((resident) => resident.flat_id === flat.id),
+        }))
+        .filter(
+          (flat) =>
+            !query ||
+            flat.number.toLowerCase().includes(query) ||
+            flat.tower?.name.toLowerCase().includes(query) ||
+            flat.tower?.code.toLowerCase().includes(query),
+        ),
+    [flatsQuery.data, residentsQuery.data, towerStatsQuery.data, query],
   );
   const filteredResidents = useMemo(
     () => (residentsQuery.data ?? []).filter((r) => !query || r.full_name.toLowerCase().includes(query)),
@@ -79,6 +103,8 @@ export default function CommunityScreen() {
   function addAction() {
     if (activeTab === 'Residents') {
       router.push('/(admin)/add-resident');
+    } else if (activeTab === 'Flats') {
+      router.push('/(admin)/add-flat' as Href);
     } else {
       router.push('/(admin)/add-tower');
     }
@@ -146,32 +172,45 @@ export default function CommunityScreen() {
 
         {activeTab === 'Flats' && (
           <FlatList
-            data={filteredTowers}
+            data={filteredFlats}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
             ListEmptyComponent={
               <AsyncState
-                isLoading={towerStatsQuery.isLoading}
-                isError={towerStatsQuery.isError}
-                onRetry={() => towerStatsQuery.refetch()}
-                isEmpty={filteredTowers.length === 0}
-                emptyMessage="No flats match your search."
+                isLoading={flatsQuery.isLoading || towerStatsQuery.isLoading || residentsQuery.isLoading}
+                isError={flatsQuery.isError || towerStatsQuery.isError || residentsQuery.isError}
+                onRetry={() => {
+                  flatsQuery.refetch();
+                  towerStatsQuery.refetch();
+                  residentsQuery.refetch();
+                }}
+                isEmpty={filteredFlats.length === 0}
+                emptyMessage={query ? 'No flats match your search.' : 'No flats have been created yet.'}
               />
             }
             renderItem={({ item }) => (
-              <View style={styles.flatRow}>
+              <Pressable
+                style={styles.flatRow}
+                onPress={() =>
+                  router.push({ pathname: '/(admin)/flat/[id]', params: { id: item.id } } as unknown as Href)
+                }>
                 <View style={styles.flatCode}>
-                  <Text style={styles.flatCodeLabel}>{item.code}</Text>
+                  <Text style={styles.flatCodeLabel}>{item.tower?.code ?? '?'}</Text>
                 </View>
                 <View style={styles.flex}>
-                  <Text style={styles.towerName}>{item.name}</Text>
-                  <Text style={styles.towerSub}>{item.totalFlats} flats total</Text>
+                  <Text style={styles.towerName}>{item.tower?.code}-{item.number}</Text>
+                  <Text style={styles.towerSub}>{item.tower?.name ?? 'Unknown tower'} - Floor {item.floor}</Text>
                 </View>
                 <View style={styles.flatStatsCol}>
-                  <Text style={styles.flatOccupied}>{item.occupiedFlats} occupied</Text>
-                  <Text style={styles.flatVacant}>{item.vacantFlats} vacant</Text>
+                  <Text style={item.resident ? styles.flatOccupied : styles.flatVacant}>
+                    {item.resident ? 'Occupied' : 'Vacant'}
+                  </Text>
+                  <Text style={styles.flatResidentName} numberOfLines={1}>
+                    {item.resident?.full_name ?? 'Ready to assign'}
+                  </Text>
                 </View>
-              </View>
+                <ChevronRightIcon />
+              </Pressable>
             )}
           />
         )}
@@ -191,7 +230,9 @@ export default function CommunityScreen() {
               />
             }
             renderItem={({ item }) => {
-              const status = getVerificationStatusStyle(item.is_verified);
+              const status = item.is_active
+                ? getVerificationStatusStyle(item.is_verified)
+                : { label: 'Inactive', color: Colors.danger700, bg: '#F9E4E1' };
               return (
                 <Pressable style={styles.residentRow} onPress={() => router.push(`/(admin)/resident/${item.id}`)}>
                   <View style={[styles.residentAvatar, { backgroundColor: avatarColorForName(item.full_name) }]}>
@@ -211,7 +252,9 @@ export default function CommunityScreen() {
         )}
 
         <Pressable style={styles.addButton} onPress={addAction}>
-          <Text style={styles.addButtonLabel}>{activeTab === 'Residents' ? '+ Add Resident' : '+ Add Tower'}</Text>
+          <Text style={styles.addButtonLabel}>
+            {activeTab === 'Residents' ? '+ Add Resident' : activeTab === 'Flats' ? '+ Add Flat' : '+ Add Tower'}
+          </Text>
         </Pressable>
       </View>
     </View>
@@ -288,7 +331,8 @@ const styles = StyleSheet.create({
   flatCodeLabel: { fontFamily: FontFamily.headingExtraBold, fontSize: 14, color: Colors.success700 },
   flatStatsCol: { alignItems: 'flex-end' },
   flatOccupied: { fontSize: 13, fontWeight: '700', color: Colors.success600 },
-  flatVacant: { fontSize: 12, color: '#9A6B14', marginTop: 2 },
+  flatVacant: { fontSize: 13, fontWeight: '700', color: '#9A6B14' },
+  flatResidentName: { maxWidth: 100, fontSize: 11.5, color: Colors.textMuted, marginTop: 2 },
   residentRow: {
     backgroundColor: Colors.surface,
     borderWidth: 1,

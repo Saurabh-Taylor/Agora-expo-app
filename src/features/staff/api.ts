@@ -1,44 +1,76 @@
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { logAuditEvent } from '@/features/audit/api';
+import { invalidateSocietyDirectory } from '@/commonFunctions';
 import { supabase } from '@/lib/supabase';
 
 export type StaffStatus = 'ON_DUTY' | 'OFF_DUTY';
 
 export type StaffMember = {
   id: string;
+  society_id: string;
   name: string;
   role: string;
   shift: string | null;
   phone: string | null;
   status: StaffStatus;
   created_at: string;
+  updated_at: string;
 };
 
-export function useStaff() {
+export type ServiceProvider = {
+  id: string;
+  society_id: string;
+  name: string;
+  category: string;
+  phone: string | null;
+  status: StaffStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+const directoryKey = (societyId: string | null | undefined) => ['directory', societyId] as const;
+
+function assertSociety<T extends { society_id: string }>(record: T, societyId: string) {
+  if (record.society_id !== societyId) throw new Error('The server returned a record outside your society');
+  return record;
+}
+
+export function useStaff(societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['staff'],
+    queryKey: [...directoryKey(societyId), 'staff'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('staff').select('*').order('name');
+      const { data, error } = await supabase
+        .from('staff')
+        .select('*')
+        .eq('society_id', societyId as string)
+        .order('name');
       if (error) throw error;
       return (data ?? []) as StaffMember[];
     },
+    enabled: !!societyId,
   });
 }
 
-export function useStaffDetail(id: string | undefined) {
+export function useStaffDetail(id: string | undefined, societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['staff', 'detail', id],
+    queryKey: [...directoryKey(societyId), 'staff', id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('staff').select('*').eq('id', id as string).single();
+      const { data, error } = await supabase
+        .from('staff')
+        .select('*')
+        .eq('id', id as string)
+        .eq('society_id', societyId as string)
+        .single();
       if (error) throw error;
-      return data as StaffMember;
+      return assertSociety(data as StaffMember, societyId as string);
     },
-    enabled: !!id,
+    enabled: !!id && !!societyId,
   });
 }
 
-type CreateStaffInput = {
+type SaveStaffInput = {
+  id?: string;
   societyId: string;
   name: string;
   role: string;
@@ -46,148 +78,135 @@ type CreateStaffInput = {
   phone: string;
 };
 
-export function useCreateStaff() {
+export function useSaveStaff() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: CreateStaffInput) => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const { data, error } = await supabase
-        .from('staff')
-        .insert({
-          society_id: input.societyId,
-          name: input.name,
-          role: input.role,
-          shift: input.shift || null,
-          phone: input.phone || null,
-        })
-        .select()
-        .single();
+    mutationFn: async (input: SaveStaffInput) => {
+      const { data, error } = await supabase.rpc('save_admin_staff', {
+        target_staff_id: input.id ?? null,
+        requested_name: input.name,
+        requested_role: input.role,
+        requested_shift: input.shift,
+        requested_phone: input.phone,
+      });
       if (error) throw error;
-      if (user) await logAuditEvent({ societyId: input.societyId, actorId: user.id, action: `Added staff member ${input.name}` });
-      return data as StaffMember;
+      return assertSociety(data as StaffMember, input.societyId);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['staff'] });
-    },
+    onSuccess: (_data, input) => invalidateSocietyDirectory(queryClient, input.societyId),
   });
 }
 
-type ToggleStaffStatusInput = { id: string; societyId: string; name: string; status: StaffStatus };
+type SetStaffStatusInput = { id: string; societyId: string; status: StaffStatus };
 
-export function useToggleStaffStatus() {
+export function useSetStaffStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: ToggleStaffStatusInput) => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const { error } = await supabase.from('staff').update({ status: input.status }).eq('id', input.id);
+    mutationFn: async (input: SetStaffStatusInput) => {
+      const { data, error } = await supabase.rpc('set_admin_staff_status', {
+        target_staff_id: input.id,
+        requested_status: input.status,
+      });
       if (error) throw error;
-      if (user) {
-        await logAuditEvent({
-          societyId: input.societyId,
-          actorId: user.id,
-          action: `Marked ${input.name} as ${input.status === 'ON_DUTY' ? 'on duty' : 'off duty'}`,
-        });
-      }
+      return assertSociety(data as StaffMember, input.societyId);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['staff'] });
-    },
+    onSuccess: (_data, input) => invalidateSocietyDirectory(queryClient, input.societyId),
   });
 }
 
-// ══════════════════════════ service providers ══════════════════════════
-
-export type ServiceProvider = {
-  id: string;
-  name: string;
-  category: string;
-  phone: string | null;
-  status: StaffStatus;
-  created_at: string;
-};
-
-export function useServiceProviders() {
+export function useServiceProviders(societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['service-providers'],
+    queryKey: [...directoryKey(societyId), 'service-providers'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('service_providers').select('*').order('name');
+      const { data, error } = await supabase
+        .from('service_providers')
+        .select('*')
+        .eq('society_id', societyId as string)
+        .order('name');
       if (error) throw error;
       return (data ?? []) as ServiceProvider[];
     },
+    enabled: !!societyId,
   });
 }
 
-export function useServiceProviderDetail(id: string | undefined) {
+export function useServiceProviderDetail(id: string | undefined, societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['service-providers', 'detail', id],
+    queryKey: [...directoryKey(societyId), 'service-providers', id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('service_providers').select('*').eq('id', id as string).single();
+      const { data, error } = await supabase
+        .from('service_providers')
+        .select('*')
+        .eq('id', id as string)
+        .eq('society_id', societyId as string)
+        .single();
       if (error) throw error;
-      return data as ServiceProvider;
+      return assertSociety(data as ServiceProvider, societyId as string);
     },
-    enabled: !!id,
+    enabled: !!id && !!societyId,
   });
 }
 
-type CreateServiceProviderInput = {
+type SaveServiceProviderInput = {
+  id?: string;
   societyId: string;
   name: string;
   category: string;
   phone: string;
 };
 
-export function useCreateServiceProvider() {
+export function useSaveServiceProvider() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: CreateServiceProviderInput) => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const { data, error } = await supabase
-        .from('service_providers')
-        .insert({
-          society_id: input.societyId,
-          name: input.name,
-          category: input.category,
-          phone: input.phone || null,
-        })
-        .select()
-        .single();
+    mutationFn: async (input: SaveServiceProviderInput) => {
+      const { data, error } = await supabase.rpc('save_admin_service_provider', {
+        target_provider_id: input.id ?? null,
+        requested_name: input.name,
+        requested_category: input.category,
+        requested_phone: input.phone,
+      });
       if (error) throw error;
-      if (user) await logAuditEvent({ societyId: input.societyId, actorId: user.id, action: `Added service provider ${input.name}` });
-      return data as ServiceProvider;
+      return assertSociety(data as ServiceProvider, input.societyId);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['service-providers'] });
-    },
+    onSuccess: (_data, input) => invalidateSocietyDirectory(queryClient, input.societyId),
   });
 }
 
-type ToggleServiceProviderStatusInput = { id: string; societyId: string; name: string; status: StaffStatus };
+type SetServiceProviderStatusInput = { id: string; societyId: string; status: StaffStatus };
 
-export function useToggleServiceProviderStatus() {
+export function useSetServiceProviderStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: ToggleServiceProviderStatusInput) => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const { error } = await supabase.from('service_providers').update({ status: input.status }).eq('id', input.id);
+    mutationFn: async (input: SetServiceProviderStatusInput) => {
+      const { data, error } = await supabase.rpc('set_admin_service_provider_status', {
+        target_provider_id: input.id,
+        requested_status: input.status,
+      });
       if (error) throw error;
-      if (user) {
-        await logAuditEvent({
-          societyId: input.societyId,
-          actorId: user.id,
-          action: `Marked ${input.name} as ${input.status === 'ON_DUTY' ? 'on duty' : 'off duty'}`,
-        });
-      }
+      return assertSociety(data as ServiceProvider, input.societyId);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['service-providers'] });
-    },
+    onSuccess: (_data, input) => invalidateSocietyDirectory(queryClient, input.societyId),
   });
+}
+
+export function useDirectoryRealtimeSync(societyId: string | null | undefined) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!societyId) return;
+    const channel = supabase
+      .channel(`directory:${societyId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'staff', filter: `society_id=eq.${societyId}` }, () => {
+        void invalidateSocietyDirectory(queryClient, societyId);
+      })
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'service_providers', filter: `society_id=eq.${societyId}` },
+        () => void invalidateSocietyDirectory(queryClient, societyId),
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [queryClient, societyId]);
 }

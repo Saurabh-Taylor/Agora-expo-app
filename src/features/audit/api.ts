@@ -22,17 +22,19 @@ export async function logAuditEvent(params: { societyId: string; actorId: string
   });
 }
 
-export function useRecentAuditEvents(limit: number) {
+export function useRecentAuditEvents(societyId: string | null | undefined, limit: number) {
   return useQuery({
-    queryKey: ['audit-events', limit],
+    queryKey: ['audit-events', societyId, limit],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('audit_events')
         .select('*')
+        .eq('society_id', societyId as string)
         .order('created_at', { ascending: false })
         .limit(limit);
       if (error) throw error;
       return data as AuditEvent[];
     },
+    enabled: !!societyId,
   });
 }

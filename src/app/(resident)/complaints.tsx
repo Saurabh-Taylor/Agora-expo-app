@@ -6,15 +6,16 @@ import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { StatusPill } from '@/components/status-pill';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
-import { useFlatComplaints } from '@/features/complaints/api';
+import { useComplaintRealtimeSync, useFlatComplaints } from '@/features/complaints/api';
 import { useProfile } from '@/features/profile/api';
 import { useAuthStore } from '@/stores/auth-store';
 
 export default function ResidentComplaintsScreen() {
   const session = useAuthStore((state) => state.session);
   const profileQuery = useProfile(session?.user.id);
-  const complaintsQuery = useFlatComplaints(profileQuery.data?.flat_id);
+  const complaintsQuery = useFlatComplaints(profileQuery.data?.flat_id, profileQuery.data?.society_id);
   const complaints = complaintsQuery.data ?? [];
+  useComplaintRealtimeSync(profileQuery.data?.society_id);
 
   return (
     <View style={styles.root}>
@@ -30,9 +31,9 @@ export default function ResidentComplaintsScreen() {
         keyExtractor={(item) => item.id}
         ListEmptyComponent={
           <AsyncState
-            isLoading={complaintsQuery.isLoading}
-            isError={complaintsQuery.isError}
-            onRetry={() => complaintsQuery.refetch()}
+            isLoading={profileQuery.isLoading || complaintsQuery.isLoading}
+            isError={profileQuery.isError || complaintsQuery.isError}
+            onRetry={() => { profileQuery.refetch(); complaintsQuery.refetch(); }}
             isEmpty={complaints.length === 0}
             emptyMessage="No complaints raised yet. Tap + to raise one."
           />
@@ -52,7 +53,7 @@ export default function ResidentComplaintsScreen() {
         }}
       />
 
-      <Pressable style={styles.fab} onPress={() => router.push('/(resident)/raise-complaint')}>
+      <Pressable style={styles.fab} onPress={() => router.push('/(resident)/raise-complaint')} accessibilityRole="button" accessibilityLabel="Raise a complaint">
         <Text style={styles.fabLabel}>+</Text>
       </Pressable>
     </View>

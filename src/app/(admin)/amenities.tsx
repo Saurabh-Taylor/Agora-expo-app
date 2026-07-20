@@ -1,21 +1,22 @@
 import { router } from 'expo-router';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { getInitials } from '@/commonFunctions';
+import { formatAmenityTimings, getInitials } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
-import { useAmenities, usePendingBookingsCount } from '@/features/amenities/api';
-
-function formatTimings(openTime: string | null, closeTime: string | null) {
-  if (!openTime || !closeTime) return 'Timing not set';
-  return `${openTime.slice(0, 5)} – ${closeTime.slice(0, 5)}`;
-}
+import { useAmenities, useAmenityRealtimeSync, usePendingBookingsCount } from '@/features/amenities/api';
+import { useProfile } from '@/features/profile/api';
+import { useAuthStore } from '@/stores/auth-store';
 
 export default function AmenitiesScreen() {
-  const amenitiesQuery = useAmenities();
-  const pendingQuery = usePendingBookingsCount();
+  const session = useAuthStore((state) => state.session);
+  const profileQuery = useProfile(session?.user.id);
+  const societyId = profileQuery.data?.society_id;
+  const amenitiesQuery = useAmenities(societyId);
+  const pendingQuery = usePendingBookingsCount(societyId);
   const amenities = amenitiesQuery.data ?? [];
+  useAmenityRealtimeSync(societyId);
 
   return (
     <View style={styles.root}>
@@ -32,27 +33,27 @@ export default function AmenitiesScreen() {
         keyExtractor={(item) => item.id}
         ListEmptyComponent={
           <AsyncState
-            isLoading={amenitiesQuery.isLoading}
-            isError={amenitiesQuery.isError}
-            onRetry={() => amenitiesQuery.refetch()}
+            isLoading={profileQuery.isLoading || amenitiesQuery.isLoading || pendingQuery.isLoading}
+            isError={profileQuery.isError || amenitiesQuery.isError || pendingQuery.isError}
+            onRetry={() => { profileQuery.refetch(); amenitiesQuery.refetch(); pendingQuery.refetch(); }}
             isEmpty={amenities.length === 0}
             emptyMessage="No amenities yet. Add one for residents to book."
           />
         }
         renderItem={({ item }) => (
-          <Pressable style={styles.card} onPress={() => router.push(`/(admin)/amenity/${item.id}`)}>
+          <Pressable style={[styles.card, !item.is_active && styles.archivedCard]} onPress={() => router.push(`/(admin)/amenity/${item.id}`)}>
             <View style={styles.iconWrap}>
               <Text style={styles.iconLabel}>{getInitials(item.name)}</Text>
             </View>
             <View style={styles.flex}>
               <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.timings}>{formatTimings(item.open_time, item.close_time)}</Text>
+              <Text style={styles.timings}>{formatAmenityTimings(item.open_time, item.close_time)}{!item.is_active ? ' · Archived' : ''}</Text>
             </View>
           </Pressable>
         )}
       />
 
-      <Pressable style={styles.addButton} onPress={() => router.push('/(admin)/add-amenity')}>
+      <Pressable style={styles.addButton} onPress={() => router.push('/(admin)/add-amenity')} accessibilityRole="button" accessibilityLabel="Add amenity">
         <Text style={styles.addButtonLabel}>+ Add amenity</Text>
       </Pressable>
     </View>
@@ -77,6 +78,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 13,
   },
+  archivedCard: { opacity: 0.65 },
   iconWrap: {
     width: 46,
     height: 46,

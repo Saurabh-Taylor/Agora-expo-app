@@ -5,24 +5,27 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatDate, getComplaintPriorityStyle, getComplaintStatusStyle } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { StatusPill } from '@/components/status-pill';
-import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
-import { useAdminComplaints, type ComplaintStatus } from '@/features/complaints/api';
+import { Colors, ComplaintStatuses, FontFamily, Radius } from '@/constants/commonConstants';
+import { useAdminComplaints, useComplaintRealtimeSync, type ComplaintStatus } from '@/features/complaints/api';
+import { useProfile } from '@/features/profile/api';
+import { useAuthStore } from '@/stores/auth-store';
 
 const FILTERS: { value: ComplaintStatus | 'ALL'; label: string }[] = [
   { value: 'ALL', label: 'All' },
-  { value: 'OPEN', label: 'Open' },
-  { value: 'IN_PROGRESS', label: 'In progress' },
-  { value: 'RESOLVED', label: 'Resolved' },
+  ...ComplaintStatuses,
 ];
 
 export default function AdminComplaintsScreen() {
-  const complaintsQuery = useAdminComplaints();
+  const session = useAuthStore((state) => state.session);
+  const profileQuery = useProfile(session?.user.id);
+  const complaintsQuery = useAdminComplaints(profileQuery.data?.society_id);
   const complaints = useMemo(() => complaintsQuery.data ?? [], [complaintsQuery.data]);
+  useComplaintRealtimeSync(profileQuery.data?.society_id);
   const [filter, setFilter] = useState<ComplaintStatus | 'ALL'>('ALL');
 
   const openCount = complaints.filter((c) => c.status !== 'RESOLVED').length;
   const resolvedToday = complaints.filter(
-    (c) => c.status === 'RESOLVED' && new Date(c.created_at).toDateString() === new Date().toDateString(),
+    (c) => c.status === 'RESOLVED' && c.resolved_at && new Date(c.resolved_at).toDateString() === new Date().toDateString(),
   ).length;
 
   const filtered = useMemo(

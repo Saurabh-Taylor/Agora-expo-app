@@ -2,25 +2,19 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { getErrorMessage } from '@/commonFunctions';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
-import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
-import { useCreateNotice, type NoticeCategory } from '@/features/notices/api';
+import { Colors, FontFamily, NoticeCategories, Radius } from '@/constants/commonConstants';
+import { useCreateNotice, usePublishNotice, type NoticeCategory } from '@/features/notices/api';
 import { useProfile } from '@/features/profile/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { showToast } from '@/stores/toast-store';
 
-const CATEGORIES: { value: NoticeCategory; label: string }[] = [
-  { value: 'GENERAL', label: 'General' },
-  { value: 'WATER', label: 'Water' },
-  { value: 'EVENT', label: 'Event' },
-  { value: 'BILLING', label: 'Billing' },
-  { value: 'SECURITY', label: 'Security' },
-];
-
-export default function ComposeNoticeScreen() {
+ export default function ComposeNoticeScreen() {
   const session = useAuthStore((state) => state.session);
   const profileQuery = useProfile(session?.user.id);
   const createNotice = useCreateNotice();
+  const publishNotice = usePublishNotice();
 
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -28,18 +22,24 @@ export default function ComposeNoticeScreen() {
 
   const canPublish = title.trim().length > 1 && body.trim().length > 1 && !!profileQuery.data;
 
-  async function handlePublish() {
-    if (!canPublish || !profileQuery.data) return;
+  const isPending = createNotice.isPending || publishNotice.isPending;
+
+  async function handleSave(publishNow: boolean) {
+    if (!canPublish || !profileQuery.data || isPending) return;
     try {
-      await createNotice.mutateAsync({
+      const notice = await createNotice.mutateAsync({
         societyId: profileQuery.data.society_id,
         title: title.trim(),
         body: body.trim(),
         category,
       });
+      if (publishNow) {
+        await publishNotice.mutateAsync({ id: notice.id, societyId: profileQuery.data.society_id });
+      }
+      showToast(publishNow ? 'Notice published' : 'Draft saved');
       router.back();
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Could not publish the notice');
+      showToast(getErrorMessage(error, publishNow ? 'Could not publish the notice' : 'Could not save the draft'));
     }
   }
 
@@ -72,7 +72,7 @@ export default function ComposeNoticeScreen() {
 
       <Text style={styles.label}>CATEGORY</Text>
       <View style={styles.chipsRow}>
-        {CATEGORIES.map((item) => {
+        {NoticeCategories.map((item) => {
           const active = category === item.value;
           return (
             <Pressable
@@ -85,15 +85,21 @@ export default function ComposeNoticeScreen() {
         })}
       </View>
 
-      <Pressable
-        style={[styles.publishButton, { backgroundColor: canPublish ? Colors.green500 : '#DDD8C8' }]}
-        onPress={handlePublish}
-        disabled={!canPublish || createNotice.isPending}>
-        {createNotice.isPending && <ActivityIndicator size="small" color="#fff" />}
-        <Text style={[styles.publishLabel, { color: canPublish ? Colors.textOnDark : '#9B9682' }]}>
-          Publish now
-        </Text>
-      </Pressable>
+      <View style={styles.actionRow}>
+        <Pressable
+          style={[styles.draftButton, !canPublish && styles.disabledButton]}
+          onPress={() => handleSave(false)}
+          disabled={!canPublish || isPending}>
+          <Text style={styles.draftLabel}>Save draft</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.publishButton, !canPublish && styles.disabledButton]}
+          onPress={() => handleSave(true)}
+          disabled={!canPublish || isPending}>
+          {isPending && <ActivityIndicator size="small" color={Colors.textOnDark} />}
+          <Text style={styles.publishLabel}>{publishNotice.isPending ? 'Publishing...' : 'Publish now'}</Text>
+        </Pressable>
+      </View>
     </ScrollView>
   );
 }
@@ -122,14 +128,27 @@ const styles = StyleSheet.create({
   chipInactive: { backgroundColor: Colors.surface, borderColor: Colors.borderAlt },
   chipLabelActive: { fontSize: 14, fontWeight: '600', color: Colors.textOnDark },
   chipLabelInactive: { fontSize: 14, fontWeight: '600', color: '#3E4A40' },
-  publishButton: {
-    marginTop: 30,
-    height: 54,
+  actionRow: { flexDirection: 'row', gap: 10, marginTop: 30 },
+  draftButton: {
+    flex: 1,
+    minHeight: 54,
     borderRadius: Radius.card - 2,
+    borderWidth: 1,
+    borderColor: Colors.green500,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  draftLabel: { fontSize: 14.5, fontWeight: '700', color: Colors.green500 },
+  publishButton: {
+    flex: 1.35,
+    minHeight: 54,
+    borderRadius: Radius.card - 2,
+    backgroundColor: Colors.green500,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 9,
   },
-  publishLabel: { fontSize: 15.5, fontWeight: '700' },
+  publishLabel: { fontSize: 14.5, fontWeight: '700', color: Colors.textOnDark },
+  disabledButton: { opacity: 0.45 },
 });

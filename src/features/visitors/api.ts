@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import * as Crypto from 'expo-crypto';
 import { useEffect } from 'react';
 
 import { titleCase } from '@/commonFunctions';
@@ -53,52 +52,88 @@ export function useTodaysVisitorRequestsCount(societyId: string | null | undefin
   });
 }
 
+export type GuardResidentSearchResult = {
+  id: string;
+  society_id: string;
+  full_name: string;
+  flat_id: string;
+  flat_number: string;
+  tower_id: string;
+  tower_code: string;
+};
+
+export function useGuardResidentSearch(search: string, societyId: string | null | undefined) {
+  const normalizedSearch = search.trim();
+  return useQuery({
+    queryKey: ['guard-resident-search', societyId, normalizedSearch],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('search_guard_residents', {
+        requested_search: normalizedSearch,
+      });
+      if (error) throw error;
+
+      const residents = (data ?? []) as GuardResidentSearchResult[];
+      if (residents.some((resident) => resident.society_id !== societyId)) {
+        throw new Error('Resident search returned an invalid society scope');
+      }
+      return residents;
+    },
+    enabled: !!societyId,
+    staleTime: 15_000,
+  });
+}
+
 type CreateVisitorRequestInput = {
   societyId: string;
-  raisedBy: string;
   flatId: string;
   visitorName: string;
   visitorPhone?: string;
   category: VisitorCategory;
 };
 
+type CreatedVisitorRequest = {
+  id: string;
+  society_id: string;
+  visitor_id: string;
+  flat_id: string;
+  raised_by: string | null;
+  status: VisitorRequestStatus;
+  gate_pass_code: string | null;
+};
+
 export function useCreateVisitorRequest() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateVisitorRequestInput) => {
-      const { data: visitor, error: visitorError } = await supabase
-        .from('visitors')
-        .insert({
-          society_id: input.societyId,
-          name: input.visitorName,
-          phone: input.visitorPhone || null,
-          category: input.category,
-        })
-        .select()
-        .single();
-      if (visitorError) throw visitorError;
+      const { data, error } = await supabase.rpc('create_guard_visitor_request', {
+        requested_flat_id: input.flatId,
+        requested_name: input.visitorName,
+        requested_phone: input.visitorPhone ?? null,
+        requested_category: input.category,
+      });
+      if (error) throw error;
 
-      const { data: request, error: requestError } = await supabase
-        .from('visitor_requests')
-        .insert({
-          society_id: input.societyId,
-          visitor_id: visitor.id,
-          flat_id: input.flatId,
-          raised_by: input.raisedBy,
-          status: 'PENDING',
-        })
-        .select()
-        .single();
-      if (requestError) throw requestError;
+      const request = data as CreatedVisitorRequest | null;
+      if (
+        !request ||
+        request.society_id !== input.societyId ||
+        request.flat_id !== input.flatId ||
+        request.status !== 'PENDING'
+      ) {
+        throw new Error('Visitor request returned an invalid authorization scope');
+      }
 
-      return { visitor, request };
+      return {
+        visitor: { name: input.visitorName, category: input.category },
+        request,
+      };
     },
     onSuccess: ({ visitor, request }) => {
       queryClient.invalidateQueries({ queryKey: ['visitor-requests'] });
       sendPushNotification({
         flatId: request.flat_id,
         title: `${visitor.name} is at the gate`,
-        body: `${titleCase(visitor.category)} · Tap to respond`,
+        body: `${titleCase(visitor.category)} - Tap to respond`,
         data: { type: 'VISITOR_REQUEST', requestId: request.id },
       });
     },
@@ -314,15 +349,10 @@ export function useDecideVisitorRequest() {
   });
 }
 
-function generateGatePassCode() {
-  const part = () => Math.floor(100 + Math.random() * 900);
-  return `${part()} ${part()}`;
-}
-
 type CreatePreApprovalInput = {
   societyId: string;
-  flatId: string;
   visitorName: string;
+  visitorPhone?: string;
   category: VisitorCategory;
 };
 
@@ -330,41 +360,24 @@ export function useCreatePreApproval() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreatePreApprovalInput) => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data, error } = await supabase.rpc('create_resident_visitor_preapproval', {
+        requested_name: input.visitorName,
+        requested_phone: input.visitorPhone ?? null,
+        requested_category: input.category,
+      });
+      if (error) throw error;
 
-      // A resident can only ever *see* a visitors row once a visitor_requests
-      // row links it to their own flat_id (visitors_select RLS) — so asking
-      // Postgres to return this insert (Prefer: return=representation) fails
-      // RLS before that link exists. Generate the id client-side and skip
-      // .select() here; the visitor becomes readable once the request below
-      // is created.
-      const visitorId = Crypto.randomUUID();
-      const { error: visitorError } = await supabase
-        .from('visitors')
-        .insert({ id: visitorId, society_id: input.societyId, name: input.visitorName, category: input.category });
-      if (visitorError) throw visitorError;
+      const request = data as CreatedVisitorRequest | null;
+      if (
+        !request ||
+        request.society_id !== input.societyId ||
+        request.status !== 'APPROVED' ||
+        !request.gate_pass_code
+      ) {
+        throw new Error('Pre-approval returned an invalid authorization scope');
+      }
 
-      const gatePassCode = generateGatePassCode();
-      const { data: request, error: requestError } = await supabase
-        .from('visitor_requests')
-        .insert({
-          society_id: input.societyId,
-          visitor_id: visitorId,
-          flat_id: input.flatId,
-          raised_by: null,
-          decision_by: user?.id,
-          decision_at: new Date().toISOString(),
-          status: 'APPROVED',
-          is_pre_approved: true,
-          gate_pass_code: gatePassCode,
-        })
-        .select()
-        .single();
-      if (requestError) throw requestError;
-
-      return { request, gatePassCode };
+      return { request, gatePassCode: request.gate_pass_code };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['visitor-requests'] });

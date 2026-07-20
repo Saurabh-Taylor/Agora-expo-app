@@ -31,7 +31,6 @@ export default function PreApproveScreen() {
     try {
       const result = await createPreApproval.mutateAsync({
         societyId: profileQuery.data.society_id,
-        flatId: profileQuery.data.flat_id,
         visitorName: name.trim(),
         category,
       });

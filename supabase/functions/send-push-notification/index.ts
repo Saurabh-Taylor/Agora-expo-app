@@ -2,13 +2,14 @@ import "@supabase/functions-js/edge-runtime.d.ts";
 import { withSupabase } from "@supabase/server";
 
 type Role = "RESIDENT" | "GUARD" | "ADMIN";
-type NotificationType = "VISITOR_REQUEST" | "VISITOR_DECISION" | "NOTICE" | "BOOKING_DECISION";
+type NotificationType = "VISITOR_REQUEST" | "VISITOR_DECISION" | "NOTICE" | "COMPLAINT_STATUS" | "BOOKING_DECISION";
 
 type SendPushBody = {
   data?: {
     type?: NotificationType;
     requestId?: string;
     noticeId?: string;
+    complaintId?: string;
     bookingId?: string;
   };
 };
@@ -36,11 +37,11 @@ export default {
 
     const { data: caller, error: callerError } = await ctx.supabase
       .from("profiles")
-      .select("id, role, society_id, flat_id")
+      .select("id, role, society_id, flat_id, is_active")
       .eq("id", callerId)
       .single();
 
-    if (callerError || !caller) return jsonError("Unauthorized", 401);
+    if (callerError || !caller || !caller.is_active) return jsonError("Unauthorized", 401);
 
     const body = (await req.json().catch(() => null)) as SendPushBody | null;
     const type = body?.data?.type;
@@ -60,7 +61,8 @@ export default {
       .from("profiles")
       .select("id")
       .in("id", audienceResult.profileIds)
-      .eq("society_id", caller.society_id);
+      .eq("society_id", caller.society_id)
+      .eq("is_active", true);
     if (recipientsError) return jsonError("Could not authorize notification recipients", 500);
 
     const allowedIds = (recipients ?? []).map((profile) => profile.id);
@@ -160,11 +162,11 @@ async function resolveAudience(
 
     const { data: notice, error } = await admin
       .from("notices")
-      .select("id, society_id, title, state, created_by")
+      .select("id, society_id, title, state, archived_at")
       .eq("id", data.noticeId)
       .eq("society_id", caller.society_id)
       .single();
-    if (error || !notice || notice.created_by !== caller.id || notice.state !== "PUBLISHED") {
+    if (error || !notice || notice.state !== "PUBLISHED" || notice.archived_at) {
       return jsonError("Notice is not available", 403);
     }
 
@@ -181,16 +183,48 @@ async function resolveAudience(
     };
   }
 
+  if (type === "COMPLAINT_STATUS") {
+    if (caller.role !== "ADMIN" || !data.complaintId) return jsonError("Admin complaint update required", 403);
+
+    const { data: complaint, error } = await admin
+      .from("complaints")
+      .select("id, society_id, raised_by, title, status")
+      .eq("id", data.complaintId)
+      .eq("society_id", caller.society_id)
+      .single();
+    if (error || !complaint || !["IN_PROGRESS", "RESOLVED"].includes(complaint.status)) {
+      return jsonError("Complaint update is not available", 403);
+    }
+
+    const { data: latestEvent, error: eventError } = await admin
+      .from("complaint_events")
+      .select("status, created_by")
+      .eq("complaint_id", complaint.id)
+      .eq("society_id", caller.society_id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    if (eventError || !latestEvent || latestEvent.created_by !== caller.id || latestEvent.status !== complaint.status) {
+      return jsonError("Complaint update was not made by this admin", 403);
+    }
+
+    return {
+      profileIds: [complaint.raised_by],
+      title: "Complaint status updated",
+      body: `${complaint.title} is now ${titleCase(complaint.status.replace("_", " "))}.`,
+    };
+  }
+
   if (type === "BOOKING_DECISION") {
     if (caller.role !== "ADMIN" || !data.bookingId) return jsonError("Admin booking decision required", 403);
 
     const { data: booking, error } = await admin
       .from("amenity_bookings")
-      .select("id, society_id, booked_by, status, slot_start, amenity:amenities(name)")
+      .select("id, society_id, booked_by, status, slot_start, decided_by, amenity:amenities(name)")
       .eq("id", data.bookingId)
       .eq("society_id", caller.society_id)
       .single();
-    if (error || !booking || !["CONFIRMED", "CANCELLED"].includes(booking.status)) {
+    if (error || !booking || booking.decided_by !== caller.id || !["CONFIRMED", "CANCELLED"].includes(booking.status)) {
       return jsonError("Booking decision is not available", 403);
     }
 

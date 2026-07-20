@@ -10,6 +10,8 @@ import {
 } from '@/components/icons/admin-tab-icons';
 import { Colors, FontFamily } from '@/constants/commonConstants';
 import { useOpenComplaintsCount } from '@/features/complaints/api';
+import { useProfile } from '@/features/profile/api';
+import { useAuthStore } from '@/stores/auth-store';
 
 // Minimal local shape instead of importing @react-navigation/bottom-tabs'
 // BottomTabBarProps directly — that package isn't a direct dependency here
@@ -39,7 +41,9 @@ const TAB_META: Record<(typeof TAB_ORDER)[number], { label: string; Icon: typeof
 
 export function AdminTabBar({ state, navigation }: AdminTabBarProps) {
   const insets = useSafeAreaInsets();
-  const { data: openComplaintsCount } = useOpenComplaintsCount();
+  const session = useAuthStore((storeState) => storeState.session);
+  const profileQuery = useProfile(session?.user.id);
+  const { data: openComplaintsCount } = useOpenComplaintsCount(profileQuery.data?.society_id);
   const hasOpenComplaints = (openComplaintsCount ?? 0) > 0;
 
   const orderedRoutes = TAB_ORDER.map((name) => state.routes.find((route) => route.name === name)).filter(

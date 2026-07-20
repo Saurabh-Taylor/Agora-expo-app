@@ -2,27 +2,23 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { formatDate } from '@/commonFunctions';
+import { formatCurrency, formatDate } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
-import { useCreatePayment, useDueDetail } from '@/features/dues/api';
+import { useDueDetail, usePayMaintenanceDue } from '@/features/dues/api';
 import { useProfile } from '@/features/profile/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { showToast } from '@/stores/toast-store';
 
 const PAY_METHODS = ['UPI', 'Card', 'Netbanking', 'Wallet'];
 
-function formatCurrency(amount: number) {
-  return `₹${amount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-}
-
 export default function PayDueScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = useAuthStore((state) => state.session);
   const profileQuery = useProfile(session?.user.id);
-  const dueQuery = useDueDetail(id);
-  const createPayment = useCreatePayment();
+  const dueQuery = useDueDetail(id, profileQuery.data?.flat_id, profileQuery.data?.society_id);
+  const createPayment = usePayMaintenanceDue();
 
   const [method, setMethod] = useState(PAY_METHODS[0]);
 
@@ -36,7 +32,6 @@ export default function PayDueScreen() {
         dueId: due.id,
         societyId: profileQuery.data.society_id,
         flatId: profileQuery.data.flat_id,
-        amount: due.amount,
         method,
       });
       router.replace({
@@ -58,10 +53,10 @@ export default function PayDueScreen() {
       <View style={styles.root}>
         <BackArrowButton onPress={() => router.back()} />
         <AsyncState
-          isLoading={dueQuery.isLoading}
-          isError={dueQuery.isError}
-          onRetry={() => dueQuery.refetch()}
-          isEmpty={!dueQuery.isLoading && !dueQuery.isError}
+          isLoading={profileQuery.isLoading || dueQuery.isLoading}
+          isError={profileQuery.isError || dueQuery.isError}
+          onRetry={() => { profileQuery.refetch(); dueQuery.refetch(); }}
+          isEmpty={!profileQuery.isLoading && !dueQuery.isLoading && !profileQuery.isError && !dueQuery.isError}
           emptyMessage="This due isn't available."
         />
       </View>

@@ -50,12 +50,13 @@ function RootNavigator() {
   const profileQuery = useProfile(session?.user.id);
 
   const profile = session && !isPasswordRecovery && profileQuery.isSuccess ? profileQuery.data : undefined;
+  const isActive = profile?.is_active !== false;
   const mustChangePassword = !!profile?.must_change_password;
 
-  useRegisterPushToken(profile?.id, profile?.society_id);
+  useRegisterPushToken(isActive ? profile?.id : undefined, isActive ? profile?.society_id : undefined);
 
   useEffect(() => {
-    if (!profile) return;
+    if (!profile?.is_active) return;
     let cancelled = false;
     let subscription: { remove: () => void } | undefined;
 
@@ -65,11 +66,23 @@ function RootNavigator() {
         subscription = Notifications.addNotificationResponseReceivedListener((response) => {
           // A push payload is only a hint — the destination screen re-fetches the
           // record itself and RLS re-authorizes it before showing anything.
-          const data = response.notification.request.content.data as { type?: string; requestId?: string } | undefined;
+          const data = response.notification.request.content.data as {
+            type?: string;
+            requestId?: string;
+            noticeId?: string;
+            complaintId?: string;
+            bookingId?: string;
+          } | undefined;
           if (data?.type === 'VISITOR_REQUEST' && data.requestId && profile.role === 'RESIDENT') {
             router.push(`/(resident)/visitor-request/${data.requestId}`);
           } else if (data?.type === 'VISITOR_DECISION' && profile.role === 'GUARD') {
             router.push('/(guard)/(tabs)');
+          } else if (data?.type === 'NOTICE' && data.noticeId && profile.role === 'RESIDENT') {
+            router.push(`/(resident)/notice/${data.noticeId}`);
+          } else if (data?.type === 'COMPLAINT_STATUS' && data.complaintId && profile.role === 'RESIDENT') {
+            router.push(`/(resident)/complaint/${data.complaintId}`);
+          } else if (data?.type === 'BOOKING_DECISION' && data.bookingId && profile.role === 'RESIDENT') {
+            router.push({ pathname: '/(resident)/amenities', params: { tab: 'bookings' } });
           }
         });
       })
@@ -127,25 +140,44 @@ function RootNavigator() {
     );
   }
 
+  if (session && !isPasswordRecovery && profile && !isActive) {
+    return (
+      <View style={sessionErrorStyles.root}>
+        <Text style={sessionErrorStyles.title}>Your account is inactive</Text>
+        <Text style={sessionErrorStyles.subtitle}>
+          Your society administrator has disabled access. Contact the society office if you believe this is a mistake.
+        </Text>
+        <Pressable
+          style={sessionErrorStyles.retryButton}
+          onPress={async () => {
+            await useAuthStore.getState().signOut();
+            router.replace('/(auth)/login');
+          }}>
+          <Text style={sessionErrorStyles.retryLabel}>Return to sign in</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={!session || isPasswordRecovery}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
 
-      <Stack.Protected guard={!isPasswordRecovery && !!profile && mustChangePassword}>
+      <Stack.Protected guard={!isPasswordRecovery && !!profile && isActive && mustChangePassword}>
         <Stack.Screen name="change-password" />
       </Stack.Protected>
 
-      <Stack.Protected guard={!isPasswordRecovery && !!profile && !mustChangePassword && profile.role === 'RESIDENT'}>
+      <Stack.Protected guard={!isPasswordRecovery && !!profile && isActive && !mustChangePassword && profile.role === 'RESIDENT'}>
         <Stack.Screen name="(resident)" />
       </Stack.Protected>
 
-      <Stack.Protected guard={!isPasswordRecovery && !!profile && !mustChangePassword && profile.role === 'GUARD'}>
+      <Stack.Protected guard={!isPasswordRecovery && !!profile && isActive && !mustChangePassword && profile.role === 'GUARD'}>
         <Stack.Screen name="(guard)" />
       </Stack.Protected>
 
-      <Stack.Protected guard={!isPasswordRecovery && !!profile && !mustChangePassword && profile.role === 'ADMIN'}>
+      <Stack.Protected guard={!isPasswordRecovery && !!profile && isActive && !mustChangePassword && profile.role === 'ADMIN'}>
         <Stack.Screen name="(admin)" />
       </Stack.Protected>
     </Stack>

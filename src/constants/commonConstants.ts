@@ -62,6 +62,30 @@ export const AvatarPalette = ['#E7A33C', '#B9A7D6', '#8FB3C7', '#A7C4B5', '#D6C9
 // the admin complaint list/triage labels.
 export const ComplaintCategories = ['Plumbing', 'Electrical', 'Cleanliness', 'Security', 'Noise', 'Other'] as const;
 
+export const ComplaintPriorities = [
+  { value: 'LOW', label: 'Low' },
+  { value: 'MEDIUM', label: 'Medium' },
+  { value: 'HIGH', label: 'High' },
+] as const;
+
+export const ComplaintStatuses = [
+  { value: 'OPEN', label: 'Open' },
+  { value: 'IN_PROGRESS', label: 'In progress' },
+  { value: 'RESOLVED', label: 'Resolved' },
+] as const;
+
+export const NoticeCategories = [
+  { value: 'GENERAL', label: 'General' },
+  { value: 'WATER', label: 'Water' },
+  { value: 'EVENT', label: 'Event' },
+  { value: 'BILLING', label: 'Billing' },
+  { value: 'SECURITY', label: 'Security' },
+] as const;
+
+export const StaffRoles = ['Security', 'Housekeeping', 'Maintenance', 'Gardener', 'Other'] as const;
+export const StaffShifts = ['Morning', 'Afternoon', 'Evening', 'Night'] as const;
+export const ServiceProviderCategories = ['Plumber', 'Electrician', 'Carpenter', 'Pest Control', 'Other'] as const;
+
 export const AUTH_RESEND_SECONDS = 30;
 
 export const FontFamily = {

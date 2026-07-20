@@ -7,7 +7,7 @@ import { AsyncState } from '@/components/async-state';
 import { AgoraLogo } from '@/components/icons/agora-logo';
 import { StatusPill } from '@/components/status-pill';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
-import { useFlatDues } from '@/features/dues/api';
+import { useDuesRealtimeSync, useFlatDues } from '@/features/dues/api';
 import { useFlatWithTower } from '@/features/flats/api';
 import { useProfile } from '@/features/profile/api';
 import { useFlatVisitorRequests, useVisitorRequestsRealtimeSync } from '@/features/visitors/api';
@@ -60,11 +60,12 @@ export default function ResidentHomeScreen() {
   const session = useAuthStore((state) => state.session);
   const profileQuery = useProfile(session?.user.id);
   const profile = profileQuery.data;
-  const flatQuery = useFlatWithTower(profile?.flat_id);
+  const flatQuery = useFlatWithTower(profile?.flat_id, profile?.society_id);
   const requestsQuery = useFlatVisitorRequests(profile?.flat_id, profile?.society_id);
-  const duesQuery = useFlatDues(profile?.flat_id);
+  const duesQuery = useFlatDues(profile?.flat_id, profile?.society_id);
 
   useVisitorRequestsRealtimeSync('flat_id', profile?.flat_id);
+  useDuesRealtimeSync(profile?.flat_id, profile?.society_id);
 
   const requests = requestsQuery.data ?? [];
   const pending = requests.find((request) => request.status === 'PENDING');

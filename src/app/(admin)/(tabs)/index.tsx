@@ -13,7 +13,6 @@ import { useFlats } from '@/features/flats/api';
 import { useProfile } from '@/features/profile/api';
 import { useResidents } from '@/features/residents/api';
 import { useAuthStore } from '@/stores/auth-store';
-import { showToast } from '@/stores/toast-store';
 
 function ShieldAlertIcon() {
   return (
@@ -83,31 +82,27 @@ function BookingsIcon() {
 export default function AdminHomeScreen() {
   const session = useAuthStore((state) => state.session);
   const profileQuery = useProfile(session?.user.id);
-  const residentsQuery = useResidents();
-  const flatsQuery = useFlats();
-  const openComplaintsQuery = useOpenComplaintsCount();
-  const pendingBookingsQuery = usePendingBookingsCount();
-  const todaysBookingsQuery = useTodaysBookings();
-  const auditQuery = useRecentAuditEvents(3);
+  const residentsQuery = useResidents(profileQuery.data?.society_id);
+  const flatsQuery = useFlats(profileQuery.data?.society_id);
+  const openComplaintsQuery = useOpenComplaintsCount(profileQuery.data?.society_id);
+  const pendingBookingsQuery = usePendingBookingsCount(profileQuery.data?.society_id);
+  const todaysBookingsQuery = useTodaysBookings(profileQuery.data?.society_id);
+  const auditQuery = useRecentAuditEvents(profileQuery.data?.society_id, 3);
 
   const profile = profileQuery.data;
-  const pendingVerifyCount = residentsQuery.data?.filter((r) => !r.is_verified).length ?? 0;
+  const pendingVerifyCount = residentsQuery.data?.filter((resident) => resident.is_active && !resident.is_verified).length ?? 0;
   const openComplaints = openComplaintsQuery.data ?? 0;
   const pendingBookings = pendingBookingsQuery.data ?? 0;
   const priorityCount = pendingVerifyCount + openComplaints + pendingBookings;
 
-  function comingSoon() {
-    showToast('Coming in a later phase');
-  }
-
   const quickActions = [
     { label: 'Add Resident', bg: '#E9F1EC', Icon: ResidentsIcon, go: () => router.push('/(admin)/add-resident') },
-    { label: 'Publish Notice', bg: '#F6ECD8', Icon: BookingsIcon, go: comingSoon },
-    { label: 'Create Poll', bg: '#EFEAF7', Icon: BookingsIcon, go: comingSoon },
-    { label: 'Add Complaint', bg: '#F9E4E1', Icon: ComplaintIcon, go: comingSoon },
-    { label: 'Add Staff', bg: '#E4EFF5', Icon: ResidentsIcon, go: comingSoon },
-    { label: 'Manage Amenity', bg: '#E9F1EC', Icon: BookingsIcon, go: comingSoon },
-    { label: 'View Reports', bg: '#EEEDE4', Icon: FlatsIcon, go: comingSoon },
+    { label: 'Publish Notice', bg: '#F6ECD8', Icon: BookingsIcon, go: () => router.push('/(admin)/compose-notice') },
+    { label: 'Create Poll', bg: '#EFEAF7', Icon: BookingsIcon, go: () => router.push('/(admin)/create-poll') },
+    { label: 'Review Complaints', bg: '#F9E4E1', Icon: ComplaintIcon, go: () => router.push('/(admin)/(tabs)/complaints') },
+    { label: 'Add Staff', bg: '#E4EFF5', Icon: ResidentsIcon, go: () => router.push('/(admin)/add-staff') },
+    { label: 'Manage Amenity', bg: '#E9F1EC', Icon: BookingsIcon, go: () => router.push('/(admin)/amenities') },
+    { label: 'Audit Trail', bg: '#EEEDE4', Icon: FlatsIcon, go: () => router.push('/(admin)/audit') },
     { label: 'More', bg: '#EEEDE4', Icon: FlatsIcon, go: () => router.push('/(admin)/(tabs)/more') },
   ];
 
@@ -154,7 +149,7 @@ export default function AdminHomeScreen() {
                 </View>
                 <Text style={styles.priorityStatLabel}>Open Complaints</Text>
               </Pressable>
-              <Pressable style={styles.priorityStat} onPress={comingSoon}>
+              <Pressable style={styles.priorityStat} onPress={() => router.push('/(admin)/amenities')}>
                 <View style={styles.priorityStatTop}>
                   <ApprovalsIcon />
                   <Text style={styles.priorityStatValue}>{pendingBookings}</Text>

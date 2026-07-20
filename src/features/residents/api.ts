@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { logAuditEvent } from '@/features/audit/api';
 import type { Profile } from '@/features/profile/api';
 import { supabase } from '@/lib/supabase';
 
@@ -8,62 +7,138 @@ export type ResidentProfile = Profile & {
   flat: { id: string; number: string; floor: number; tower_id: string } | null;
 };
 
-export function useResidents() {
+const RESIDENT_SELECT = '*, flat:flats(id, number, floor, tower_id)';
+
+export function useResidents(
+  societyId: string | null | undefined,
+  options: { activeOnly?: boolean } = {},
+) {
+  const activeOnly = options.activeOnly ?? false;
   return useQuery({
-    queryKey: ['residents'],
+    queryKey: ['residents', societyId, activeOnly ? 'active' : 'all'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('profiles')
-        .select('*, flat:flats(id, number, floor, tower_id)')
-        .eq('role', 'RESIDENT')
-        .order('full_name');
+        .select(RESIDENT_SELECT)
+        .eq('society_id', societyId as string)
+        .eq('role', 'RESIDENT');
+      if (activeOnly) query = query.eq('is_active', true);
+      const { data, error } = await query.order('full_name');
       if (error) throw error;
       return data as unknown as ResidentProfile[];
     },
+    enabled: !!societyId,
   });
 }
 
-export function useResident(id: string | undefined) {
+export function useResident(id: string | undefined, societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['resident', id],
+    queryKey: ['resident', societyId, id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*, flat:flats(id, number, floor, tower_id)')
+        .select(RESIDENT_SELECT)
         .eq('id', id)
+        .eq('society_id', societyId as string)
+        .eq('role', 'RESIDENT')
         .single();
       if (error) throw error;
       return data as unknown as ResidentProfile;
     },
-    enabled: !!id,
+    enabled: !!id && !!societyId,
   });
 }
 
-export function useVerifyResident() {
+export function useSetResidentVerified() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (residentId: string) => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({ is_verified: true })
-        .eq('id', residentId)
-        .select('society_id, full_name')
-        .single();
+    mutationFn: async ({
+      residentId,
+      societyId,
+      verified,
+    }: {
+      residentId: string;
+      societyId: string;
+      verified: boolean;
+    }) => {
+      const { data, error } = await supabase.rpc('set_admin_resident_verified', {
+        target_resident_id: residentId,
+        requested_verified: verified,
+      });
       if (error) throw error;
-
-      const { data: session } = await supabase.auth.getSession();
-      if (session.session) {
-        await logAuditEvent({
-          societyId: data.society_id,
-          actorId: session.session.user.id,
-          action: `Verified ${data.full_name}`,
-        });
-      }
+      const resident = data as ResidentProfile;
+      if (!resident || resident.society_id !== societyId) throw new Error('The resident could not be updated');
+      return resident;
     },
-    onSuccess: (_data, residentId) => {
-      queryClient.invalidateQueries({ queryKey: ['residents'] });
-      queryClient.invalidateQueries({ queryKey: ['resident', residentId] });
-      queryClient.invalidateQueries({ queryKey: ['audit-events'] });
+    onSuccess: (resident) => {
+      queryClient.invalidateQueries({ queryKey: ['residents', resident.society_id] });
+      queryClient.invalidateQueries({ queryKey: ['resident', resident.society_id, resident.id] });
+      queryClient.invalidateQueries({ queryKey: ['audit-events', resident.society_id] });
+    },
+  });
+}
+
+type UpdateResidentInput = {
+  residentId: string;
+  societyId: string;
+  fullName: string;
+  phone: string;
+  flatId: string;
+  occupancyType: 'OWNER' | 'TENANT';
+  isVerified: boolean;
+};
+
+export function useUpdateResident() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: UpdateResidentInput) => {
+      const { data, error } = await supabase.rpc('update_admin_resident', {
+        target_resident_id: input.residentId,
+        requested_full_name: input.fullName.trim(),
+        requested_phone: input.phone.trim(),
+        requested_flat_id: input.flatId,
+        requested_occupancy: input.occupancyType,
+        requested_verified: input.isVerified,
+      });
+      if (error) throw error;
+      const resident = data as ResidentProfile;
+      if (!resident || resident.society_id !== input.societyId) throw new Error('The resident could not be updated');
+      return resident;
+    },
+    onSuccess: (resident) => {
+      queryClient.invalidateQueries({ queryKey: ['residents', resident.society_id] });
+      queryClient.invalidateQueries({ queryKey: ['resident', resident.society_id, resident.id] });
+      queryClient.invalidateQueries({ queryKey: ['flats', resident.society_id] });
+      queryClient.invalidateQueries({ queryKey: ['audit-events', resident.society_id] });
+    },
+  });
+}
+
+export function useSetResidentActive() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      residentId,
+      societyId,
+      active,
+    }: {
+      residentId: string;
+      societyId: string;
+      active: boolean;
+    }) => {
+      const { data, error } = await supabase.rpc('set_admin_resident_active', {
+        target_resident_id: residentId,
+        requested_active: active,
+      });
+      if (error) throw error;
+      const resident = data as ResidentProfile;
+      if (!resident || resident.society_id !== societyId) throw new Error('The resident access could not be updated');
+      return resident;
+    },
+    onSuccess: (resident) => {
+      queryClient.invalidateQueries({ queryKey: ['residents', resident.society_id] });
+      queryClient.invalidateQueries({ queryKey: ['resident', resident.society_id, resident.id] });
+      queryClient.invalidateQueries({ queryKey: ['audit-events', resident.society_id] });
     },
   });
 }
@@ -75,6 +150,7 @@ type CreateResidentInput = {
   flatId: string;
   occupancyType: 'OWNER' | 'TENANT';
   isVerified: boolean;
+  societyId: string;
 };
 
 export function useCreateResident() {
@@ -98,15 +174,18 @@ export function useCreateResident() {
       if (!data) throw new Error('No response from server');
 
       if (input.isVerified) {
-        await supabase.from('profiles').update({ is_verified: true }).eq('id', data.userId);
+        const { error: verifyError } = await supabase.rpc('set_admin_resident_verified', {
+          target_resident_id: data.userId,
+          requested_verified: true,
+        });
+        if (verifyError) throw verifyError;
       }
-
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['residents'] });
-      queryClient.invalidateQueries({ queryKey: ['flats'] });
-      queryClient.invalidateQueries({ queryKey: ['audit-events'] });
+    onSuccess: (_data, input) => {
+      queryClient.invalidateQueries({ queryKey: ['residents', input.societyId] });
+      queryClient.invalidateQueries({ queryKey: ['flats', input.societyId] });
+      queryClient.invalidateQueries({ queryKey: ['audit-events', input.societyId] });
     },
   });
 }

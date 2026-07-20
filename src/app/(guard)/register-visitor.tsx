@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
@@ -8,10 +8,12 @@ import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { useProfile } from '@/features/profile/api';
-import type { ResidentProfile } from '@/features/residents/api';
-import { useResidents } from '@/features/residents/api';
-import { useTowers } from '@/features/towers/api';
-import { useCreateVisitorRequest, type VisitorCategory } from '@/features/visitors/api';
+import {
+  useCreateVisitorRequest,
+  useGuardResidentSearch,
+  type GuardResidentSearchResult,
+  type VisitorCategory,
+} from '@/features/visitors/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { showToast } from '@/stores/toast-store';
 
@@ -35,8 +37,6 @@ function CheckIcon() {
 export default function RegisterVisitorScreen() {
   const session = useAuthStore((state) => state.session);
   const profileQuery = useProfile(session?.user.id);
-  const towersQuery = useTowers();
-  const residentsQuery = useResidents();
   const createRequest = useCreateVisitorRequest();
 
   const [step, setStep] = useState<Step>('details');
@@ -44,24 +44,11 @@ export default function RegisterVisitorScreen() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [search, setSearch] = useState('');
-  const [selectedResident, setSelectedResident] = useState<ResidentProfile | undefined>(undefined);
+  const [selectedResident, setSelectedResident] = useState<GuardResidentSearchResult | undefined>(undefined);
+  const residentsQuery = useGuardResidentSearch(search, step === "search" ? profileQuery.data?.society_id : undefined);
 
   const canContinue = !!category && name.trim().length > 1;
-
-  const query = search.trim().toLowerCase();
-  const filteredResidents = useMemo(
-    () =>
-      (residentsQuery.data ?? []).filter((resident) => {
-        if (!query) return true;
-        const flatLabel = `${resident.flat?.number ?? ''}`.toLowerCase();
-        return resident.full_name.toLowerCase().includes(query) || flatLabel.includes(query);
-      }),
-    [residentsQuery.data, query],
-  );
-
-  function towerCodeFor(towerId: string | undefined) {
-    return towersQuery.data?.find((t) => t.id === towerId)?.code;
-  }
+  const filteredResidents = residentsQuery.data ?? [];
 
   function resetToDetails() {
     setStep('details');
@@ -77,7 +64,6 @@ export default function RegisterVisitorScreen() {
     try {
       await createRequest.mutateAsync({
         societyId: profileQuery.data.society_id,
-        raisedBy: session.user.id,
         flatId: selectedResident.flat_id,
         visitorName: name.trim(),
         visitorPhone: phone.trim() || undefined,
@@ -90,7 +76,6 @@ export default function RegisterVisitorScreen() {
   }
 
   if (step === 'sent') {
-    const flatCode = towerCodeFor(selectedResident?.flat?.tower_id);
     return (
       <View style={styles.successRoot}>
         <View style={styles.successIconWrap}>
@@ -99,8 +84,8 @@ export default function RegisterVisitorScreen() {
         <Text style={styles.successTitle}>Request Sent</Text>
         <Text style={styles.successSubtitle}>
           {selectedResident?.full_name} at{' '}
-          {flatCode ? `${flatCode}-${selectedResident?.flat?.number}` : (selectedResident?.flat?.number ?? 'the flat')} has
-          been notified and will approve or deny shortly.
+          {selectedResident ? `${selectedResident.tower_code}-${selectedResident.flat_number}` : 'the flat'} has been
+          notified and will approve or deny shortly.
         </Text>
         <Pressable style={styles.secondaryButton} onPress={resetToDetails}>
           <Text style={styles.secondaryButtonLabel}>Register Another Visitor</Text>
@@ -122,7 +107,10 @@ export default function RegisterVisitorScreen() {
         <View style={styles.searchBody}>
           <TextInput
             value={search}
-            onChangeText={setSearch}
+            onChangeText={(value) => {
+              setSearch(value);
+              setSelectedResident(undefined);
+            }}
             placeholder="Search by name or flat number"
             placeholderTextColor={Colors.textFaint}
             style={styles.searchInput}
@@ -137,7 +125,6 @@ export default function RegisterVisitorScreen() {
             />
             {filteredResidents.map((resident) => {
               const isSelected = selectedResident?.id === resident.id;
-              const towerCode = towerCodeFor(resident.flat?.tower_id);
               return (
                 <Pressable
                   key={resident.id}
@@ -149,7 +136,7 @@ export default function RegisterVisitorScreen() {
                   <View style={styles.flex}>
                     <Text style={styles.residentName}>{resident.full_name}</Text>
                     <Text style={styles.residentSub}>
-                      {towerCode ? `${towerCode}-${resident.flat?.number}` : (resident.flat?.number ?? '—')}
+                      {`${resident.tower_code}-${resident.flat_number}`}
                     </Text>
                   </View>
                   {isSelected && (

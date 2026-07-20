@@ -3,14 +3,12 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors, FontFamily } from '@/constants/commonConstants';
 import { confirmSignOut } from '@/stores/auth-store';
-import { showToast } from '@/stores/toast-store';
 
 const MODULES = [
   { label: 'Amenities', sub: 'Bookings & spaces', iconBg: '#E4EFF5', glyph: '🏊', go: () => router.push('/(admin)/amenities') },
   { label: 'Polls & Surveys', sub: 'Community voting', iconBg: '#EFEAF7', glyph: '▤', go: () => router.push('/(admin)/polls') },
   { label: 'Staff & Services', sub: 'Directory', iconBg: '#F6ECD8', glyph: '👷', go: () => router.push('/(admin)/staff-services') },
   { label: 'Audit trail', sub: 'All logged actions', iconBg: '#EEEDE4', glyph: '≡', go: () => router.push('/(admin)/audit') },
-  { label: 'Settings', sub: 'Roles & permissions', iconBg: '#F0E7E4', glyph: '⚙', go: () => showToast('Settings — coming in a later phase') },
   { label: 'Sign out', sub: 'End this session', iconBg: '#F0E7E4', glyph: '⎋', go: () => confirmSignOut() },
 ];
 

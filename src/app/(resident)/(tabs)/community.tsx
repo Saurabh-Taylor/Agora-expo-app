@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { computePollResults, formatDate, getNoticeCategoryStyle } from '@/commonFunctions';
+import { computePollResults, formatDate, getNoticeCategoryStyle, isPollOpen } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { useNotices } from '@/features/notices/api';
@@ -32,17 +32,15 @@ function CheckIcon() {
 
 function PollCard({
   poll,
-  myProfileId,
   societyId,
 }: {
   poll: PollWithVotes;
-  myProfileId: string | undefined;
   societyId: string | undefined;
 }) {
   const castVote = useCastVote();
   const { options, totalVotes } = computePollResults(poll);
-  const myVote = poll.poll_votes.find((vote) => vote.profile_id === myProfileId);
-  const isActive = poll.state === 'ACTIVE';
+  const myVote = poll.poll_votes[0];
+  const isActive = isPollOpen(poll);
 
   async function handlePick(optionId: string) {
     if (!isActive || !societyId) return;
@@ -73,7 +71,7 @@ function PollCard({
           return (
             <Pressable
               key={option.id}
-              disabled={!isActive || castVote.isPending}
+              disabled={!isActive || !!myVote || castVote.isPending}
               onPress={() => handlePick(option.id)}
               style={[
                 styles.pollOption,
@@ -94,8 +92,9 @@ function PollCard({
           );
         })}
       </View>
-      {isActive && myVote && <Text style={styles.pollFooter}>You voted · tap another option to change</Text>}
-      {isActive && !myVote && <Text style={styles.pollFooter}>Tap an option to vote</Text>}
+      {isActive && myVote && <Text style={styles.pollFooter}>Your vote is recorded</Text>}
+      {isActive && !myVote && <Text style={styles.pollFooter}>Tap an option to vote once</Text>}
+      {!isActive && <Text style={styles.pollFooter}>Voting has closed</Text>}
     </View>
   );
 }
@@ -104,14 +103,14 @@ export default function CommunityScreen() {
   const [activeTab, setActiveTab] = useState<CommunityTab>('Notices');
   const session = useAuthStore((state) => state.session);
   const profileQuery = useProfile(session?.user.id);
-  const noticesQuery = useNotices();
-  const pollsQuery = usePolls();
+  const noticesQuery = useNotices(profileQuery.data?.society_id);
+  const pollsQuery = usePolls(profileQuery.data?.society_id);
 
   const notices = noticesQuery.data ?? [];
   const polls = pollsQuery.data ?? [];
   const [pinned, ...rest] = notices;
 
-  usePollVotesRealtimeSync(polls[0]?.id);
+  usePollVotesRealtimeSync(profileQuery.data?.society_id);
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
@@ -183,7 +182,7 @@ export default function CommunityScreen() {
           />
           <View style={styles.pollsList}>
             {polls.map((poll) => (
-              <PollCard key={poll.id} poll={poll} myProfileId={profileQuery.data?.id} societyId={profileQuery.data?.society_id} />
+              <PollCard key={poll.id} poll={poll} societyId={profileQuery.data?.society_id} />
             ))}
           </View>
         </>

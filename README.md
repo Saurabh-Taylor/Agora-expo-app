@@ -12,7 +12,7 @@ Agora is designed around three strictly separated roles:
 - **Security Guard:** register visitors, request and verify approvals, record entry and exit, search residents, and monitor society movement.
 - **Society Admin:** manage towers, flats, residents, amenities, notices, polls, complaints, staff, and service providers.
 
-The primary workflow is fast visitor approval: a guard raises a request, the resident approves or rejects it in the app, and the guard records the visitor's entry and exit. Push notifications are planned where they reduce delay in time-sensitive workflows.
+The primary workflow is fast visitor approval: a guard raises a request, the resident approves or rejects it in the app, and the guard records the visitor's entry and exit. Authorized push-notification paths are implemented for time-sensitive workflows and await final physical-device validation.
 
 ## Selected stack
 
@@ -25,7 +25,13 @@ The primary workflow is fast visitor approval: a guard raises a request, the res
 
 ## Current status
 
-This repository is currently at the **project foundation / Expo starter** stage. The planned product features, backend integration, authentication and role-based access control, demo credentials, screenshots, and distributable builds are not yet available.
+Agora is in active feature implementation. Authentication/RBAC, society administration,
+visitor workflows, community features, amenities, resident dues, and admin directories
+now have real Supabase-backed paths. Device validation, final UX polish, demo credentials,
+and submission artifacts remain in progress.
+
+See the living [feature and role tracker](docs/FEATURE_IMPLEMENTATION_TRACKER.md) for
+role permissions, implementation evidence, known limitations, and remaining work.
 
 See [AGENTS.md](AGENTS.md) for the repository product/agent contract, including the intended scope, role rules, build order, and delivery criteria.
 

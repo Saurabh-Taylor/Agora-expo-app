@@ -21,7 +21,7 @@ export default function GateLogScreen() {
   const session = useAuthStore((state) => state.session);
   const profileQuery = useProfile(session?.user.id);
   const profile = profileQuery.data;
-  const flatQuery = useFlatWithTower(profile?.flat_id);
+  const flatQuery = useFlatWithTower(profile?.flat_id, profile?.society_id);
   const requestsQuery = useFlatVisitorRequests(profile?.flat_id, profile?.society_id, 50);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]['value']>('ALL');
 

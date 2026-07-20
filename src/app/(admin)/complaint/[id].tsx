@@ -2,12 +2,13 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { formatDate, getComplaintPriorityStyle, getComplaintStatusStyle } from '@/commonFunctions';
+import { formatDate, getComplaintPriorityStyle, getComplaintStatusStyle, getErrorMessage } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
-import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
+import { Colors, ComplaintPriorities, ComplaintStatuses, FontFamily, Radius } from '@/constants/commonConstants';
 import {
   useComplaintDetail,
+  useComplaintRealtimeSync,
   useUpdateComplaint,
   type Complaint,
   type ComplaintEvent,
@@ -18,23 +19,12 @@ import { useProfile } from '@/features/profile/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { showToast } from '@/stores/toast-store';
 
-const PRIORITIES: { value: ComplaintPriority; label: string }[] = [
-  { value: 'LOW', label: 'Low' },
-  { value: 'MEDIUM', label: 'Medium' },
-  { value: 'HIGH', label: 'High' },
-];
-
-const STATUSES: { value: ComplaintStatus; label: string }[] = [
-  { value: 'OPEN', label: 'Open' },
-  { value: 'IN_PROGRESS', label: 'In progress' },
-  { value: 'RESOLVED', label: 'Resolved' },
-];
-
 export default function ComplaintTriageScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = useAuthStore((state) => state.session);
   const profileQuery = useProfile(session?.user.id);
-  const detailQuery = useComplaintDetail(id);
+  const detailQuery = useComplaintDetail(id, profileQuery.data?.society_id);
+  useComplaintRealtimeSync(profileQuery.data?.society_id);
 
   const complaint = detailQuery.data?.complaint;
 
@@ -43,9 +33,9 @@ export default function ComplaintTriageScreen() {
       <View style={styles.root}>
         <BackArrowButton onPress={() => router.back()} />
         <AsyncState
-          isLoading={detailQuery.isLoading}
-          isError={detailQuery.isError}
-          onRetry={() => detailQuery.refetch()}
+          isLoading={profileQuery.isLoading || detailQuery.isLoading}
+          isError={profileQuery.isError || detailQuery.isError}
+          onRetry={() => { profileQuery.refetch(); detailQuery.refetch(); }}
           isEmpty={!detailQuery.isLoading && !detailQuery.isError}
           emptyMessage="This complaint isn't available."
         />
@@ -54,7 +44,7 @@ export default function ComplaintTriageScreen() {
   }
 
   return (
-    <ComplaintTriageForm complaint={complaint} events={detailQuery.data?.events ?? []} societyId={profileQuery.data?.society_id} />
+    <ComplaintTriageForm key={complaint.updated_at} complaint={complaint} events={detailQuery.data?.events ?? []} societyId={profileQuery.data?.society_id} />
   );
 }
 
@@ -78,15 +68,17 @@ function ComplaintTriageForm({
   async function handleSave() {
     if (!societyId) return;
     try {
-      await updateComplaint.mutateAsync({ id: complaint.id, societyId, priority, status, note });
+      await updateComplaint.mutateAsync({ id: complaint.id, societyId, priority, status, previousStatus: complaint.status, note });
       showToast('Complaint updated');
-      router.back();
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Could not save changes');
+      showToast(getErrorMessage(error, 'Could not save changes'));
     }
   }
 
-  const priorityDotColor = getComplaintPriorityStyle(complaint.priority).color;
+  const priorityDotColor = getComplaintPriorityStyle(priority).color;
+  const statusStartIndex = ComplaintStatuses.findIndex((item) => item.value === complaint.status);
+  const availableStatuses = ComplaintStatuses.slice(statusStartIndex);
+  const hasChanges = priority !== complaint.priority || status !== complaint.status || note.trim().length > 0;
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
@@ -132,7 +124,7 @@ function ComplaintTriageForm({
 
       <Text style={styles.label}>PRIORITY</Text>
       <View style={styles.chipsRow}>
-        {PRIORITIES.map((item) => {
+        {ComplaintPriorities.map((item) => {
           const active = priority === item.value;
           return (
             <Pressable
@@ -147,7 +139,7 @@ function ComplaintTriageForm({
 
       <Text style={styles.label}>STATUS</Text>
       <View style={styles.chipsRow}>
-        {STATUSES.map((item) => {
+        {availableStatuses.map((item) => {
           const active = status === item.value;
           return (
             <Pressable
@@ -168,10 +160,11 @@ function ComplaintTriageForm({
         placeholderTextColor={Colors.textFaint}
         style={[styles.input, styles.textarea]}
         multiline
+        maxLength={500}
         textAlignVertical="top"
       />
 
-      <Pressable style={styles.saveButton} onPress={handleSave} disabled={updateComplaint.isPending}>
+      <Pressable style={[styles.saveButton, !hasChanges && styles.saveButtonDisabled]} onPress={handleSave} disabled={!hasChanges || updateComplaint.isPending} accessibilityRole="button" accessibilityLabel="Save complaint changes">
         {updateComplaint.isPending && <ActivityIndicator size="small" color={Colors.textOnDark} />}
         <Text style={styles.saveButtonLabel}>Save changes</Text>
       </Pressable>
@@ -231,5 +224,6 @@ const styles = StyleSheet.create({
     gap: 9,
     backgroundColor: Colors.green500,
   },
+  saveButtonDisabled: { opacity: 0.5 },
   saveButtonLabel: { fontSize: 15.5, fontWeight: '700', color: Colors.textOnDark },
 });

@@ -5,9 +5,13 @@ import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { Colors, FontFamily } from '@/constants/commonConstants';
 import { useRecentAuditEvents } from '@/features/audit/api';
+import { useProfile } from '@/features/profile/api';
+import { useAuthStore } from '@/stores/auth-store';
 
 export default function AuditTrailScreen() {
-  const auditQuery = useRecentAuditEvents(100);
+  const session = useAuthStore((state) => state.session);
+  const profileQuery = useProfile(session?.user.id);
+  const auditQuery = useRecentAuditEvents(profileQuery.data?.society_id, 100);
 
   return (
     <View style={styles.root}>

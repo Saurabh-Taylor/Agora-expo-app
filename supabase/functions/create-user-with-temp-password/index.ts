@@ -45,11 +45,11 @@ export default {
     // never trust a client-supplied role or societyId.
     const { data: callerProfile, error: callerError } = await ctx.supabase
       .from("profiles")
-      .select("role, society_id")
+      .select("role, society_id, is_active")
       .eq("id", callerId)
       .single();
 
-    if (callerError || !callerProfile || callerProfile.role !== "ADMIN") {
+    if (callerError || !callerProfile || callerProfile.role !== "ADMIN" || !callerProfile.is_active) {
       return Response.json({ error: "Only society admins can create accounts" }, { status: 403 });
     }
 
@@ -84,6 +84,16 @@ export default {
       if (flatError || !flat || flat.society_id !== societyId) {
         return badRequest("Flat does not belong to your society");
       }
+
+      const { data: assignedResident, error: assignmentError } = await ctx.supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("society_id", societyId)
+        .eq("flat_id", flatId)
+        .eq("role", "RESIDENT")
+        .maybeSingle();
+      if (assignmentError) return badRequest("Could not verify flat availability");
+      if (assignedResident) return badRequest("This flat is already assigned to another resident");
     }
 
     const tempPassword = generateTempPassword();

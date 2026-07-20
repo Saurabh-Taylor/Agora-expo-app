@@ -2,18 +2,14 @@ import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { formatDate } from '@/commonFunctions';
+import { formatCurrency, formatDate } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
-import { useFlatDues } from '@/features/dues/api';
+import { useDuesRealtimeSync, useFlatDues } from '@/features/dues/api';
 import { useFlatWithTower } from '@/features/flats/api';
 import { useProfile } from '@/features/profile/api';
 import { useAuthStore } from '@/stores/auth-store';
-
-function formatCurrency(amount: number) {
-  return `₹${amount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-}
 
 function CheckCircleIcon() {
   return (
@@ -26,8 +22,10 @@ function CheckCircleIcon() {
 export default function DuesScreen() {
   const session = useAuthStore((state) => state.session);
   const profileQuery = useProfile(session?.user.id);
-  const flatQuery = useFlatWithTower(profileQuery.data?.flat_id);
-  const duesQuery = useFlatDues(profileQuery.data?.flat_id);
+  const flatQuery = useFlatWithTower(profileQuery.data?.flat_id, profileQuery.data?.society_id);
+  const duesQuery = useFlatDues(profileQuery.data?.flat_id, profileQuery.data?.society_id);
+
+  useDuesRealtimeSync(profileQuery.data?.flat_id, profileQuery.data?.society_id);
 
   const dues = duesQuery.data ?? [];
   const unpaid = dues.filter((d) => d.status === 'UNPAID').sort((a, b) => a.due_date.localeCompare(b.due_date));
@@ -47,9 +45,9 @@ export default function DuesScreen() {
       )}
 
       <AsyncState
-        isLoading={duesQuery.isLoading}
-        isError={duesQuery.isError}
-        onRetry={() => duesQuery.refetch()}
+        isLoading={profileQuery.isLoading || flatQuery.isLoading || duesQuery.isLoading}
+        isError={profileQuery.isError || flatQuery.isError || duesQuery.isError}
+        onRetry={() => { profileQuery.refetch(); flatQuery.refetch(); duesQuery.refetch(); }}
         isEmpty={dues.length === 0}
         emptyMessage="No dues on record yet."
       />

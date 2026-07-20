@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
+import { getErrorMessage } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
@@ -36,7 +37,8 @@ export default function CreatePollScreen() {
   const [durationDays, setDurationDays] = useState<number | null>(3);
 
   const trimmedOptions = options.map((option) => option.trim()).filter((option) => option.length > 0);
-  const canLaunch = question.trim().length > 3 && trimmedOptions.length >= 2 && !!profileQuery.data;
+  const hasUniqueOptions = new Set(trimmedOptions.map((option) => option.toLowerCase())).size === trimmedOptions.length;
+  const canLaunch = question.trim().length > 3 && trimmedOptions.length >= 2 && hasUniqueOptions && !!profileQuery.data;
 
   function setOptionAt(index: number, value: string) {
     setOptions((prev) => prev.map((option, i) => (i === index ? value : option)));
@@ -58,12 +60,12 @@ export default function CreatePollScreen() {
       });
       router.replace(`/(admin)/poll/${poll.id}`);
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Could not launch the poll');
+      showToast(getErrorMessage(error, 'Could not launch the poll'));
     }
   }
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.root} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.headerRow}>
         <BackArrowButton onPress={() => router.back()} />
         <Text style={styles.title}>New poll</Text>
@@ -79,6 +81,7 @@ export default function CreatePollScreen() {
         placeholderTextColor={Colors.textFaint}
         style={[styles.input, styles.textarea]}
         multiline
+        maxLength={240}
         textAlignVertical="top"
       />
 
@@ -92,6 +95,7 @@ export default function CreatePollScreen() {
               placeholder={`Option ${index + 1}`}
               placeholderTextColor={Colors.textFaint}
               style={[styles.input, styles.optionInput]}
+              maxLength={80}
             />
             {options.length > 2 && (
               <Pressable style={styles.removeButton} onPress={() => removeOptionAt(index)} hitSlop={6}>
@@ -101,6 +105,7 @@ export default function CreatePollScreen() {
           </View>
         ))}
       </View>
+      {!hasUniqueOptions && <Text style={styles.validationError}>Options must be unique.</Text>}
       {options.length < 5 && (
         <Pressable onPress={() => setOptions((prev) => [...prev, ''])}>
           <Text style={styles.addOptionLabel}>+ Add option</Text>
@@ -125,7 +130,9 @@ export default function CreatePollScreen() {
       <Pressable
         style={[styles.launchButton, { backgroundColor: canLaunch ? Colors.green500 : '#DDD8C8' }]}
         onPress={handleLaunch}
-        disabled={!canLaunch || createPoll.isPending}>
+        disabled={!canLaunch || createPoll.isPending}
+        accessibilityRole="button"
+        accessibilityLabel="Launch poll">
         {createPoll.isPending && <ActivityIndicator size="small" color="#fff" />}
         <Text style={[styles.launchLabel, { color: canLaunch ? Colors.textOnDark : '#9B9682' }]}>Launch poll</Text>
       </Pressable>
@@ -162,6 +169,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  validationError: { marginTop: 8, fontSize: 12.5, color: Colors.danger700 },
   addOptionLabel: { marginTop: 10, fontSize: 13.5, fontWeight: '700', color: Colors.success700 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
   chip: { paddingVertical: 11, paddingHorizontal: 16, borderRadius: 999, borderWidth: 1.5 },

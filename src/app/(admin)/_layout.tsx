@@ -16,12 +16,15 @@ export default function AdminLayout() {
       <Stack.Screen name="complaint/[id]" />
       <Stack.Screen name="amenities" />
       <Stack.Screen name="add-amenity" />
+      <Stack.Screen name="edit-amenity/[id]" />
       <Stack.Screen name="amenity/[id]" />
       <Stack.Screen name="staff-services" />
       <Stack.Screen name="add-staff" />
       <Stack.Screen name="staff/[id]" />
+      <Stack.Screen name="edit-staff/[id]" />
       <Stack.Screen name="add-service-provider" />
       <Stack.Screen name="service-provider/[id]" />
+      <Stack.Screen name="edit-service-provider/[id]" />
     </Stack>
   );
 }

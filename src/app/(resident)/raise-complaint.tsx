@@ -2,6 +2,8 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { getErrorMessage } from '@/commonFunctions';
+import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { Colors, ComplaintCategories, FontFamily, Radius } from '@/constants/commonConstants';
 import { useCreateComplaint } from '@/features/complaints/api';
@@ -32,16 +34,18 @@ export default function RaiseComplaintScreen() {
       });
       router.replace(`/(resident)/complaint/${complaint.id}`);
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Could not raise the complaint');
+      showToast(getErrorMessage(error, 'Could not raise the complaint'));
     }
   }
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.root} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.headerRow}>
         <BackArrowButton onPress={() => router.back()} />
         <Text style={styles.title}>Raise a complaint</Text>
       </View>
+
+      <AsyncState isLoading={profileQuery.isLoading} isError={profileQuery.isError} onRetry={() => profileQuery.refetch()} />
 
       <Text style={styles.label}>TITLE</Text>
       <TextInput
@@ -50,6 +54,7 @@ export default function RaiseComplaintScreen() {
         placeholder="e.g. Leaking pipe in the basement"
         placeholderTextColor={Colors.textFaint}
         style={styles.input}
+        maxLength={120}
       />
 
       <Text style={styles.label}>DESCRIPTION</Text>
@@ -60,6 +65,7 @@ export default function RaiseComplaintScreen() {
         placeholderTextColor={Colors.textFaint}
         style={[styles.input, styles.textarea]}
         multiline
+        maxLength={1000}
         textAlignVertical="top"
       />
 
@@ -78,7 +84,9 @@ export default function RaiseComplaintScreen() {
       <Pressable
         style={[styles.submitButton, { backgroundColor: canSubmit ? Colors.green500 : '#DDD8C8' }]}
         onPress={handleSubmit}
-        disabled={!canSubmit || createComplaint.isPending}>
+        disabled={!canSubmit || createComplaint.isPending}
+        accessibilityRole="button"
+        accessibilityLabel="Submit complaint">
         {createComplaint.isPending && <ActivityIndicator size="small" color="#fff" />}
         <Text style={[styles.submitLabel, { color: canSubmit ? Colors.textOnDark : '#9B9682' }]}>Submit complaint</Text>
       </Pressable>

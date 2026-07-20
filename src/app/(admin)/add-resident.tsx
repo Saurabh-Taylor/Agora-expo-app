@@ -22,16 +22,16 @@ function parseFloorFromFlatNumber(number: string) {
 }
 
 export default function AddResidentScreen() {
-  const params = useLocalSearchParams<{ towerId?: string }>();
+  const params = useLocalSearchParams<{ towerId?: string; flatNumber?: string }>();
   const session = useAuthStore((state) => state.session);
   const profileQuery = useProfile(session?.user.id);
-  const towersQuery = useTowers();
+  const towersQuery = useTowers(profileQuery.data?.society_id);
   const createResident = useCreateResident();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [selectedTowerId, setSelectedTowerId] = useState<string | undefined>(params.towerId);
-  const [flatNumber, setFlatNumber] = useState('');
+  const [flatNumber, setFlatNumber] = useState(params.flatNumber ?? '');
   const [phone, setPhone] = useState('');
   const [occupancyType, setOccupancyType] = useState<OccupancyType>('OWNER');
   const [markVerified, setMarkVerified] = useState(false);
@@ -68,6 +68,7 @@ export default function AddResidentScreen() {
         flatId: flat.id,
         occupancyType,
         isVerified: markVerified,
+        societyId: profileQuery.data.society_id,
       });
       setResult({ email: created.email, tempPassword: created.tempPassword });
     } catch (error) {
