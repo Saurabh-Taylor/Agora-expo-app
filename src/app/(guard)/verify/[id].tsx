@@ -2,7 +2,16 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { avatarColorForName, formatTime, getInitials, getVisitorRequestStatusStyle, titleCase } from '@/commonFunctions';
+import {
+  avatarColorForName,
+  formatTime,
+  getEffectiveVisitorRequestStatus,
+  getInitials,
+  getVisitorRequestStatusStyle,
+  getErrorMessage,
+  isVisitorReadyForEntry,
+  titleCase,
+} from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { StatusPill } from '@/components/status-pill';
@@ -44,8 +53,9 @@ export default function VerifyVisitorScreen() {
     );
   }
 
-  const style = getVisitorRequestStatusStyle(request.status);
-  const canMarkEntry = request.status === 'APPROVED' && !request.entry_at;
+  const effectiveStatus = getEffectiveVisitorRequestStatus(request);
+  const style = getVisitorRequestStatusStyle(effectiveStatus);
+  const canMarkEntry = isVisitorReadyForEntry(request);
   const canMarkExit = request.status === 'ENTERED' && !request.exit_at;
 
   async function handleMarkEntry() {
@@ -53,9 +63,9 @@ export default function VerifyVisitorScreen() {
       await markEntry.mutateAsync({ id: id as string });
       showToast('Entry marked');
       router.back();
-    } catch {
-      showToast('This request was already updated.');
-      router.back();
+    } catch (error) {
+      showToast(getErrorMessage(error, 'Could not mark visitor entry'));
+      detailQuery.refetch();
     }
   }
 

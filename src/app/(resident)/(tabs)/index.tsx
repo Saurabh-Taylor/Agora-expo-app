@@ -11,7 +11,7 @@ import { useDuesRealtimeSync, useFlatDues } from '@/features/dues/api';
 import { useFlatWithTower } from '@/features/flats/api';
 import { useProfile } from '@/features/profile/api';
 import { useFlatVisitorRequests, useVisitorRequestsRealtimeSync } from '@/features/visitors/api';
-import { confirmSignOut, useAuthStore } from '@/stores/auth-store';
+import { useAuthStore } from '@/stores/auth-store';
 
 function PlusIcon() {
   return (
@@ -102,9 +102,9 @@ export default function ResidentHomeScreen() {
               <AgoraLogo size={24} />
               <Text style={styles.brandLabel}>Agora</Text>
             </View>
-            <Pressable style={styles.avatar} onPress={confirmSignOut} hitSlop={8}>
+            <View style={styles.avatar}>
               <Text style={styles.avatarLabel}>{profile ? getInitials(profile.full_name) : ''}</Text>
-            </Pressable>
+            </View>
           </View>
           <Text style={styles.greeting}>
             {getTimeBasedGreeting()}, {profile?.full_name.split(' ')[0] ?? ''}
@@ -208,6 +208,8 @@ export default function ResidentHomeScreen() {
             <AsyncState
               isLoading={requestsQuery.isLoading}
               isError={requestsQuery.isError}
+              errorTitle="Recent visitors unavailable"
+              errorMessage="We couldn’t retrieve your visitor history. Try again."
               onRetry={() => requestsQuery.refetch()}
               isEmpty={recent.length === 0}
               emptyMessage="No visitor activity for your flat yet."

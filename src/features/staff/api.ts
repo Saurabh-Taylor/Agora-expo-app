@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { invalidateSocietyDirectory } from '@/commonFunctions';
+import { getUniqueRealtimeChannelTopic, invalidateSocietyDirectory } from '@/commonFunctions';
 import { supabase } from '@/lib/supabase';
 
 export type StaffStatus = 'ON_DUTY' | 'OFF_DUTY';
@@ -194,7 +194,7 @@ export function useDirectoryRealtimeSync(societyId: string | null | undefined) {
   useEffect(() => {
     if (!societyId) return;
     const channel = supabase
-      .channel(`directory:${societyId}`)
+      .channel(getUniqueRealtimeChannelTopic('directory:' + societyId))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'staff', filter: `society_id=eq.${societyId}` }, () => {
         void invalidateSocietyDirectory(queryClient, societyId);
       })

@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(38);
+select plan(52);
 
 insert into public.societies (id, name) values
   ('16000000-0000-0000-0000-000000000001', 'Complaint Test Society A'),
@@ -40,6 +40,11 @@ insert into public.complaint_events (id, complaint_id, society_id, status, note,
   ('66000000-0000-0000-0000-000000000001', '56000000-0000-0000-0000-000000000001', '16000000-0000-0000-0000-000000000001', 'OPEN', 'Complaint raised', '46000000-0000-0000-0000-000000000003', now() - interval '1 day'),
   ('66000000-0000-0000-0000-000000000002', '56000000-0000-0000-0000-000000000002', '16000000-0000-0000-0000-000000000001', 'OPEN', 'Complaint raised', '46000000-0000-0000-0000-000000000006', now() - interval '2 hours'),
   ('66000000-0000-0000-0000-000000000003', '56000000-0000-0000-0000-000000000003', '16000000-0000-0000-0000-000000000002', 'OPEN', 'Complaint raised', '46000000-0000-0000-0000-000000000005', now());
+
+insert into storage.objects (bucket_id, name, owner) values
+  ('complaint-attachments', '16000000-0000-0000-0000-000000000001/46000000-0000-0000-0000-000000000003/71000000-0000-0000-0000-000000000001.jpg', '46000000-0000-0000-0000-000000000003'),
+  ('complaint-attachments', '16000000-0000-0000-0000-000000000001/46000000-0000-0000-0000-000000000006/71000000-0000-0000-0000-000000000002.jpg', '46000000-0000-0000-0000-000000000006'),
+  ('complaint-attachments', '16000000-0000-0000-0000-000000000002/46000000-0000-0000-0000-000000000005/71000000-0000-0000-0000-000000000003.jpg', '46000000-0000-0000-0000-000000000005');
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '46000000-0000-0000-0000-000000000003', true);
@@ -176,6 +181,79 @@ select throws_like(
 );
 reset role;
 select is((select count(*)::integer from public.audit_events where society_id = '16000000-0000-0000-0000-000000000001'), 3, 'admin complaint lifecycle actions are audited');
+
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '46000000-0000-0000-0000-000000000003', true);
+select is((select count(*)::integer from storage.objects where bucket_id = 'complaint-attachments'), 1, 'resident sees only their own complaint attachments');
+select is((select count(*)::integer from storage.objects where name like '%46000000-0000-0000-0000-000000000006%'), 0, 'resident cannot see another resident attachment in the same society');
+select is((select count(*)::integer from storage.objects where name like '16000000-0000-0000-0000-000000000002/%'), 0, 'resident cannot see cross-society attachments');
+select lives_ok(
+  $$ insert into storage.objects (bucket_id, name, owner) values ('complaint-attachments', '16000000-0000-0000-0000-000000000001/46000000-0000-0000-0000-000000000003/71000000-0000-0000-0000-000000000004.jpg', '46000000-0000-0000-0000-000000000003') $$,
+  'resident can upload to their authenticated society and user path'
+);
+select throws_like(
+  $$ insert into storage.objects (bucket_id, name, owner) values ('complaint-attachments', '16000000-0000-0000-0000-000000000002/46000000-0000-0000-0000-000000000003/71000000-0000-0000-0000-000000000005.jpg', '46000000-0000-0000-0000-000000000003') $$,
+  '%row-level security%',
+  'resident cannot upload to a cross-society path'
+);
+select lives_ok(
+  $$ select public.create_resident_complaint_with_attachment(
+    'Attached issue',
+    'Evidence included',
+    'Other',
+    '16000000-0000-0000-0000-000000000001/46000000-0000-0000-0000-000000000003/71000000-0000-0000-0000-000000000001.jpg'
+  ) $$,
+  'resident creates a complaint with their uploaded attachment'
+);
+reset role;
+select is(
+  (select attachment_path from public.complaints where title = 'Attached issue'),
+  '16000000-0000-0000-0000-000000000001/46000000-0000-0000-0000-000000000003/71000000-0000-0000-0000-000000000001.jpg',
+  'complaint stores the validated private attachment path'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '46000000-0000-0000-0000-000000000003', true);
+select throws_ok(
+  $$ select public.create_resident_complaint_with_attachment(
+    'Wrong attachment',
+    'No',
+    'Other',
+    '16000000-0000-0000-0000-000000000001/46000000-0000-0000-0000-000000000006/71000000-0000-0000-0000-000000000002.jpg'
+  ) $$,
+  '22023',
+  'Complaint attachment path is invalid',
+  'resident cannot attach another resident file'
+);
+select throws_ok(
+  $$ delete from storage.objects
+     where bucket_id = 'complaint-attachments'
+       and name = '16000000-0000-0000-0000-000000000001/46000000-0000-0000-0000-000000000003/71000000-0000-0000-0000-000000000001.jpg' $$,
+  '42501',
+  'Direct deletion from storage tables is not allowed. Use the Storage API instead.',
+  'direct deletion cannot bypass the Storage API'
+);
+reset role;
+select is(
+  (select count(*)::integer from storage.objects where name like '%71000000-0000-0000-0000-000000000001.jpg'),
+  1,
+  'resident cannot delete an attachment linked to a complaint'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '46000000-0000-0000-0000-000000000004', true);
+select is((select count(*)::integer from storage.objects where bucket_id = 'complaint-attachments'), 0, 'guard cannot read complaint attachments');
+
+select set_config('request.jwt.claim.sub', '46000000-0000-0000-0000-000000000001', true);
+select is((select count(*)::integer from storage.objects where bucket_id = 'complaint-attachments'), 3, 'admin sees complaint attachments only in their society');
+select is((select count(*)::integer from storage.objects where name like '16000000-0000-0000-0000-000000000002/%'), 0, 'admin cannot read cross-society complaint attachments');
+select throws_like(
+  $$ insert into storage.objects (bucket_id, name, owner) values ('complaint-attachments', '16000000-0000-0000-0000-000000000001/46000000-0000-0000-0000-000000000001/71000000-0000-0000-0000-000000000006.jpg', '46000000-0000-0000-0000-000000000001') $$,
+  '%row-level security%',
+  'admin cannot upload complaint attachments'
+);
+reset role;
 
 select * from finish();
 rollback;

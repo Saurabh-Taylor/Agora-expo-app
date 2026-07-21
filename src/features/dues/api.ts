@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { getUniqueRealtimeChannelTopic } from '@/commonFunctions';
 import { supabase } from '@/lib/supabase';
 
 export type DuesStatus = 'UNPAID' | 'PAID';
@@ -112,7 +113,7 @@ export function useDuesRealtimeSync(
   useEffect(() => {
     if (!flatId || !societyId) return;
     const channel = supabase
-      .channel(`dues:${societyId}:${flatId}`)
+      .channel(getUniqueRealtimeChannelTopic('dues:' + societyId + ':' + flatId))
       .on(
         'postgres_changes',
         {

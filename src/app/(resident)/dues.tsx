@@ -49,7 +49,9 @@ export default function DuesScreen() {
         isError={profileQuery.isError || flatQuery.isError || duesQuery.isError}
         onRetry={() => { profileQuery.refetch(); flatQuery.refetch(); duesQuery.refetch(); }}
         isEmpty={dues.length === 0}
-        emptyMessage="No dues on record yet."
+        emptySymbol={null}
+        emptyTitle="No maintenance dues"
+        emptyMessage="Your society has not added any maintenance dues for this flat yet."
       />
 
       {currentDue && (

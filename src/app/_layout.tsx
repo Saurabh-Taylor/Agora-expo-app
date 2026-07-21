@@ -18,8 +18,10 @@ import { useEffect } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { loadNotificationsModule } from '@/commonFunctions';
+import { BrandedSplash } from '@/components/branded-splash';
+import { SignOutDialog } from '@/components/sign-out-dialog';
 import { ToastHost } from '@/components/toast-host';
-import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
+import { AuthRoutes, Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { useRegisterPushToken } from '@/features/notifications/api';
 import { useProfile } from '@/features/profile/api';
 import { queryClient } from '@/lib/query-client';
@@ -95,17 +97,7 @@ function RootNavigator() {
   }, [profile]);
 
   if (isInitializing || (session && !isPasswordRecovery && profileQuery.isPending)) {
-    return (
-      <View
-        style={sessionErrorStyles.bootRoot}
-        accessibilityRole="progressbar"
-        accessibilityLabel={isInitializing ? 'Restoring your session' : 'Loading your account'}>
-        <ActivityIndicator color={Colors.gold} />
-        <Text style={sessionErrorStyles.bootLabel}>
-          {isInitializing ? 'Opening Agora...' : 'Loading your account...'}
-        </Text>
-      </View>
-    );
+    return <BrandedSplash accessibilityLabel={isInitializing ? 'Restoring your session' : 'Loading your account'} />;
   }
 
   // The access token is still technically valid, but the profile it should
@@ -132,7 +124,7 @@ function RootNavigator() {
           style={sessionErrorStyles.signOutButton}
           onPress={async () => {
             await useAuthStore.getState().signOut();
-            router.replace('/(auth)/login');
+            router.replace(AuthRoutes.login);
           }}>
           <Text style={sessionErrorStyles.signOutLabel}>Sign out and sign in again</Text>
         </Pressable>
@@ -151,7 +143,7 @@ function RootNavigator() {
           style={sessionErrorStyles.retryButton}
           onPress={async () => {
             await useAuthStore.getState().signOut();
-            router.replace('/(auth)/login');
+            router.replace(AuthRoutes.login);
           }}>
           <Text style={sessionErrorStyles.retryLabel}>Return to sign in</Text>
         </Pressable>
@@ -206,13 +198,12 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <RootNavigator />
       <ToastHost />
+      <SignOutDialog />
     </QueryClientProvider>
   );
 }
 
 const sessionErrorStyles = StyleSheet.create({
-  bootRoot: { flex: 1, backgroundColor: Colors.green600, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  bootLabel: { fontFamily: FontFamily.bodyMedium, fontSize: 14, color: Colors.textOnDark },
   root: { flex: 1, backgroundColor: Colors.canvas, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
   title: { fontFamily: FontFamily.headingExtraBold, fontSize: 20, textAlign: 'center' },
   subtitle: { fontSize: 14, color: Colors.textMuted, textAlign: 'center', marginTop: 10, lineHeight: 21 },

@@ -1,13 +1,27 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { avatarColorForName, formatTime, getInitials, getVisitorRequestStatusStyle, titleCase } from '@/commonFunctions';
+import {
+  avatarColorForName,
+  formatTime,
+  getEffectiveVisitorRequestStatus,
+  getErrorMessage,
+  getInitials,
+  getVisitorRequestStatusStyle,
+  isVisitorReadyForEntry,
+  titleCase,
+} from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { StatusPill } from '@/components/status-pill';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { useProfile } from '@/features/profile/api';
-import { useSocietyVisitorRequests, useVisitorRequestsRealtimeSync, type VisitorRequestDetail } from '@/features/visitors/api';
+import {
+  useSocietyVisitorRequests,
+  useVerifyGatePassCode,
+  useVisitorRequestsRealtimeSync,
+  type VisitorRequestDetail,
+} from '@/features/visitors/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { showToast } from '@/stores/toast-store';
 
@@ -22,51 +36,47 @@ const FILTERS: { value: StatusFilter; label: string }[] = [
 ];
 
 function matchesFilter(request: VisitorRequestDetail, filter: StatusFilter) {
+  const effectiveStatus = getEffectiveVisitorRequestStatus(request);
+
   switch (filter) {
     case 'PENDING':
-      return request.status === 'PENDING';
+      return effectiveStatus === 'PENDING';
     case 'READY':
-      return request.status === 'APPROVED' && !request.entry_at;
+      return isVisitorReadyForEntry(request);
     case 'INSIDE':
-      return request.status === 'ENTERED' && !request.exit_at;
+      return effectiveStatus === 'ENTERED' && !request.exit_at;
     case 'DONE':
-      return request.status === 'EXITED' || request.status === 'REJECTED' || request.status === 'LEFT_AT_GATE';
+      return ['EXITED', 'REJECTED', 'LEFT_AT_GATE', 'CANCELLED', 'EXPIRED'].includes(effectiveStatus);
     default:
       return true;
   }
-}
-
-function normalizeCode(value: string) {
-  return value.replace(/\s+/g, '');
 }
 
 export default function MovementLogScreen() {
   const session = useAuthStore((state) => state.session);
   const profileQuery = useProfile(session?.user.id);
   const requestsQuery = useSocietyVisitorRequests(profileQuery.data?.society_id);
+  const verifyGatePass = useVerifyGatePassCode(profileQuery.data?.society_id);
   const [filter, setFilter] = useState<StatusFilter>('ALL');
   const [code, setCode] = useState('');
 
   useVisitorRequestsRealtimeSync('society_id', profileQuery.data?.society_id);
 
-  const requests = requestsQuery.data ?? [];
   const filtered = useMemo(
     () => (requestsQuery.data ?? []).filter((request) => matchesFilter(request, filter)),
     [requestsQuery.data, filter],
   );
 
-  function handleVerifyCode() {
-    const target = normalizeCode(code);
-    if (!target) return;
-    const match = requests.find(
-      (request) => request.gate_pass_code && normalizeCode(request.gate_pass_code) === target && request.status === 'APPROVED' && !request.entry_at,
-    );
-    if (!match) {
-      showToast('No matching gate pass found for that code.');
-      return;
+  async function handleVerifyCode() {
+    if (!code.trim() || verifyGatePass.isPending) return;
+
+    try {
+      const request = await verifyGatePass.mutateAsync({ code });
+      setCode('');
+      router.push(`/(guard)/verify/${request.id}`);
+    } catch (error) {
+      showToast(getErrorMessage(error, 'Could not verify this gate pass'));
     }
-    setCode('');
-    router.push(`/(guard)/verify/${match.id}`);
   }
 
   return (
@@ -82,9 +92,18 @@ export default function MovementLogScreen() {
           placeholder="e.g. 482 917"
           placeholderTextColor={Colors.textFaint}
           style={styles.codeInput}
+          keyboardType="number-pad"
+          maxLength={7}
         />
-        <Pressable style={styles.codeButton} onPress={handleVerifyCode}>
-          <Text style={styles.codeButtonLabel}>Verify</Text>
+        <Pressable
+          style={[styles.codeButton, verifyGatePass.isPending && styles.codeButtonDisabled]}
+          onPress={() => void handleVerifyCode()}
+          disabled={verifyGatePass.isPending}>
+          {verifyGatePass.isPending ? (
+            <ActivityIndicator size="small" color={Colors.textOnDark} />
+          ) : (
+            <Text style={styles.codeButtonLabel}>Verify</Text>
+          )}
         </Pressable>
       </View>
 
@@ -111,7 +130,8 @@ export default function MovementLogScreen() {
           emptyMessage="No visitor activity to show."
         />
         {filtered.map((request) => {
-          const style = getVisitorRequestStatusStyle(request.status);
+          const effectiveStatus = getEffectiveVisitorRequestStatus(request);
+          const style = getVisitorRequestStatusStyle(effectiveStatus);
           const actionable = matchesFilter(request, 'READY') || matchesFilter(request, 'INSIDE');
           return (
             <Pressable
@@ -169,6 +189,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  codeButtonDisabled: { opacity: 0.65 },
   codeButtonLabel: { fontSize: 14, fontWeight: '700', color: Colors.textOnDark },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 20 },
   chip: {

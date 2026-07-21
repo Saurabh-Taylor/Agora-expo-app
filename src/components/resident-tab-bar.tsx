@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CommunicationTabIcon, HomeTabIcon } from '@/components/icons/admin-tab-icons';
+import { CommunicationTabIcon, HomeTabIcon, MoreTabIcon } from '@/components/icons/admin-tab-icons';
 import { GateTabIcon } from '@/components/icons/resident-tab-icons';
 import { Colors, FontFamily } from '@/constants/commonConstants';
 
@@ -17,12 +17,13 @@ export type ResidentTabBarProps = {
   navigation: ResidentTabBarNavigation;
 };
 
-const TAB_ORDER = ['index', 'gate', 'community'] as const;
+const TAB_ORDER = ['index', 'gate', 'community', 'more'] as const;
 
 const TAB_META: Record<(typeof TAB_ORDER)[number], { label: string; Icon: typeof HomeTabIcon }> = {
   index: { label: 'Home', Icon: HomeTabIcon },
   gate: { label: 'Gate', Icon: GateTabIcon },
   community: { label: 'Community', Icon: CommunicationTabIcon },
+  more: { label: 'More', Icon: MoreTabIcon },
 };
 
 export function ResidentTabBar({ state, navigation }: ResidentTabBarProps) {

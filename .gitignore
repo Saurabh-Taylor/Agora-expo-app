@@ -43,4 +43,5 @@ example
 /ios
 /android
 my.txt
-docs
+docs/*
+!docs/FEATURE_IMPLEMENTATION_TRACKER.md

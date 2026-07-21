@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { isValidEmail, useResendCountdown } from '@/commonFunctions';
 import { AuthEmailField } from '@/components/auth-email-field';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
-import { Colors, FontFamily } from '@/constants/commonConstants';
+import { AuthRoutes, Colors, FontFamily } from '@/constants/commonConstants';
 import { supabase } from '@/lib/supabase';
 import { showToast } from '@/stores/toast-store';
 
@@ -73,7 +73,7 @@ export default function ForgotPasswordScreen() {
           <Pressable style={styles.secondaryButton} onPress={() => setSentTo(null)}>
             <Text style={styles.secondaryButtonLabel}>Use another email</Text>
           </Pressable>
-          <Pressable style={styles.loginButton} onPress={() => router.replace('/(auth)/login')}>
+          <Pressable style={styles.loginButton} onPress={() => router.replace(AuthRoutes.login)}>
             <Text style={styles.loginButtonLabel}>Back to login</Text>
           </Pressable>
         </View>
@@ -94,7 +94,7 @@ export default function ForgotPasswordScreen() {
               {busy ? 'Sending…' : remainingSeconds > 0 ? `Send again in ${remainingSeconds}s` : 'Send reset link'}
             </Text>
           </Pressable>
-          <Pressable style={styles.loginButton} onPress={() => router.replace('/(auth)/login')}>
+          <Pressable style={styles.loginButton} onPress={() => router.replace(AuthRoutes.login)}>
             <Text style={styles.loginButtonLabel}>Back to login</Text>
           </Pressable>
         </View>

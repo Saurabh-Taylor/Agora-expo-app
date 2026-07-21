@@ -61,6 +61,9 @@ export const AvatarPalette = ['#E7A33C', '#B9A7D6', '#8FB3C7', '#A7C4B5', '#D6C9
 // UI's own vocabulary, shared between the resident raise-complaint chips and
 // the admin complaint list/triage labels.
 export const ComplaintCategories = ['Plumbing', 'Electrical', 'Cleanliness', 'Security', 'Noise', 'Other'] as const;
+export const COMPLAINT_ATTACHMENTS_BUCKET = 'complaint-attachments';
+export const COMPLAINT_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
+export const COMPLAINT_ATTACHMENT_SIGNED_URL_SECONDS = 60 * 60;
 
 export const ComplaintPriorities = [
   { value: 'LOW', label: 'Low' },
@@ -86,7 +89,36 @@ export const StaffRoles = ['Security', 'Housekeeping', 'Maintenance', 'Gardener'
 export const StaffShifts = ['Morning', 'Afternoon', 'Evening', 'Night'] as const;
 export const ServiceProviderCategories = ['Plumber', 'Electrician', 'Carpenter', 'Pest Control', 'Other'] as const;
 
+export const VisitorCategoryOptions = [
+  { value: 'GUEST', label: 'Guest' },
+  { value: 'DELIVERY', label: 'Delivery' },
+  { value: 'CAB', label: 'Cab' },
+  { value: 'SERVICE', label: 'Service' },
+] as const;
+
+export const VisitorHistoryStatusOptions = [
+  { value: 'ALL', label: 'All' },
+  { value: 'PENDING', label: 'Pending' },
+  { value: 'APPROVED', label: 'Approved' },
+  { value: 'ENTERED', label: 'Inside' },
+  { value: 'EXITED', label: 'Exited' },
+  { value: 'REJECTED', label: 'Denied' },
+  { value: 'LEFT_AT_GATE', label: 'At gate' },
+] as const;
+
+export const VisitorHistoryRangeOptions = [
+  { value: '7_DAYS', label: '7 days', days: 7 },
+  { value: '30_DAYS', label: '30 days', days: 30 },
+  { value: 'ALL_TIME', label: 'All time', days: null },
+] as const;
+
 export const AUTH_RESEND_SECONDS = 30;
+export const ONBOARDING_COMPLETE_STORAGE_KEY = 'agora:onboarding-complete';
+
+export const AuthRoutes = {
+  login: '/(auth)/login',
+  onboarding: '/(auth)/onboarding',
+} as const;
 
 export const FontFamily = {
   headingExtraLight: 'BricolageGrotesque_200ExtraLight',

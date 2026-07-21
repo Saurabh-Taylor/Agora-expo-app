@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(22);
+select plan(24);
 
 insert into public.societies (id, name) values
   ('14000000-0000-0000-0000-000000000001', 'Notice Test Society A'),
@@ -47,6 +47,18 @@ select lives_ok(
 );
 reset role;
 select is((select state::text from public.notices where title = 'New Draft'), 'SCHEDULED', 'new draft remains unpublished');
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '44000000-0000-0000-0000-000000000001', true);
+select lives_ok(
+  $$ select public.create_admin_notice('Immediate Notice', 'Published atomically', 'EVENT', true) $$,
+  'admin creates and publishes a notice atomically'
+);
+reset role;
+select ok(
+  (select state = 'PUBLISHED' and published_at is not null from public.notices where title = 'Immediate Notice'),
+  'atomic publication persists the state and timestamp together'
+);
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '44000000-0000-0000-0000-000000000003', true);
@@ -105,7 +117,7 @@ select ok((select archived_at is not null from public.notices where title = 'Upd
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '44000000-0000-0000-0000-000000000003', true);
-select is((select count(*)::integer from public.notices), 1, 'archived notice disappears from resident reads');
+select is((select count(*)::integer from public.notices), 2, 'resident retains only active published notices after archive');
 select set_config('request.jwt.claim.sub', '44000000-0000-0000-0000-000000000001', true);
 select throws_ok(
   $$ select public.update_admin_notice((select id from public.notices where title = 'Updated Draft'), 'Again', 'Again', 'EVENT') $$,
@@ -126,7 +138,7 @@ select throws_ok(
   'admin cannot archive cross-society notice'
 );
 reset role;
-select is((select count(*)::integer from public.audit_events where society_id = '14000000-0000-0000-0000-000000000001'), 4, 'notice lifecycle actions are audited');
+select is((select count(*)::integer from public.audit_events where society_id = '14000000-0000-0000-0000-000000000001'), 5, 'notice lifecycle actions are audited');
 
 select * from finish();
 rollback;

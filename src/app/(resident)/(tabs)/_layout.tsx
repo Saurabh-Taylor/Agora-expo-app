@@ -10,6 +10,7 @@ export default function ResidentTabsLayout() {
       <Tabs.Screen name="index" />
       <Tabs.Screen name="gate" />
       <Tabs.Screen name="community" />
+      <Tabs.Screen name="more" />
     </Tabs>
   );
 }

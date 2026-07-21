@@ -1,9 +1,34 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { QueryClient } from '@tanstack/react-query';
 import Constants, { AppOwnership } from 'expo-constants';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
-import { AUTH_RESEND_SECONDS, AvatarPalette, Colors } from '@/constants/commonConstants';
+import { AUTH_RESEND_SECONDS, AvatarPalette, Colors, ONBOARDING_COMPLETE_STORAGE_KEY } from '@/constants/commonConstants';
+
+let onboardingCompletedCache: boolean | undefined;
+
+export async function hasCompletedOnboarding() {
+  if (onboardingCompletedCache !== undefined) return onboardingCompletedCache;
+
+  try {
+    onboardingCompletedCache = (await AsyncStorage.getItem(ONBOARDING_COMPLETE_STORAGE_KEY)) === 'true';
+  } catch {
+    // A non-critical preference must never block access to sign in.
+    onboardingCompletedCache = true;
+  }
+
+  return onboardingCompletedCache;
+}
+
+export async function markOnboardingComplete() {
+  onboardingCompletedCache = true;
+  try {
+    await AsyncStorage.setItem(ONBOARDING_COMPLETE_STORAGE_KEY, 'true');
+  } catch {
+    // Continue to sign in/out even if the device cannot persist this preference.
+  }
+}
 
 // Android Expo Go no longer includes the native remote-notification module.
 // Keep the import lazy so merely rendering the app cannot evaluate the
@@ -53,6 +78,16 @@ export function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
+// Supabase reuses a registered channel when its topic matches. A fast
+// unmount/remount can occur before asynchronous channel removal completes,
+// so every hook mount needs a fresh topic before adding callbacks.
+let realtimeChannelSequence = 0;
+
+export function getUniqueRealtimeChannelTopic(topic: string) {
+  realtimeChannelSequence += 1;
+  return topic + ':' + realtimeChannelSequence;
+}
+
 export function getInitials(fullName: string) {
   return fullName.trim().charAt(0).toUpperCase() || '?';
 }
@@ -89,6 +124,8 @@ const VISITOR_REQUEST_STATUS_STYLES = {
   LEFT_AT_GATE: { label: 'Left at gate', color: '#9A6B14', bg: '#F6ECD8' },
   ENTERED: { label: 'Inside', color: Colors.success600, bg: '#E3F2E9' },
   EXITED: { label: 'Exited', color: Colors.textMuted, bg: '#EEEDE4' },
+  CANCELLED: { label: 'Cancelled', color: Colors.textMuted, bg: '#EEEDE4' },
+  EXPIRED: { label: 'Expired', color: Colors.textMuted, bg: '#EEEDE4' },
 } as const;
 
 export function getVisitorRequestStatusStyle(status: keyof typeof VISITOR_REQUEST_STATUS_STYLES) {
@@ -97,6 +134,51 @@ export function getVisitorRequestStatusStyle(status: keyof typeof VISITOR_REQUES
 
 export function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+export function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString([], {
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+type VisitorEntryState = {
+  status: string;
+  is_pre_approved: boolean;
+  entry_at: string | null;
+  valid_until: string | null;
+};
+
+export function hasGatePassExpired(request: VisitorEntryState, now = Date.now()) {
+  return (
+    request.is_pre_approved &&
+    request.status === 'APPROVED' &&
+    !request.entry_at &&
+    !!request.valid_until &&
+    new Date(request.valid_until).getTime() <= now
+  );
+}
+
+export function getEffectiveVisitorRequestStatus<TStatus extends string>(
+  request: VisitorEntryState & { status: TStatus },
+  now = Date.now(),
+) {
+  return hasGatePassExpired(request, now) ? ('EXPIRED' as const) : request.status;
+}
+
+export function isVisitorReadyForEntry(request: VisitorEntryState, now = Date.now()) {
+  return (
+    request.status === 'APPROVED' &&
+    !request.entry_at &&
+    (!request.is_pre_approved || (!!request.valid_until && new Date(request.valid_until).getTime() > now))
+  );
+}
+
+export function isGatePassActive(request: VisitorEntryState, now = Date.now()) {
+  return request.is_pre_approved && isVisitorReadyForEntry(request, now);
 }
 
 export function titleCase(value: string) {
@@ -113,6 +195,19 @@ const NOTICE_CATEGORY_STYLES = {
 
 export function getNoticeCategoryStyle(category: keyof typeof NOTICE_CATEGORY_STYLES) {
   return NOTICE_CATEGORY_STYLES[category];
+}
+
+export function invalidateSocietyNotices(queryClient: QueryClient, societyId: string) {
+  return queryClient.invalidateQueries({ queryKey: ['notices', societyId] });
+}
+
+export function getPublishedNoticePushInput(notice: { id: string; title: string }) {
+  return {
+    notifyAllResidents: true,
+    title: 'New notice published',
+    body: notice.title,
+    data: { type: 'NOTICE', noticeId: notice.id },
+  } as const;
 }
 
 const COMPLAINT_PRIORITY_STYLES = {

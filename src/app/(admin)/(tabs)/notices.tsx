@@ -5,7 +5,7 @@ import { formatDate, getNoticeCategoryStyle } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { StatusPill } from '@/components/status-pill';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
-import { useNotices } from '@/features/notices/api';
+import { useNotices, useNoticesRealtimeSync } from '@/features/notices/api';
 import { useProfile } from '@/features/profile/api';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -13,6 +13,7 @@ export default function NoticesScreen() {
   const session = useAuthStore((state) => state.session);
   const profileQuery = useProfile(session?.user.id);
   const noticesQuery = useNotices(profileQuery.data?.society_id);
+  useNoticesRealtimeSync(profileQuery.data?.society_id);
   const notices = noticesQuery.data ?? [];
   const publishedCount = notices.filter((notice) => notice.state === 'PUBLISHED' && !notice.archived_at).length;
   const draftCount = notices.filter((notice) => notice.state !== 'PUBLISHED' && !notice.archived_at).length;
@@ -32,6 +33,8 @@ export default function NoticesScreen() {
           data={notices}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
+          refreshing={noticesQuery.isRefetching}
+          onRefresh={() => noticesQuery.refetch()}
           ListEmptyComponent={
             <AsyncState
               isLoading={profileQuery.isLoading || noticesQuery.isLoading}

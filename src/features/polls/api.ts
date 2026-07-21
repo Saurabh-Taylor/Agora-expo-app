@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
-import { invalidateSocietyPolls } from '@/commonFunctions';
+import { getUniqueRealtimeChannelTopic, invalidateSocietyPolls } from '@/commonFunctions';
 import { supabase } from '@/lib/supabase';
 
 export type PollState = 'ACTIVE' | 'CLOSED';
@@ -143,19 +143,16 @@ export function useArchivePoll() {
   });
 }
 
-let pollRealtimeSequence = 0;
-
 export function usePollVotesRealtimeSync(societyId: string | null | undefined) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!societyId) return;
-    pollRealtimeSequence += 1;
     const refreshPolls = () => {
       invalidateSocietyPolls(queryClient, societyId);
     };
     const channel = supabase
-      .channel(`poll-results:${societyId}:${pollRealtimeSequence}`)
+      .channel(getUniqueRealtimeChannelTopic('poll-results:' + societyId))
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'poll_options', filter: `society_id=eq.${societyId}` },

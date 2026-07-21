@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { HomeTabIcon } from '@/components/icons/admin-tab-icons';
+import { HomeTabIcon, MoreTabIcon } from '@/components/icons/admin-tab-icons';
 import { MovementTabIcon } from '@/components/icons/guard-tab-icons';
 import { Colors, FontFamily } from '@/constants/commonConstants';
 import { useProfile } from '@/features/profile/api';
@@ -20,11 +20,12 @@ export type GuardTabBarProps = {
   navigation: GuardTabBarNavigation;
 };
 
-const TAB_ORDER = ['index', 'movement-log'] as const;
+const TAB_ORDER = ['index', 'movement-log', 'more'] as const;
 
 const TAB_META: Record<(typeof TAB_ORDER)[number], { label: string; Icon: typeof HomeTabIcon }> = {
   index: { label: 'Home', Icon: HomeTabIcon },
   'movement-log': { label: 'Movement', Icon: MovementTabIcon },
+  more: { label: 'More', Icon: MoreTabIcon },
 };
 
 export function GuardTabBar({ state, navigation }: GuardTabBarProps) {

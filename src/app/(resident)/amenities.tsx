@@ -69,7 +69,9 @@ export default function ResidentAmenitiesScreen() {
               amenitiesQuery.refetch();
             }}
             isEmpty={amenities.length === 0}
-            emptyMessage="No amenities available yet."
+            emptySymbol={null}
+            emptyTitle="No amenities available"
+            emptyMessage="Your society has not added any bookable amenities yet."
           />
           {amenities.map((amenity) => (
             <Pressable
@@ -105,7 +107,11 @@ export default function ResidentAmenitiesScreen() {
               bookingsQuery.refetch();
             }}
             isEmpty={bookings.length === 0}
-            emptyMessage="No bookings yet. Browse amenities to request a slot."
+            emptySymbol={null}
+            emptyTitle="No bookings yet"
+            emptyMessage="Amenities you book will appear here."
+            actionLabel="Browse amenities"
+            onAction={() => setTab('Browse')}
           />
           {bookings.map((booking) => {
             const statusStyle = getBookingStatusStyle(booking.status);

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
-import { invalidateSocietyAmenities } from '@/commonFunctions';
+import { getUniqueRealtimeChannelTopic, invalidateSocietyAmenities } from '@/commonFunctions';
 import { sendPushNotification } from '@/features/notifications/api';
 import { supabase } from '@/lib/supabase';
 
@@ -190,7 +190,7 @@ export type AmenityBookingWithFlat = {
 };
 
 const BOOKING_SELECT =
-  'id, society_id, amenity_id, slot_start, slot_end, status, booked_by, decided_by, decided_at, flat:flats(number, tower:towers(code)), booked_by_profile:profiles!amenity_bookings_booked_by_fkey(full_name)';
+  'id, society_id, amenity_id, slot_start, slot_end, status, booked_by, decided_by, decided_at, flat:flats(number, tower:towers(code)), booked_by_profile:profiles!amenity_bookings_booked_by_same_society_fkey(full_name)';
 
 export function useAmenityBookings(amenityId: string | undefined, societyId: string | null | undefined) {
   return useQuery({
@@ -335,19 +335,16 @@ export function useAmenityUnavailableSlots(
   });
 }
 
-let amenityRealtimeSequence = 0;
-
 export function useAmenityRealtimeSync(societyId: string | null | undefined) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!societyId) return;
-    amenityRealtimeSequence += 1;
     const refreshAmenities = () => {
       invalidateSocietyAmenities(queryClient, societyId);
     };
     const channel = supabase
-      .channel(`amenities:${societyId}:${amenityRealtimeSequence}`)
+      .channel(getUniqueRealtimeChannelTopic('amenities:' + societyId))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'amenities', filter: `society_id=eq.${societyId}` },

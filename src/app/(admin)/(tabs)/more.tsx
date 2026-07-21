@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors, FontFamily } from '@/constants/commonConstants';
@@ -8,8 +8,9 @@ const MODULES = [
   { label: 'Amenities', sub: 'Bookings & spaces', iconBg: '#E4EFF5', glyph: '🏊', go: () => router.push('/(admin)/amenities') },
   { label: 'Polls & Surveys', sub: 'Community voting', iconBg: '#EFEAF7', glyph: '▤', go: () => router.push('/(admin)/polls') },
   { label: 'Staff & Services', sub: 'Directory', iconBg: '#F6ECD8', glyph: '👷', go: () => router.push('/(admin)/staff-services') },
+  { label: 'Visitor History', sub: 'Read-only gate records', iconBg: '#E9F1EC', glyph: '↕', go: () => router.push('/(admin)/visitor-history' as Href) },
   { label: 'Audit trail', sub: 'All logged actions', iconBg: '#EEEDE4', glyph: '≡', go: () => router.push('/(admin)/audit') },
-  { label: 'Sign out', sub: 'End this session', iconBg: '#F0E7E4', glyph: '⎋', go: () => confirmSignOut() },
+  { label: 'Sign out', sub: 'End this session', iconBg: '#F0E7E4', glyph: '⎋', go: confirmSignOut },
 ];
 
 export default function MoreScreen() {

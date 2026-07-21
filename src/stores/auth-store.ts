@@ -1,15 +1,18 @@
 import type { Session } from '@supabase/supabase-js';
-import { Alert } from 'react-native';
 import { create } from 'zustand';
 
+import { markOnboardingComplete } from '@/commonFunctions';
 import { supabase } from '@/lib/supabase';
 
 type AuthState = {
   session: Session | null;
   isInitializing: boolean;
   isPasswordRecovery: boolean;
+  isSignOutDialogOpen: boolean;
   beginPasswordRecovery: () => void;
   finishPasswordRecovery: () => void;
+  openSignOutDialog: () => void;
+  closeSignOutDialog: () => void;
   signOut: () => Promise<void>;
 };
 
@@ -19,6 +22,7 @@ export const useAuthStore = create<AuthState>((set) => {
       session,
       isInitializing: false,
       isPasswordRecovery: event === 'PASSWORD_RECOVERY' ? true : event === 'SIGNED_OUT' ? false : state.isPasswordRecovery,
+      isSignOutDialogOpen: event === 'SIGNED_OUT' ? false : state.isSignOutDialogOpen,
     }));
   });
 
@@ -26,20 +30,21 @@ export const useAuthStore = create<AuthState>((set) => {
     session: null,
     isInitializing: true,
     isPasswordRecovery: false,
+    isSignOutDialogOpen: false,
     beginPasswordRecovery: () => set({ isPasswordRecovery: true }),
     finishPasswordRecovery: () => set({ isPasswordRecovery: false }),
+    openSignOutDialog: () => set({ isSignOutDialogOpen: true }),
+    closeSignOutDialog: () => set({ isSignOutDialogOpen: false }),
     signOut: async () => {
-      await supabase.auth.signOut();
+      await markOnboardingComplete();
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
     },
   };
 });
 
-// Shared by every role's sign-out entry point (Admin's More tile, Resident
-// and Guard's Home avatar) — one native confirm so an accidental tap can't
-// silently end the session.
+// Shared by the Resident, Guard, and Admin More tabs.
+// The global themed dialog keeps confirmation behavior consistent.
 export function confirmSignOut() {
-  Alert.alert('Sign out?', "You'll need to sign in again to continue.", [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Sign out', style: 'destructive', onPress: () => useAuthStore.getState().signOut() },
-  ]);
+  useAuthStore.getState().openSignOutDialog();
 }

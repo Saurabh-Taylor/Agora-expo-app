@@ -8,8 +8,9 @@ type AsyncStateProps = {
   isEmpty?: boolean;
   isRetrying?: boolean;
   loadingMessage?: string;
-  emptyTitle?: string;
+  emptyTitle?: string | null;
   emptyMessage?: string;
+  emptySymbol?: string | null;
   errorTitle?: string;
   errorMessage?: string;
   actionLabel?: string;
@@ -25,10 +26,11 @@ export function AsyncState({
   isEmpty,
   isRetrying = false,
   loadingMessage = 'Loading…',
-  emptyTitle = 'Nothing here yet',
+  emptyTitle = null,
   emptyMessage = 'New activity will appear here.',
-  errorTitle = 'Unable to load this',
-  errorMessage = 'Check your connection and try again.',
+  emptySymbol = null,
+  errorTitle = 'Couldn’t load this right now',
+  errorMessage = 'Try again. If the problem continues, return to this screen in a moment.',
   actionLabel,
   onAction,
   onRetry,
@@ -68,10 +70,12 @@ export function AsyncState({
   if (isEmpty) {
     return (
       <View style={styles.center}>
-        <Text style={styles.symbol} accessibilityElementsHidden>
-          +
-        </Text>
-        <Text style={styles.title}>{emptyTitle}</Text>
+        {emptySymbol && (
+          <Text style={styles.symbol} accessibilityElementsHidden>
+            {emptySymbol}
+          </Text>
+        )}
+        {emptyTitle && <Text style={styles.title}>{emptyTitle}</Text>}
         <Text style={styles.supportingText}>{emptyMessage}</Text>
         {actionLabel && onAction && (
           <Pressable

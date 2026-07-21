@@ -5,41 +5,42 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import { getErrorMessage } from '@/commonFunctions';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { Colors, FontFamily, NoticeCategories, Radius } from '@/constants/commonConstants';
-import { useCreateNotice, usePublishNotice, type NoticeCategory } from '@/features/notices/api';
+import { useCreateNotice, type NoticeCategory } from '@/features/notices/api';
 import { useProfile } from '@/features/profile/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { showToast } from '@/stores/toast-store';
 
- export default function ComposeNoticeScreen() {
+export default function ComposeNoticeScreen() {
   const session = useAuthStore((state) => state.session);
   const profileQuery = useProfile(session?.user.id);
   const createNotice = useCreateNotice();
-  const publishNotice = usePublishNotice();
 
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [category, setCategory] = useState<NoticeCategory>('GENERAL');
+  const [savingMode, setSavingMode] = useState<'draft' | 'publish' | null>(null);
 
   const canPublish = title.trim().length > 1 && body.trim().length > 1 && !!profileQuery.data;
 
-  const isPending = createNotice.isPending || publishNotice.isPending;
+  const isPending = createNotice.isPending;
 
   async function handleSave(publishNow: boolean) {
     if (!canPublish || !profileQuery.data || isPending) return;
+    setSavingMode(publishNow ? 'publish' : 'draft');
     try {
-      const notice = await createNotice.mutateAsync({
+      await createNotice.mutateAsync({
         societyId: profileQuery.data.society_id,
         title: title.trim(),
         body: body.trim(),
         category,
+        publishNow,
       });
-      if (publishNow) {
-        await publishNotice.mutateAsync({ id: notice.id, societyId: profileQuery.data.society_id });
-      }
       showToast(publishNow ? 'Notice published' : 'Draft saved');
       router.back();
     } catch (error) {
       showToast(getErrorMessage(error, publishNow ? 'Could not publish the notice' : 'Could not save the draft'));
+    } finally {
+      setSavingMode(null);
     }
   }
 
@@ -90,14 +91,14 @@ import { showToast } from '@/stores/toast-store';
           style={[styles.draftButton, !canPublish && styles.disabledButton]}
           onPress={() => handleSave(false)}
           disabled={!canPublish || isPending}>
-          <Text style={styles.draftLabel}>Save draft</Text>
+          <Text style={styles.draftLabel}>{savingMode === 'draft' ? 'Saving...' : 'Save draft'}</Text>
         </Pressable>
         <Pressable
           style={[styles.publishButton, !canPublish && styles.disabledButton]}
           onPress={() => handleSave(true)}
           disabled={!canPublish || isPending}>
-          {isPending && <ActivityIndicator size="small" color={Colors.textOnDark} />}
-          <Text style={styles.publishLabel}>{publishNotice.isPending ? 'Publishing...' : 'Publish now'}</Text>
+          {savingMode === 'publish' && <ActivityIndicator size="small" color={Colors.textOnDark} />}
+          <Text style={styles.publishLabel}>{savingMode === 'publish' ? 'Publishing...' : 'Publish now'}</Text>
         </Pressable>
       </View>
     </ScrollView>

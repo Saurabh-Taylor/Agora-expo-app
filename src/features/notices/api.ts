@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { getPublishedNoticePushInput, getUniqueRealtimeChannelTopic, invalidateSocietyNotices } from '@/commonFunctions';
 import { sendPushNotification } from '@/features/notifications/api';
 import { supabase } from '@/lib/supabase';
 
@@ -61,6 +63,7 @@ type CreateNoticeInput = {
   title: string;
   body: string;
   category: NoticeCategory;
+  publishNow: boolean;
 };
 
 export function useCreateNotice() {
@@ -71,7 +74,7 @@ export function useCreateNotice() {
         requested_title: input.title.trim(),
         requested_body: input.body.trim(),
         requested_category: input.category,
-        publish_now: false,
+        publish_now: input.publishNow,
       });
       if (error) throw error;
       const notice = data as Notice;
@@ -79,8 +82,11 @@ export function useCreateNotice() {
       return notice;
     },
     onSuccess: (notice) => {
-      queryClient.invalidateQueries({ queryKey: ['notices', notice.society_id] });
+      invalidateSocietyNotices(queryClient, notice.society_id);
       queryClient.invalidateQueries({ queryKey: ['audit-events', notice.society_id] });
+      if (notice.state === 'PUBLISHED') {
+        void sendPushNotification(getPublishedNoticePushInput(notice));
+      }
     },
   });
 }
@@ -109,7 +115,7 @@ export function useUpdateNotice() {
       return notice;
     },
     onSuccess: (notice) => {
-      queryClient.invalidateQueries({ queryKey: ['notices', notice.society_id] });
+      invalidateSocietyNotices(queryClient, notice.society_id);
       queryClient.invalidateQueries({ queryKey: ['notices', 'detail', notice.society_id, notice.id] });
       queryClient.invalidateQueries({ queryKey: ['audit-events', notice.society_id] });
     },
@@ -127,15 +133,10 @@ export function usePublishNotice() {
       return notice;
     },
     onSuccess: (notice) => {
-      queryClient.invalidateQueries({ queryKey: ['notices', notice.society_id] });
+      invalidateSocietyNotices(queryClient, notice.society_id);
       queryClient.invalidateQueries({ queryKey: ['notices', 'detail', notice.society_id, notice.id] });
       queryClient.invalidateQueries({ queryKey: ['audit-events', notice.society_id] });
-      void sendPushNotification({
-        notifyAllResidents: true,
-        title: 'New notice published',
-        body: notice.title,
-        data: { type: 'NOTICE', noticeId: notice.id },
-      });
+      void sendPushNotification(getPublishedNoticePushInput(notice));
     },
   });
 }
@@ -151,9 +152,29 @@ export function useArchiveNotice() {
       return notice;
     },
     onSuccess: (notice) => {
-      queryClient.invalidateQueries({ queryKey: ['notices', notice.society_id] });
+      invalidateSocietyNotices(queryClient, notice.society_id);
       queryClient.invalidateQueries({ queryKey: ['notices', 'detail', notice.society_id, notice.id] });
       queryClient.invalidateQueries({ queryKey: ['audit-events', notice.society_id] });
     },
   });
+}
+
+export function useNoticesRealtimeSync(societyId: string | null | undefined) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!societyId) return;
+    const channel = supabase
+      .channel(getUniqueRealtimeChannelTopic('notices:' + societyId))
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notices', filter: 'society_id=eq.' + societyId },
+        () => invalidateSocietyNotices(queryClient, societyId),
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient, societyId]);
 }

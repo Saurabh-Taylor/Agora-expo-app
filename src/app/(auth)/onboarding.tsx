@@ -6,8 +6,9 @@ import { Animated, NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollVie
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
+import { markOnboardingComplete } from '@/commonFunctions';
 import { AgoraLogo } from '@/components/icons/agora-logo';
-import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
+import { AuthRoutes, Colors, FontFamily, Radius } from '@/constants/commonConstants';
 
 const SLIDE_COUNT = 4;
 
@@ -113,9 +114,14 @@ export default function OnboardingScreen() {
     setActiveIndex(index);
   }
 
+  async function finishOnboarding() {
+    await markOnboardingComplete();
+    router.replace(AuthRoutes.login);
+  }
+
   function handlePrimary() {
     if (isLast) {
-      router.replace('/(auth)/login');
+      void finishOnboarding();
       return;
     }
     goToSlide(activeIndex + 1);
@@ -221,7 +227,7 @@ export default function OnboardingScreen() {
       {!isLast && (
         <Pressable
           style={[styles.skip, { top: insets.top + 10 }]}
-          onPress={() => router.replace('/(auth)/login')}
+          onPress={finishOnboarding}
           hitSlop={8}>
           <Text style={styles.skipLabel}>Skip</Text>
         </Pressable>

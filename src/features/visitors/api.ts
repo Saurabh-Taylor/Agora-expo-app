@@ -1,12 +1,96 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
-import { titleCase } from '@/commonFunctions';
+import {
+  getEffectiveVisitorRequestStatus,
+  getUniqueRealtimeChannelTopic,
+  isVisitorReadyForEntry,
+  titleCase,
+} from '@/commonFunctions';
 import { sendPushNotification } from '@/features/notifications/api';
 import { supabase } from '@/lib/supabase';
 
 export type VisitorCategory = 'DELIVERY' | 'GUEST' | 'SERVICE' | 'CAB';
-export type VisitorRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'LEFT_AT_GATE' | 'ENTERED' | 'EXITED';
+export type VisitorRequestStatus =
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'LEFT_AT_GATE'
+  | 'ENTERED'
+  | 'EXITED'
+  | 'CANCELLED'
+  | 'EXPIRED';
+
+export type AdminVisitorHistoryFilters = {
+  since: string | null;
+  status: VisitorRequestStatus | 'ALL';
+  category: VisitorCategory | 'ALL';
+  towerId: string | null;
+  flatNumber: string | null;
+};
+
+export type AdminVisitorHistoryItem = {
+  request_id: string;
+  society_id: string;
+  status: VisitorRequestStatus;
+  is_pre_approved: boolean;
+  created_at: string;
+  decision_at: string | null;
+  entry_at: string | null;
+  exit_at: string | null;
+  visitor_name: string;
+  visitor_category: VisitorCategory;
+  flat_id: string;
+  flat_number: string;
+  tower_id: string;
+  tower_code: string;
+  tower_name: string;
+};
+
+type AdminVisitorHistoryCursor = { createdAt: string; id: string };
+
+const ADMIN_VISITOR_HISTORY_PAGE_SIZE = 25;
+
+export function useAdminVisitorHistory(
+  societyId: string | null | undefined,
+  filters: AdminVisitorHistoryFilters,
+) {
+  return useInfiniteQuery({
+    queryKey: ['visitor-requests', 'admin-history', societyId, filters],
+    queryFn: async ({ pageParam }) => {
+      const cursor = pageParam as AdminVisitorHistoryCursor | null;
+      const { data, error } = await supabase.rpc('list_admin_visitor_history', {
+        requested_limit: ADMIN_VISITOR_HISTORY_PAGE_SIZE + 1,
+        cursor_created_at: cursor?.createdAt ?? null,
+        cursor_id: cursor?.id ?? null,
+        requested_since: filters.since,
+        requested_status: filters.status === 'ALL' ? null : filters.status,
+        requested_category: filters.category === 'ALL' ? null : filters.category,
+        requested_tower_id: filters.towerId,
+        requested_flat_number: filters.flatNumber,
+      });
+      if (error) throw error;
+
+      const rows = (data ?? []) as AdminVisitorHistoryItem[];
+      if (rows.some((row) => row.society_id !== societyId)) {
+        throw new Error('Visitor history returned an invalid society scope');
+      }
+
+      const items = rows.slice(0, ADMIN_VISITOR_HISTORY_PAGE_SIZE);
+      const lastItem = items.at(-1);
+      return {
+        items,
+        nextCursor:
+          rows.length > ADMIN_VISITOR_HISTORY_PAGE_SIZE && lastItem
+            ? { createdAt: lastItem.created_at, id: lastItem.request_id }
+            : null,
+      };
+    },
+    initialPageParam: null as AdminVisitorHistoryCursor | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    enabled: !!societyId,
+  });
+}
 
 export type VisitorRequestWithVisitor = {
   id: string;
@@ -17,13 +101,19 @@ export type VisitorRequestWithVisitor = {
   flat: { number: string; tower: { code: string } | null } | null;
 };
 
+const VISITOR_REQUEST_SELECT =
+  'id, society_id, status, is_pre_approved, created_at, decision_at, entry_at, exit_at, gate_pass_code, valid_until, flat_id, raised_by, visitor:visitors(name, category, phone)';
+const VISITOR_REQUEST_WITH_FLAT_SELECT =
+  VISITOR_REQUEST_SELECT +
+  ', flat:flats(number, tower:towers(code, name))';
+
 export function usePendingVisitorRequests(societyId: string | null | undefined) {
   return useQuery({
     queryKey: ['visitor-requests', 'pending', societyId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('visitor_requests')
-        .select('id, status, created_at, flat_id, visitor:visitors(name, category), flat:flats(number, tower:towers(code))')
+        .select(VISITOR_REQUEST_WITH_FLAT_SELECT)
         .eq('society_id', societyId as string)
         .eq('status', 'PENDING')
         .order('created_at', { ascending: false });
@@ -99,6 +189,7 @@ type CreatedVisitorRequest = {
   raised_by: string | null;
   status: VisitorRequestStatus;
   gate_pass_code: string | null;
+  valid_until: string | null;
 };
 
 export function useCreateVisitorRequest() {
@@ -144,6 +235,7 @@ export function useCreateVisitorRequest() {
 
 export type VisitorRequestForFlat = {
   id: string;
+  society_id: string;
   status: VisitorRequestStatus;
   is_pre_approved: boolean;
   created_at: string;
@@ -151,13 +243,11 @@ export type VisitorRequestForFlat = {
   entry_at: string | null;
   exit_at: string | null;
   gate_pass_code: string | null;
+  valid_until: string | null;
   flat_id: string;
   raised_by: string | null;
   visitor: { name: string; category: VisitorCategory; phone: string | null } | null;
 };
-
-const FLAT_REQUEST_SELECT =
-  'id, status, is_pre_approved, created_at, decision_at, entry_at, exit_at, gate_pass_code, flat_id, raised_by, visitor:visitors(name, category, phone)';
 
 export function useFlatVisitorRequests(
   flatId: string | null | undefined,
@@ -169,11 +259,35 @@ export function useFlatVisitorRequests(
     queryFn: async () => {
       const { data, error } = await supabase
         .from('visitor_requests')
-        .select(FLAT_REQUEST_SELECT)
+        .select(VISITOR_REQUEST_SELECT)
         .eq('flat_id', flatId as string)
         .eq('society_id', societyId as string)
         .order('created_at', { ascending: false })
         .limit(limit);
+      if (error) throw error;
+      return data as unknown as VisitorRequestForFlat[];
+    },
+    enabled: !!flatId && !!societyId,
+  });
+}
+
+export function useActiveGatePasses(
+  flatId: string | null | undefined,
+  societyId: string | null | undefined,
+) {
+  return useQuery({
+    queryKey: ['visitor-requests', 'active-gate-passes', societyId, flatId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('visitor_requests')
+        .select(VISITOR_REQUEST_SELECT)
+        .eq('flat_id', flatId as string)
+        .eq('society_id', societyId as string)
+        .eq('is_pre_approved', true)
+        .eq('status', 'APPROVED')
+        .is('entry_at', null)
+        .gt('valid_until', new Date().toISOString())
+        .order('valid_until', { ascending: true });
       if (error) throw error;
       return data as unknown as VisitorRequestForFlat[];
     },
@@ -191,7 +305,7 @@ export function useVisitorRequestDetail(id: string | undefined, societyId: strin
     queryFn: async () => {
       const { data, error } = await supabase
         .from('visitor_requests')
-        .select(`${FLAT_REQUEST_SELECT}, flat:flats(number, tower:towers(code, name))`)
+        .select(VISITOR_REQUEST_WITH_FLAT_SELECT)
         .eq('id', id as string)
         .eq('society_id', societyId as string)
         .single();
@@ -199,6 +313,42 @@ export function useVisitorRequestDetail(id: string | undefined, societyId: strin
       return data as unknown as VisitorRequestDetail;
     },
     enabled: !!id && !!societyId,
+    staleTime: 10_000,
+  });
+}
+
+export function useVerifyGatePassCode(societyId: string | null | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ code }: { code: string }) => {
+      const { data, error } = await supabase.rpc('lookup_guard_gate_pass', {
+        requested_code: code,
+      });
+      if (error) throw error;
+
+      const request = ((data ?? []) as VisitorRequestDetail[])[0];
+      if (!request || request.society_id !== societyId) {
+        throw new Error('Gate-pass verification returned an invalid authorization scope');
+      }
+      if (!isVisitorReadyForEntry(request)) {
+        const effectiveStatus = getEffectiveVisitorRequestStatus(request);
+        if (effectiveStatus === 'EXPIRED') throw new Error('This gate pass has expired');
+        if (effectiveStatus === 'CANCELLED') throw new Error('This gate pass was revoked');
+        if (request.entry_at || ['ENTERED', 'EXITED'].includes(effectiveStatus)) {
+          throw new Error('This gate pass has already been used');
+        }
+        throw new Error('This gate pass is not active');
+      }
+
+      return request;
+    },
+    onSuccess: (request) => {
+      queryClient.setQueryData(
+        ['visitor-requests', 'detail', societyId, request.id],
+        request,
+      );
+    },
   });
 }
 
@@ -211,7 +361,8 @@ export function useAwaitingEntryCount(societyId: string | null | undefined) {
         .select('id', { count: 'exact', head: true })
         .eq('society_id', societyId as string)
         .eq('status', 'APPROVED')
-        .is('entry_at', null);
+        .is('entry_at', null)
+        .or(`is_pre_approved.eq.false,valid_until.gt.${new Date().toISOString()}`);
       if (error) throw error;
       return count ?? 0;
     },
@@ -231,7 +382,7 @@ export function useSocietyVisitorRequests(societyId: string | null | undefined, 
     queryFn: async () => {
       const { data, error } = await supabase
         .from('visitor_requests')
-        .select(`${FLAT_REQUEST_SELECT}, flat:flats(number, tower:towers(code, name))`)
+        .select(VISITOR_REQUEST_WITH_FLAT_SELECT)
         .eq('society_id', societyId as string)
         .order('created_at', { ascending: false })
         .limit(limit);
@@ -277,8 +428,6 @@ export function useMarkExit() {
 // Subscribes to visitor_requests changes for a flat (resident) or a whole
 // society (guard) and invalidates every visitor-requests query on any change —
 // the in-app Realtime fallback AGENTS.md requires push to degrade to.
-let realtimeChannelSequence = 0;
-
 export function useVisitorRequestsRealtimeSync(
   filterColumn: 'flat_id' | 'society_id',
   filterValue: string | null | undefined,
@@ -288,15 +437,8 @@ export function useVisitorRequestsRealtimeSync(
   useEffect(() => {
     if (!filterValue) return;
 
-    // supabase.channel(topic) returns the existing channel if one with the
-    // same topic is still registered — e.g. a fast unmount/remount (a Home
-    // screen replaced by router.replace while its own removeChannel is still
-    // in flight) would otherwise hand back an already-subscribed channel and
-    // .on(...).subscribe() throws. A sequence suffix guarantees a fresh topic
-    // per mount so two instances never collide.
-    realtimeChannelSequence += 1;
     const channel = supabase
-      .channel(`visitor_requests:${filterColumn}:${filterValue}:${realtimeChannelSequence}`)
+      .channel(getUniqueRealtimeChannelTopic('visitor_requests:' + filterColumn + ':' + filterValue))
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'visitor_requests', filter: `${filterColumn}=eq.${filterValue}` },
@@ -356,6 +498,22 @@ type CreatePreApprovalInput = {
   category: VisitorCategory;
 };
 
+export function useRevokePreApproval() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      const { data, error } = await supabase.rpc('revoke_resident_visitor_preapproval', {
+        request_id: id,
+      });
+      if (error) throw error;
+      return data as VisitorRequestForFlat;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['visitor-requests'] });
+    },
+  });
+}
+
 export function useCreatePreApproval() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -372,7 +530,8 @@ export function useCreatePreApproval() {
         !request ||
         request.society_id !== input.societyId ||
         request.status !== 'APPROVED' ||
-        !request.gate_pass_code
+        !request.gate_pass_code ||
+        !request.valid_until
       ) {
         throw new Error('Pre-approval returned an invalid authorization scope');
       }

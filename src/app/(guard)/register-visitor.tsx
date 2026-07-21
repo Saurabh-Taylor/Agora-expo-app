@@ -6,7 +6,7 @@ import Svg, { Path } from 'react-native-svg';
 import { avatarColorForName, getInitials } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
-import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
+import { Colors, FontFamily, Radius, VisitorCategoryOptions } from '@/constants/commonConstants';
 import { useProfile } from '@/features/profile/api';
 import {
   useCreateVisitorRequest,
@@ -16,13 +16,6 @@ import {
 } from '@/features/visitors/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { showToast } from '@/stores/toast-store';
-
-const CATEGORIES: { value: VisitorCategory; label: string }[] = [
-  { value: 'DELIVERY', label: 'Delivery' },
-  { value: 'GUEST', label: 'Guest' },
-  { value: 'SERVICE', label: 'Service' },
-  { value: 'CAB', label: 'Cab' },
-];
 
 type Step = 'details' | 'search' | 'sent';
 
@@ -169,7 +162,7 @@ export default function RegisterVisitorScreen() {
 
       <Text style={styles.label}>CATEGORY</Text>
       <View style={styles.chipsRow}>
-        {CATEGORIES.map((item) => {
+        {VisitorCategoryOptions.map((item) => {
           const active = category === item.value;
           return (
             <Pressable

@@ -9,6 +9,7 @@ export default function AdminLayout() {
       <Stack.Screen name="add-tower" />
       <Stack.Screen name="add-resident" />
       <Stack.Screen name="audit" />
+      <Stack.Screen name="visitor-history" />
       <Stack.Screen name="compose-notice" />
       <Stack.Screen name="polls" />
       <Stack.Screen name="create-poll" />

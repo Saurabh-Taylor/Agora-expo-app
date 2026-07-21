@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 
 import { formatDate, getComplaintPriorityStyle, getComplaintStatusStyle, getErrorMessage } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
+import { ComplaintAttachment } from '@/components/complaint-attachment';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { Colors, ComplaintPriorities, ComplaintStatuses, FontFamily, Radius } from '@/constants/commonConstants';
 import {
@@ -49,7 +50,7 @@ export default function ComplaintTriageScreen() {
 }
 
 // A separate component so priority/status can lazy-initialize from the
-// loaded complaint on first mount — this component only mounts once
+// loaded complaint on first mount - this component only mounts once
 // `complaint` exists, so no effect is needed to sync state after the fact.
 function ComplaintTriageForm({
   complaint,
@@ -91,13 +92,15 @@ function ComplaintTriageForm({
       <Text style={styles.title}>{complaint.title}</Text>
       <Text style={styles.subMeta}>
         Raised by {complaint.raised_by_profile?.full_name ?? 'Resident'}
-        {complaint.flat ? ` · ${complaint.flat.tower ? `${complaint.flat.tower.code}-` : ''}${complaint.flat.number}` : ''} ·{' '}
+        {complaint.flat ? ` \u00B7 ${complaint.flat.tower ? `${complaint.flat.tower.code}-` : ''}${complaint.flat.number}` : ''}{' \u00B7 '}
         {formatDate(complaint.created_at)}
       </Text>
 
       <View style={styles.descriptionCard}>
         <Text style={styles.descriptionText}>{complaint.description}</Text>
       </View>
+
+      <ComplaintAttachment attachmentPath={complaint.attachment_path} societyId={complaint.society_id} />
 
       {events.length > 0 && (
         <>
@@ -112,7 +115,7 @@ function ComplaintTriageForm({
                     <Text style={styles.timelineStatus}>{eventStyle.label}</Text>
                     {event.note && <Text style={styles.timelineNote}>{event.note}</Text>}
                     <Text style={styles.timelineMeta}>
-                      {event.created_by_profile?.full_name ?? 'Admin'} · {formatDate(event.created_at)}
+                      {event.created_by_profile?.full_name ?? 'Admin'} {'\u00B7'} {formatDate(event.created_at)}
                     </Text>
                   </View>
                 </View>

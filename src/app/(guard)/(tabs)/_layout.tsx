@@ -9,6 +9,7 @@ export default function GuardTabsLayout() {
       tabBar={(props) => <GuardTabBar {...(props as unknown as GuardTabBarProps)} />}>
       <Tabs.Screen name="index" />
       <Tabs.Screen name="movement-log" />
+      <Tabs.Screen name="more" />
     </Tabs>
   );
 }

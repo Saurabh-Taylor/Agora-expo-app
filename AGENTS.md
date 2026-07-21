@@ -23,11 +23,13 @@ Agora consolidates the society gate, resident communication, and community opera
 into a single app with three role-based experiences:
 
 - **Resident** — approve/pre-approve visitors, raise and track helpdesk complaints,
-  book amenities, view notices, vote in polls, pay maintenance dues
+  book amenities, view notices, vote in polls, pay maintenance dues, and view the
+  society staff and service-provider directory
 - **Security Guard** — register visitors, request approvals, verify approvals, log
   entry/exit in real time
-- **Society Admin** — manage towers, flats, residents, staff, service providers,
-  amenities, notices, polls, and complaints from a centralized dashboard
+- **Society Admin** — manage towers, flats, residents, security-guard accounts, staff,
+  service providers, amenities, notices, polls, complaints, and maintenance invoices
+  from a centralized dashboard
 
 Core idea: the conversations that used to happen at the society gate now happen inside
 the app — replacing manual, call-based coordination with fast, trackable, role-based
@@ -88,13 +90,14 @@ account for all three roles.
 | --- | --- | --- | --- |
 | Society structure | Uses own assigned flat context; cannot manage records | Searches only resident/flat data needed for visitor routing | Manages towers, flats, and residents in own society |
 | Visitor approvals | Receives and approves/rejects own-flat requests; creates pre-approvals | Registers visitors, raises requests, verifies decisions, and marks entry/exit | No operational visitor workflow in current scope |
-| Visitor records | Views own flat's visitor history | Views society visitor history and real-time movement log for guard duties | No visitor-log UI required in current scope |
+| Visitor records | Views own flat's visitor history | Views society visitor history and real-time movement log for guard duties | Views read-only society visitor history; cannot perform operational actions |
 | Notices | Views published notices | No notice workflow | Creates and manages notices |
 | Polls | Views published polls and votes when eligible | No poll workflow | Creates and manages polls and results |
 | Complaints | Raises complaints and tracks own timeline | No complaint workflow | Views, manages, and updates society complaints |
 | Amenities | Views amenities, books them, and views own bookings | No amenity workflow | Manages amenities and society bookings |
-| Maintenance dues | Views and pays own dues | No dues workflow | No dues-management UI required in current scope |
-| Staff and service providers | No management workflow | No directory-management workflow; service visitors use visitor flows | Manages staff and service-provider records |
+| Maintenance dues | Views and pays own dues | No dues workflow | Creates invoices, tracks payments, sends reminders, and views reports in own society |
+| Staff and service providers | Views the active own-society directory read-only | No directory-management workflow; service visitors use visitor flows | Manages staff and service-provider records |
+| Security-guard accounts | No access | Uses own guard account only | Creates, views, activates, and deactivates guard accounts in own society |
 
 Residents are further restricted to records they own or are eligible to access, including
 their own flatId, visitor requests, bookings, complaints, votes, and dues. Guards may
@@ -155,6 +158,7 @@ The Resident dashboard includes:
 - Amenity discovery and booking
 - Visitor history for the resident's own flat
 - Maintenance dues and payment
+- Read-only active staff and service-provider directory
 
 Residents cannot access another flat's private data or society administration controls.
 
@@ -179,12 +183,15 @@ The Admin dashboard manages:
 - Towers
 - Flats
 - Residents
+- Security-guard accounts
+- Read-only society visitor history
 - Amenities and society bookings
 - Notices
 - Polls and results
 - Complaints
 - Staff
 - Service providers
+- Maintenance invoices, payment tracking, reminders, and reports
 
 Every admin action is restricted to the admin's society.
 
@@ -236,6 +243,7 @@ relationships and tenancy boundaries:
     Society -> Complaints -> Status timeline
     Society -> Staff
     Society -> ServiceProviders
+    Society -> MaintenanceDues -> Payments
     Visitor -> VisitorRequest -> { status, approvedBy, entryAt, exitAt }
     User -> { role: RESIDENT | GUARD | ADMIN, societyId, flatId? }
 
@@ -270,14 +278,14 @@ Build vertical slices in this order unless a discovered dependency requires a sm
 documented adjustment:
 
 1. Auth, RBAC, and role-based routing shell
-2. Admin management of towers, then flats, then residents
+2. Admin management of towers, then flats, then residents, then security-guard accounts
 3. Guard visitor registration and approval-request creation
 4. Resident request receipt, approve/deny, and push notification
 5. Entry/exit marking, movement logs, and visitor history
 6. Notices, then polls, then complaints
 7. Amenity booking
-8. Maintenance dues
-9. Staff and service-provider directory
+8. Maintenance dues and admin invoice/payment management
+9. Staff and service-provider management plus the resident read-only directory
 10. Polish pass for loading, empty, error, permission, and transition states
 11. Submission artifacts: video, README, and screenshots
 

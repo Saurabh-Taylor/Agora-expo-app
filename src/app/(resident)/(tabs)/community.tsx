@@ -1,12 +1,12 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { computePollResults, formatDate, getNoticeCategoryStyle, isPollOpen } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
-import { useNotices } from '@/features/notices/api';
+import { useNotices, useNoticesRealtimeSync } from '@/features/notices/api';
 import { useCastVote, usePolls, usePollVotesRealtimeSync, type PollWithVotes } from '@/features/polls/api';
 import { useProfile } from '@/features/profile/api';
 import { useAuthStore } from '@/stores/auth-store';
@@ -111,9 +111,19 @@ export default function CommunityScreen() {
   const [pinned, ...rest] = notices;
 
   usePollVotesRealtimeSync(profileQuery.data?.society_id);
+  useNoticesRealtimeSync(profileQuery.data?.society_id);
+
+  const isRefreshing = activeTab === 'Notices' ? noticesQuery.isRefetching : pollsQuery.isRefetching;
+  function refreshActiveTab() {
+    if (activeTab === 'Notices') noticesQuery.refetch();
+    else pollsQuery.refetch();
+  }
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refreshActiveTab} />}>
       <Text style={styles.title}>Community</Text>
       <Text style={styles.subtitle}>Notices &amp; polls from your society</Text>
 
@@ -135,7 +145,8 @@ export default function CommunityScreen() {
             isError={noticesQuery.isError}
             onRetry={() => noticesQuery.refetch()}
             isEmpty={notices.length === 0}
-            emptyMessage="No notices published yet."
+            emptyTitle="No notices yet"
+            emptyMessage="Your society has not published any notices yet."
           />
 
           {pinned && (
@@ -178,7 +189,8 @@ export default function CommunityScreen() {
             isError={pollsQuery.isError}
             onRetry={() => pollsQuery.refetch()}
             isEmpty={polls.length === 0}
-            emptyMessage="No polls right now."
+            emptyTitle="No polls available"
+            emptyMessage="Your society has not published any polls yet."
           />
           <View style={styles.pollsList}>
             {polls.map((poll) => (

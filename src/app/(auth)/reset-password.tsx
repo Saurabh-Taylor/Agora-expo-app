@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SetPasswordForm } from '@/components/set-password-form';
-import { Colors, FontFamily } from '@/constants/commonConstants';
+import { AuthRoutes, Colors, FontFamily } from '@/constants/commonConstants';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/auth-store';
 import { showToast } from '@/stores/toast-store';
@@ -53,12 +53,12 @@ export default function ResetPasswordScreen() {
       return;
     }
     finishPasswordRecovery();
-    router.replace('/(auth)/login');
+    router.replace(AuthRoutes.login);
   }
 
   function returnToLogin() {
     finishPasswordRecovery();
-    router.replace('/(auth)/login');
+    router.replace(AuthRoutes.login);
   }
 
   if (status === 'checking') {

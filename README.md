@@ -8,9 +8,9 @@ Agora is a mobile-first society (apartment community) management app being built
 
 Agora is designed around three strictly separated roles:
 
-- **Resident:** approve or pre-approve visitors, view notices, vote in polls, raise complaints, book amenities, review visitor history, and pay maintenance dues.
+- **Resident:** approve or pre-approve visitors, view notices, vote in polls, raise complaints, book amenities, review visitor history, pay maintenance dues, and view the staff/service directory.
 - **Security Guard:** register visitors, request and verify approvals, record entry and exit, search residents, and monitor society movement.
-- **Society Admin:** manage towers, flats, residents, amenities, notices, polls, complaints, staff, and service providers.
+- **Society Admin:** manage towers, flats, residents, security-guard accounts, amenities, notices, polls, complaints, maintenance invoices, staff, and service providers, and view read-only society visitor history.
 
 The primary workflow is fast visitor approval: a guard raises a request, the resident approves or rejects it in the app, and the guard records the visitor's entry and exit. Authorized push-notification paths are implemented for time-sensitive workflows and await final physical-device validation.
 

@@ -3,18 +3,11 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
-import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
+import { Colors, FontFamily, Radius, VisitorCategoryOptions } from '@/constants/commonConstants';
 import { useProfile } from '@/features/profile/api';
 import { useCreatePreApproval, type VisitorCategory } from '@/features/visitors/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { showToast } from '@/stores/toast-store';
-
-const CATEGORIES: { value: VisitorCategory; label: string }[] = [
-  { value: 'GUEST', label: 'Guest' },
-  { value: 'DELIVERY', label: 'Delivery' },
-  { value: 'CAB', label: 'Cab' },
-  { value: 'SERVICE', label: 'Service' },
-];
 
 export default function PreApproveScreen() {
   const session = useAuthStore((state) => state.session);
@@ -36,7 +29,7 @@ export default function PreApproveScreen() {
       });
       router.replace({
         pathname: '/(resident)/gate-pass',
-        params: { code: result.gatePassCode, visitorName: name.trim(), category },
+        params: { id: result.request.id, created: 'true' },
       });
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Could not create the gate pass');
@@ -49,7 +42,7 @@ export default function PreApproveScreen() {
         <BackArrowButton onPress={() => router.back()} />
         <Text style={styles.title}>Pre-approve a visitor</Text>
       </View>
-      <Text style={styles.subtitle}>The guard lets them in with a pass code — no gate call needed.</Text>
+      <Text style={styles.subtitle}>The guard lets them in with a pass code - no gate call needed. The pass stays active for 24 hours.</Text>
 
       <Text style={styles.label}>VISITOR NAME</Text>
       <TextInput
@@ -62,7 +55,7 @@ export default function PreApproveScreen() {
 
       <Text style={styles.label}>TYPE</Text>
       <View style={styles.chipsRow}>
-        {CATEGORIES.map((item) => {
+        {VisitorCategoryOptions.map((item) => {
           const active = category === item.value;
           return (
             <Pressable
