@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   avatarColorForName,
+  formatVehicleLabel,
   formatTime,
   getEffectiveVisitorRequestStatus,
   getInitials,
@@ -102,6 +103,12 @@ export default function VerifyVisitorScreen() {
       <StatusPill label={style.label} color={style.color} backgroundColor={style.bg} />
 
       <View style={styles.card}>
+        {!!formatVehicleLabel(request.vehicle_number, request.vehicle_type) && (
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Vehicle</Text>
+            <Text style={styles.rowValue}>{formatVehicleLabel(request.vehicle_number, request.vehicle_type)}</Text>
+          </View>
+        )}
         {request.is_pre_approved && request.gate_pass_code && (
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Gate pass</Text>

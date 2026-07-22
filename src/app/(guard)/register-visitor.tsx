@@ -1,12 +1,29 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { avatarColorForName, getInitials } from '@/commonFunctions';
+import {
+  avatarColorForName,
+  getInitials,
+  isVehicleDetailsValid,
+  normalizeSingleLineInput,
+  normalizeVehicleNumber,
+} from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
-import { Colors, FontFamily, Radius, VisitorCategoryOptions } from '@/constants/commonConstants';
+import { VehicleFields } from '@/components/vehicle-fields';
+import { Colors, FontFamily, Radius, VisitorCategoryOptions, type VisitorVehicleType } from '@/constants/commonConstants';
 import { useProfile } from '@/features/profile/api';
 import {
   useCreateVisitorRequest,
@@ -36,11 +53,13 @@ export default function RegisterVisitorScreen() {
   const [category, setCategory] = useState<VisitorCategory | undefined>(undefined);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [vehicleType, setVehicleType] = useState<VisitorVehicleType | null>(null);
+  const [vehicleNumber, setVehicleNumber] = useState('');
   const [search, setSearch] = useState('');
   const [selectedResident, setSelectedResident] = useState<GuardResidentSearchResult | undefined>(undefined);
   const residentsQuery = useGuardResidentSearch(search, step === "search" ? profileQuery.data?.society_id : undefined);
 
-  const canContinue = !!category && name.trim().length > 1;
+  const canContinue = !!category && name.trim().length > 1 && isVehicleDetailsValid(vehicleNumber, vehicleType);
   const filteredResidents = residentsQuery.data ?? [];
 
   function resetToDetails() {
@@ -48,6 +67,8 @@ export default function RegisterVisitorScreen() {
     setCategory(undefined);
     setName('');
     setPhone('');
+    setVehicleType(null);
+    setVehicleNumber('');
     setSearch('');
     setSelectedResident(undefined);
   }
@@ -58,9 +79,11 @@ export default function RegisterVisitorScreen() {
       await createRequest.mutateAsync({
         societyId: profileQuery.data.society_id,
         flatId: selectedResident.flat_id,
-        visitorName: name.trim(),
-        visitorPhone: phone.trim() || undefined,
+        visitorName: normalizeSingleLineInput(name),
+        visitorPhone: normalizeSingleLineInput(phone) || undefined,
         category,
+        vehicleType: vehicleType ?? undefined,
+        vehicleNumber: vehicleType ? normalizeVehicleNumber(vehicleNumber) : undefined,
       });
       setStep('sent');
     } catch (error) {
@@ -104,6 +127,7 @@ export default function RegisterVisitorScreen() {
               setSearch(value);
               setSelectedResident(undefined);
             }}
+            onBlur={() => setSearch(normalizeSingleLineInput(search))}
             placeholder="Search by name or flat number"
             placeholderTextColor={Colors.textFaint}
             style={styles.searchInput}
@@ -154,7 +178,14 @@ export default function RegisterVisitorScreen() {
   }
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView
+        style={styles.root}
+        contentContainerStyle={styles.content}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled">
       <View style={styles.headerRow}>
         <BackArrowButton onPress={() => router.back()} />
         <Text style={styles.title}>Register Visitor</Text>
@@ -179,6 +210,7 @@ export default function RegisterVisitorScreen() {
       <TextInput
         value={name}
         onChangeText={setName}
+        onBlur={() => setName(normalizeSingleLineInput(name))}
         placeholder="e.g. Ravi Kumar"
         placeholderTextColor={Colors.textFaint}
         style={styles.input}
@@ -188,10 +220,18 @@ export default function RegisterVisitorScreen() {
       <TextInput
         value={phone}
         onChangeText={setPhone}
+        onBlur={() => setPhone(normalizeSingleLineInput(phone))}
         keyboardType="numeric"
         placeholder="98765 43210"
         placeholderTextColor={Colors.textFaint}
         style={styles.input}
+      />
+
+      <VehicleFields
+        vehicleType={vehicleType}
+        vehicleNumber={vehicleNumber}
+        onTypeChange={setVehicleType}
+        onNumberChange={setVehicleNumber}
       />
 
       <Pressable
@@ -200,7 +240,8 @@ export default function RegisterVisitorScreen() {
         disabled={!canContinue}>
         <Text style={styles.saveLabel}>Next: Find Resident</Text>
       </Pressable>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

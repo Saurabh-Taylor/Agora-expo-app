@@ -5,7 +5,7 @@ import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Rect } from 'react-native-svg';
 
-import { formatDateTime, isGatePassActive, titleCase } from '@/commonFunctions';
+import { formatDateTime, formatVehicleLabel, isGatePassActive, titleCase } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
@@ -95,6 +95,7 @@ export default function GatePassScreen() {
   const requestId = request.id;
   const visitorName = request.visitor?.name ?? 'Visitor';
   const category = request.visitor?.category ? titleCase(request.visitor.category) : '';
+  const vehicle = formatVehicleLabel(request.vehicle_number, request.vehicle_type);
   const passMessage = `Agora gate pass ${request.gate_pass_code} for ${visitorName} at your society. Valid until ${formatDateTime(
     request.valid_until,
   )}. Share this code with the guard at the gate.`;
@@ -150,7 +151,7 @@ export default function GatePassScreen() {
         <Text style={styles.codeOverline}>AGORA GATE PASS</Text>
         <Text style={styles.code}>{request.gate_pass_code}</Text>
         <Text style={styles.codeName}>{visitorName}</Text>
-        <Text style={styles.codeMeta}>{category}</Text>
+        <Text style={styles.codeMeta}>{[category, vehicle].filter(Boolean).join(' / ')}</Text>
         <View style={styles.validityDivider} />
         <Text style={styles.validityLabel}>VALID UNTIL</Text>
         <Text style={styles.validityValue}>{formatDateTime(request.valid_until)}</Text>

@@ -112,6 +112,86 @@ export const VisitorHistoryRangeOptions = [
   { value: 'ALL_TIME', label: 'All time', days: null },
 ] as const;
 
+export const GuardLogbookRangeOptions = [
+  { value: 'TODAY', label: 'Today' },
+  { value: 'MONTH', label: 'Month' },
+  { value: '7_DAYS', label: '7 days' },
+  { value: '30_DAYS', label: '30 days' },
+  { value: 'CUSTOM', label: 'Custom' },
+  { value: 'ALL_TIME', label: 'All time' },
+] as const;
+
+export const GuardLogbookStateOptions = [
+  { value: 'VISITS', label: 'All visits' },
+  { value: 'INSIDE', label: 'Inside' },
+  { value: 'EXITED', label: 'Exited' },
+  { value: 'PENDING', label: 'Pending' },
+  { value: 'APPROVED', label: 'Approved' },
+  { value: 'REJECTED', label: 'Denied' },
+  { value: 'ALL_REQUESTS', label: 'All requests' },
+] as const;
+
+export const ResidentHistoryRangeOptions = [
+  { value: 'DAY', label: 'Selected day' },
+  { value: '7_DAYS', label: 'Last 7 days' },
+  { value: '30_DAYS', label: 'Last 30 days' },
+  { value: 'MONTH', label: 'Month' },
+  { value: 'CUSTOM', label: 'Custom dates' },
+] as const;
+
+export const ResidentHistoryStateOptions = [
+  { value: 'VISITS', label: 'All visits' },
+  { value: 'INSIDE', label: 'Inside now' },
+  { value: 'EXITED', label: 'Exited' },
+] as const;
+
+export const CalendarMonthLabels = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+] as const;
+
+export const RESIDENT_HISTORY_QUICK_DAY_COUNT = 7;
+
+export const DEFAULT_GUARD_LOGBOOK_FILTERS = {
+  range: 'TODAY',
+  state: 'VISITS',
+  category: 'ALL',
+  towerId: null,
+  flatId: null,
+  customFrom: '',
+  customTo: '',
+  month: '',
+  locationLabel: 'Entire society',
+} as const;
+
+export const VisitorVehicleTypeOptions = [
+  { value: 'CAR', label: 'Car' },
+  { value: 'TWO_WHEELER', label: 'Two-wheeler' },
+  { value: 'COMMERCIAL', label: 'Commercial' },
+  { value: 'OTHER', label: 'Other' },
+] as const;
+
+export type VisitorVehicleType = (typeof VisitorVehicleTypeOptions)[number]['value'];
+
+export const VisitorCategoryFilterOptions = [
+  { value: 'ALL', label: 'All types' },
+  ...VisitorCategoryOptions,
+] as const;
+
+export const VISITOR_LOGBOOK_PAGE_SIZE = 25;
+export const LOGBOOK_LOCATION_SEARCH_LIMIT = 20;
+export const LOGBOOK_LOCATION_SEARCH_DEBOUNCE_MS = 300;
+
 export const AUTH_RESEND_SECONDS = 30;
 export const ONBOARDING_COMPLETE_STORAGE_KEY = 'agora:onboarding-complete';
 

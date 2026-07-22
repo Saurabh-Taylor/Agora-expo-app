@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   getEffectiveVisitorRequestStatus,
@@ -7,6 +7,7 @@ import {
   isVisitorReadyForEntry,
   titleCase,
 } from '@/commonFunctions';
+import { LOGBOOK_LOCATION_SEARCH_LIMIT, VISITOR_LOGBOOK_PAGE_SIZE, type VisitorVehicleType } from '@/constants/commonConstants';
 import { sendPushNotification } from '@/features/notifications/api';
 import { supabase } from '@/lib/supabase';
 
@@ -38,6 +39,8 @@ export type AdminVisitorHistoryItem = {
   decision_at: string | null;
   entry_at: string | null;
   exit_at: string | null;
+  vehicle_number: string | null;
+  vehicle_type: VisitorVehicleType | null;
   visitor_name: string;
   visitor_category: VisitorCategory;
   flat_id: string;
@@ -92,6 +95,126 @@ export function useAdminVisitorHistory(
   });
 }
 
+
+export type LogbookLocationResult = {
+  result_type: 'TOWER' | 'FLAT';
+  society_id: string;
+  tower_id: string;
+  tower_code: string;
+  tower_name: string;
+  flat_id: string | null;
+  flat_number: string | null;
+};
+
+export function useLogbookLocationSearch(
+  search: string,
+  societyId: string | null | undefined,
+  enabled: boolean,
+) {
+  const normalizedSearch = search.trim();
+  return useQuery({
+    queryKey: ['visitor-logbook-locations', societyId, normalizedSearch],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('search_guard_logbook_locations', {
+        requested_search: normalizedSearch,
+        requested_limit: LOGBOOK_LOCATION_SEARCH_LIMIT,
+      });
+      if (error) throw error;
+
+      const locations = (data ?? []) as LogbookLocationResult[];
+      if (locations.some((location) => location.society_id !== societyId)) {
+        throw new Error('Location search returned an invalid society scope');
+      }
+      return locations;
+    },
+    enabled: enabled && !!societyId && normalizedSearch.length > 0,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export type SocietyVisitorLogbookFilters = {
+  since: string | null;
+  until: string | null;
+  status: VisitorRequestStatus | null;
+  category: VisitorCategory | null;
+  towerId: string | null;
+  flatId: string | null;
+  entryOnly: boolean;
+};
+
+export type SocietyVisitorLogbookItem = {
+  request_id: string;
+  society_id: string;
+  status: VisitorRequestStatus;
+  is_pre_approved: boolean;
+  created_at: string;
+  decision_at: string | null;
+  entry_at: string | null;
+  exit_at: string | null;
+  activity_at: string;
+  vehicle_number: string | null;
+  vehicle_type: VisitorVehicleType | null;
+  register_number: number | null;
+  visitor_name: string;
+  visitor_phone: string | null;
+  visitor_category: VisitorCategory;
+  flat_id: string;
+  flat_number: string;
+  tower_id: string;
+  tower_code: string;
+  tower_name: string;
+};
+
+type SocietyVisitorLogbookCursor = { activityAt: string; id: string };
+type SocietyVisitorLogbookPayload = { total_count: number | null; items: SocietyVisitorLogbookItem[] };
+
+export function useSocietyVisitorLogbook(
+  societyId: string | null | undefined,
+  filters: SocietyVisitorLogbookFilters,
+) {
+  return useInfiniteQuery({
+    queryKey: ['visitor-logbook', societyId, filters],
+    queryFn: async ({ pageParam }) => {
+      const cursor = pageParam as SocietyVisitorLogbookCursor | null;
+      const { data, error } = await supabase.rpc('list_society_visitor_logbook', {
+        requested_limit: VISITOR_LOGBOOK_PAGE_SIZE + 1,
+        cursor_activity_at: cursor?.activityAt ?? null,
+        cursor_id: cursor?.id ?? null,
+        requested_since: filters.since,
+        requested_until: filters.until,
+        requested_status: filters.status,
+        requested_category: filters.category,
+        requested_tower_id: filters.towerId,
+        requested_flat_id: filters.flatId,
+        requested_flat_number: null,
+        requested_entry_only: filters.entryOnly,
+        requested_include_total: cursor === null,
+      });
+      if (error) throw error;
+
+      const payload = data as unknown as SocietyVisitorLogbookPayload;
+      const rows = Array.isArray(payload?.items) ? payload.items : [];
+      if (rows.some((row) => row.society_id !== societyId)) {
+        throw new Error('Visitor logbook returned an invalid society scope');
+      }
+
+      const items = rows.slice(0, VISITOR_LOGBOOK_PAGE_SIZE);
+      const lastItem = items.at(-1);
+      return {
+        items,
+        totalCount: cursor === null ? (payload?.total_count ?? 0) : null,
+        nextCursor:
+          rows.length > VISITOR_LOGBOOK_PAGE_SIZE && lastItem
+            ? { activityAt: lastItem.activity_at, id: lastItem.request_id }
+            : null,
+      };
+    },
+    initialPageParam: null as SocietyVisitorLogbookCursor | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    enabled: !!societyId,
+  });
+}
+
 export type VisitorRequestWithVisitor = {
   id: string;
   status: VisitorRequestStatus;
@@ -102,7 +225,7 @@ export type VisitorRequestWithVisitor = {
 };
 
 const VISITOR_REQUEST_SELECT =
-  'id, society_id, status, is_pre_approved, created_at, decision_at, entry_at, exit_at, gate_pass_code, valid_until, flat_id, raised_by, visitor:visitors(name, category, phone)';
+  'id, society_id, status, is_pre_approved, created_at, decision_at, entry_at, exit_at, vehicle_number, vehicle_type, gate_pass_code, valid_until, flat_id, raised_by, visitor:visitors(name, category, phone)';
 const VISITOR_REQUEST_WITH_FLAT_SELECT =
   VISITOR_REQUEST_SELECT +
   ', flat:flats(number, tower:towers(code, name))';
@@ -178,6 +301,8 @@ type CreateVisitorRequestInput = {
   flatId: string;
   visitorName: string;
   visitorPhone?: string;
+  vehicleNumber?: string;
+  vehicleType?: VisitorVehicleType;
   category: VisitorCategory;
 };
 
@@ -190,6 +315,8 @@ type CreatedVisitorRequest = {
   status: VisitorRequestStatus;
   gate_pass_code: string | null;
   valid_until: string | null;
+  vehicle_number: string | null;
+  vehicle_type: VisitorVehicleType | null;
 };
 
 export function useCreateVisitorRequest() {
@@ -201,6 +328,8 @@ export function useCreateVisitorRequest() {
         requested_name: input.visitorName,
         requested_phone: input.visitorPhone ?? null,
         requested_category: input.category,
+        requested_vehicle_number: input.vehicleNumber ?? null,
+        requested_vehicle_type: input.vehicleType ?? null,
       });
       if (error) throw error;
 
@@ -246,8 +375,82 @@ export type VisitorRequestForFlat = {
   valid_until: string | null;
   flat_id: string;
   raised_by: string | null;
+  vehicle_number: string | null;
+  vehicle_type: VisitorVehicleType | null;
   visitor: { name: string; category: VisitorCategory; phone: string | null } | null;
 };
+
+export type ResidentVisitorHistoryFilters = {
+  since: string | null;
+  until: string | null;
+  status: 'ENTERED' | 'EXITED' | null;
+  category: VisitorCategory | null;
+};
+
+export type ResidentVisitorHistoryItem = {
+  request_id: string;
+  society_id: string;
+  flat_id: string;
+  status: 'ENTERED' | 'EXITED';
+  is_pre_approved: boolean;
+  created_at: string;
+  decision_at: string | null;
+  entry_at: string;
+  exit_at: string | null;
+  activity_at: string;
+  vehicle_number: string | null;
+  vehicle_type: VisitorVehicleType | null;
+  visitor_name: string;
+  visitor_phone: string | null;
+  visitor_category: VisitorCategory;
+};
+
+type ResidentVisitorHistoryCursor = { entryAt: string; id: string };
+type ResidentVisitorHistoryPayload = { total_count: number | null; items: ResidentVisitorHistoryItem[] };
+
+export function useResidentVisitorHistory(
+  societyId: string | null | undefined,
+  flatId: string | null | undefined,
+  filters: ResidentVisitorHistoryFilters,
+) {
+  return useInfiniteQuery({
+    queryKey: ['visitor-requests', 'resident-history', societyId, flatId, filters],
+    queryFn: async ({ pageParam }) => {
+      const cursor = pageParam as ResidentVisitorHistoryCursor | null;
+      const { data, error } = await supabase.rpc('list_resident_visitor_history', {
+        requested_limit: VISITOR_LOGBOOK_PAGE_SIZE + 1,
+        cursor_entry_at: cursor?.entryAt ?? null,
+        cursor_id: cursor?.id ?? null,
+        requested_since: filters.since,
+        requested_until: filters.until,
+        requested_status: filters.status,
+        requested_category: filters.category,
+        requested_include_total: cursor === null,
+      });
+      if (error) throw error;
+
+      const payload = data as unknown as ResidentVisitorHistoryPayload;
+      const rows = Array.isArray(payload?.items) ? payload.items : [];
+      if (rows.some((row) => row.society_id !== societyId || row.flat_id !== flatId)) {
+        throw new Error('Resident visitor history returned an invalid ownership scope');
+      }
+
+      const items = rows.slice(0, VISITOR_LOGBOOK_PAGE_SIZE);
+      const lastItem = items.at(-1);
+      return {
+        items,
+        totalCount: cursor === null ? (payload?.total_count ?? 0) : null,
+        nextCursor:
+          rows.length > VISITOR_LOGBOOK_PAGE_SIZE && lastItem
+            ? { entryAt: lastItem.entry_at, id: lastItem.request_id }
+            : null,
+      };
+    },
+    initialPageParam: null as ResidentVisitorHistoryCursor | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    enabled: !!societyId && !!flatId,
+  });
+}
 
 export function useFlatVisitorRequests(
   flatId: string | null | undefined,
@@ -372,6 +575,24 @@ export function useAwaitingEntryCount(societyId: string | null | undefined) {
 
 // ══════════════════════════ guard: movement log ══════════════════════════
 
+export function useGuardLiveVisitorRequests(societyId: string | null | undefined, limit = 100) {
+  return useQuery({
+    queryKey: ['visitor-requests', 'live', societyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('visitor_requests')
+        .select(VISITOR_REQUEST_WITH_FLAT_SELECT)
+        .eq('society_id', societyId as string)
+        .in('status', ['PENDING', 'APPROVED', 'ENTERED'])
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return data as unknown as VisitorRequestDetail[];
+    },
+    enabled: !!societyId,
+  });
+}
+
 // Society-wide feed — doubles as both the "live movement log" and "visitor
 // history" AGENTS.md calls for, rather than building two near-duplicate
 // screens. Ordered by created_at, so a just-exited visitor doesn't jump back
@@ -423,6 +644,29 @@ export function useMarkExit() {
       queryClient.invalidateQueries({ queryKey: ['visitor-requests'] });
     },
   });
+}
+
+export function useVisitorLogbookRealtimeNotice(societyId: string | null | undefined) {
+  const [hasNewActivity, setHasNewActivity] = useState(false);
+
+  useEffect(() => {
+    if (!societyId) return;
+
+    const channel = supabase
+      .channel(getUniqueRealtimeChannelTopic('visitor-logbook:' + societyId))
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'visitor_requests', filter: `society_id=eq.${societyId}` },
+        () => setHasNewActivity(true),
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [societyId]);
+
+  return { hasNewActivity, clearNewActivity: () => setHasNewActivity(false) };
 }
 
 // Subscribes to visitor_requests changes for a flat (resident) or a whole
@@ -495,6 +739,8 @@ type CreatePreApprovalInput = {
   societyId: string;
   visitorName: string;
   visitorPhone?: string;
+  vehicleNumber?: string;
+  vehicleType?: VisitorVehicleType;
   category: VisitorCategory;
 };
 
@@ -522,6 +768,8 @@ export function useCreatePreApproval() {
         requested_name: input.visitorName,
         requested_phone: input.visitorPhone ?? null,
         requested_category: input.category,
+        requested_vehicle_number: input.vehicleNumber ?? null,
+        requested_vehicle_type: input.vehicleType ?? null,
       });
       if (error) throw error;
 

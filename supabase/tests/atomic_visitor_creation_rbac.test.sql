@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(24);
+select plan(27);
 
 insert into public.societies (id, name) values
   ('71000000-0000-0000-0000-000000000001', 'Visitor Society A'),
@@ -44,7 +44,7 @@ select set_config('request.jwt.claim.sub', '74000000-0000-0000-0000-000000000004
 select throws_ok($$ select * from public.search_guard_residents('') $$, '42501', 'Only guards can search residents', 'admin cannot use guard resident search');
 
 select set_config('request.jwt.claim.sub', '74000000-0000-0000-0000-000000000003', true);
-select lives_ok($$ select public.create_guard_visitor_request('73000000-0000-0000-0000-000000000001', '  Gate Guest  ', '+91 98765 43210', 'GUEST') $$, 'guard atomically creates a pending request');
+select lives_ok($$ select public.create_guard_visitor_request('73000000-0000-0000-0000-000000000001', '  Gate Guest  ', '+91 98765 43210', 'GUEST', '  mh 12 ab 1234  ', 'CAR') $$, 'guard atomically creates a pending request with optional vehicle details');
 reset role;
 select is(
   (select concat_ws('|', society_id, flat_id, raised_by, status::text) from public.visitor_requests where visitor_id = (select id from public.visitors where name = 'Gate Guest')),
@@ -52,6 +52,11 @@ select is(
   'guard request derives society, flat, actor, and pending status'
 );
 select is((select society_id::text from public.visitors where name = 'Gate Guest'), '71000000-0000-0000-0000-000000000001', 'created visitor inherits guard society');
+select is(
+  (select concat_ws('|', vehicle_number, vehicle_type::text) from public.visitor_requests where visitor_id = (select id from public.visitors where name = 'Gate Guest')),
+  'MH 12 AB 1234|CAR',
+  'guard vehicle details are normalized and stored on the visit'
+);
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '74000000-0000-0000-0000-000000000003', true);
@@ -62,6 +67,10 @@ select throws_ok(
 select throws_ok(
   $$ select public.create_guard_visitor_request('73000000-0000-0000-0000-000000000001', 'Bad Phone', '123', 'GUEST') $$,
   '22023', 'Visitor phone number is invalid', 'invalid visitor data is rejected'
+);
+select throws_ok(
+  $$ select public.create_guard_visitor_request('73000000-0000-0000-0000-000000000001', 'Partial Vehicle', null, 'GUEST', 'MH12AB1234', null) $$,
+  '22023', 'Choose a vehicle type and enter its registration number', 'partial vehicle details are rejected atomically'
 );
 reset role;
 select is((select count(*)::integer from public.visitors where name in ('Cross Tenant', 'Bad Phone')), 0, 'failed guard calls leave no orphan visitors');
@@ -79,7 +88,7 @@ select throws_ok(
 );
 
 select set_config('request.jwt.claim.sub', '74000000-0000-0000-0000-000000000001', true);
-select lives_ok($$ select public.create_resident_visitor_preapproval('  Expected Guest  ', null, 'GUEST') $$, 'resident atomically creates own-flat pre-approval');
+select lives_ok($$ select public.create_resident_visitor_preapproval('  Expected Guest  ', null, 'GUEST', ' ka 01 zz 9999 ', 'CAR') $$, 'resident atomically creates own-flat pre-approval with optional vehicle details');
 reset role;
 select is(
   (select concat_ws('|', society_id, flat_id, decision_by, status::text, is_pre_approved::text) from public.visitor_requests where visitor_id = (select id from public.visitors where name = 'Expected Guest')),
@@ -90,6 +99,11 @@ select matches(
   (select gate_pass_code from public.visitor_requests where visitor_id = (select id from public.visitors where name = 'Expected Guest')),
   '^[0-9]{3} [0-9]{3}$',
   'server generates a six-digit gate pass'
+);
+select is(
+  (select concat_ws('|', vehicle_number, vehicle_type::text) from public.visitor_requests where visitor_id = (select id from public.visitors where name = 'Expected Guest')),
+  'KA 01 ZZ 9999|CAR',
+  'resident pre-approval stores normalized vehicle details on the visit'
 );
 
 set local role authenticated;

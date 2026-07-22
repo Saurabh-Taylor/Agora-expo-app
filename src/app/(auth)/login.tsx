@@ -2,10 +2,20 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
-import { isValidEmail, useResendCountdown } from '@/commonFunctions';
+import { isValidEmail, normalizeEmailAddress, useResendCountdown } from '@/commonFunctions';
 import { AuthEmailField } from '@/components/auth-email-field';
 import { AgoraLogo } from '@/components/icons/agora-logo';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
@@ -62,7 +72,8 @@ export default function LoginScreen() {
   const { remainingSeconds: resendIn, startCountdown: startResend, resetCountdown: resetResend } = useResendCountdown();
 
   const isPassword = authMode === 'password';
-  const hasId = isValidEmail(identifier);
+  const normalizedIdentifier = normalizeEmailAddress(identifier);
+  const hasId = isValidEmail(normalizedIdentifier);
   const canLogin = hasId && password.length > 0 && !busy;
   const canSend = hasId && !busy;
   const canVerify = otp.length === OTP_LENGTH && !busy;
@@ -87,7 +98,7 @@ export default function LoginScreen() {
     }
     if (busy) return;
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: identifier.trim(), password });
+    const { error } = await supabase.auth.signInWithPassword({ email: normalizedIdentifier, password });
     if (error) {
       setBusy(false);
       showToast(error.message);
@@ -103,7 +114,7 @@ export default function LoginScreen() {
     if (busy) return;
     setBusy(true);
     const { error } = await supabase.auth.signInWithOtp({
-      email: identifier.trim(),
+      email: normalizedIdentifier,
       options: { shouldCreateUser: false },
     });
     setBusy(false);
@@ -120,7 +131,7 @@ export default function LoginScreen() {
   async function resend() {
     if (resendIn > 0 || busy) return;
     const { error } = await supabase.auth.signInWithOtp({
-      email: identifier.trim(),
+      email: normalizedIdentifier,
       options: { shouldCreateUser: false },
     });
     if (error) {
@@ -138,7 +149,7 @@ export default function LoginScreen() {
     }
     if (busy) return;
     setBusy(true);
-    const { error } = await supabase.auth.verifyOtp({ email: identifier.trim(), token: otp, type: 'email' });
+    const { error } = await supabase.auth.verifyOtp({ email: normalizedIdentifier, token: otp, type: 'email' });
     if (error) {
       setBusy(false);
       showToast(error.message);
@@ -146,7 +157,7 @@ export default function LoginScreen() {
   }
 
   function forgot() {
-    router.push({ pathname: '/(auth)/forgot-password', params: { email: identifier.trim() } });
+    router.push({ pathname: '/(auth)/forgot-password', params: { email: normalizedIdentifier } });
   }
 
   function contact() {
@@ -154,7 +165,9 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={styles.root}>
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={styles.heroWrap}>
         <Image source={require('@/assets/images/login-hero.png')} style={StyleSheet.absoluteFill} contentFit="cover" />
         <LinearGradient
@@ -163,7 +176,10 @@ export default function LoginScreen() {
           style={StyleSheet.absoluteFill}
         />
       </View>
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled">
         <View style={styles.logoRow}>
           <View style={styles.logoBadge}>
             <AgoraLogo size={34} />
@@ -193,6 +209,12 @@ export default function LoginScreen() {
                     placeholder="Enter your password"
                     placeholderTextColor={Colors.textFaint}
                     secureTextEntry={!showPw}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="current-password"
+                    textContentType="password"
+                    returnKeyType="done"
+                    onSubmitEditing={() => void doLogin()}
                     style={[styles.input, styles.flex]}
                   />
                   <Pressable
@@ -285,7 +307,7 @@ export default function LoginScreen() {
           </Text>
         </Text>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

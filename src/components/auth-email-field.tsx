@@ -1,6 +1,7 @@
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 
+import { normalizeEmailAddress } from '@/commonFunctions';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
 
 function EmailIcon() {
@@ -29,10 +30,12 @@ export function AuthEmailField({ value, onChangeText, autoFocus = false }: AuthE
         <TextInput
           value={value}
           onChangeText={onChangeText}
+          onBlur={() => onChangeText(normalizeEmailAddress(value))}
           placeholder="you@email.com"
           placeholderTextColor={Colors.textFaint}
           autoCapitalize="none"
           autoComplete="email"
+          autoCorrect={false}
           keyboardType="email-address"
           autoFocus={autoFocus}
           style={styles.input}

@@ -46,6 +46,10 @@ export function isValidEmail(value: string) {
   return /\S+@\S+\.\S+/.test(value.trim());
 }
 
+export function normalizeEmailAddress(value: string) {
+  return value.trim().toLowerCase();
+}
+
 export function useResendCountdown() {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const timer = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
@@ -236,6 +240,100 @@ export function formatCurrency(amount: number) {
 
 export function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString([], { day: 'numeric', month: 'short' });
+}
+
+export function parseHistoryDateInput(value: string, endExclusive = false) {
+  if (value.length !== 10 || !/^\d{4}-\d{2}-\d{2}/.test(value)) return null;
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  if (endExclusive) date.setDate(date.getDate() + 1);
+  return date.toISOString();
+}
+
+
+export function getCurrentLogbookMonth(now = new Date()) {
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+export function getLogbookMonthBounds(monthValue: string) {
+  if (!/^\d{4}-\d{2}$/.test(monthValue)) return null;
+  const [year, month] = monthValue.split('-').map(Number);
+  if (month < 1 || month > 12) return null;
+  const since = new Date(year, month - 1, 1);
+  const until = new Date(year, month, 1);
+  return { since: since.toISOString(), until: until.toISOString() };
+}
+
+export function formatLogbookMonth(monthValue: string) {
+  const bounds = getLogbookMonthBounds(monthValue);
+  if (!bounds) return 'Select month';
+  return new Date(bounds.since).toLocaleDateString([], { month: 'long', year: 'numeric' });
+}
+
+export function formatRegisterNumber(value: number | null) {
+  return value === null ? '--' : String(value).padStart(3, '0');
+}
+
+export function getVisitorHistorySince(range: string, now = new Date()) {
+  if (range === 'ALL_TIME' || range === 'CUSTOM') return null;
+  const since = new Date(now);
+  if (range === 'TODAY') {
+    since.setHours(0, 0, 0, 0);
+    return since.toISOString();
+  }
+  const days = range === '7_DAYS' ? 7 : 30;
+  since.setDate(since.getDate() - days);
+  return since.toISOString();
+}
+
+
+export function normalizeVehicleNumber(value: string) {
+  return value.trim().toUpperCase().replace(/\s+/g, ' ');
+}
+
+export function normalizeSingleLineInput(value: string) {
+  return value.trim().replace(/\s+/g, ' ');
+}
+
+export function isVehicleDetailsValid(
+  vehicleNumber: string,
+  vehicleType: string | null | undefined,
+) {
+  const normalizedNumber = normalizeVehicleNumber(vehicleNumber);
+  if (!vehicleType && !normalizedNumber) return true;
+  return (
+    !!vehicleType &&
+    normalizedNumber.length >= 3 &&
+    normalizedNumber.length <= 20 &&
+    /^[A-Z0-9][A-Z0-9 -]*[A-Z0-9]$/.test(normalizedNumber)
+  );
+}
+
+export function formatVehicleLabel(
+  vehicleNumber: string | null | undefined,
+  vehicleType: string | null | undefined,
+) {
+  if (!vehicleNumber) return null;
+  const typeLabel =
+    vehicleType === 'TWO_WHEELER'
+      ? 'Two-wheeler'
+      : vehicleType === 'COMMERCIAL'
+        ? 'Commercial'
+        : vehicleType === 'CAR'
+          ? 'Car'
+          : 'Vehicle';
+  return `${typeLabel} / ${vehicleNumber}`;
+}
+
+export function formatVisitDuration(entryAt: string, exitAt: string | null) {
+  if (!exitAt) return 'Currently inside';
+  const totalMinutes = Math.max(0, Math.round((new Date(exitAt).getTime() - new Date(entryAt).getTime()) / 60_000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return hours ? `${hours}h ${minutes}m` : `${minutes}m`;
 }
 
 const BOOKING_STATUS_STYLES = {

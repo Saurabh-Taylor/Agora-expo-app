@@ -15,18 +15,21 @@ import {
   avatarColorForName,
   formatDate,
   formatTime,
+  formatVehicleLabel,
+  getVisitorHistorySince,
   getInitials,
   getVisitorRequestStatusStyle,
   titleCase,
 } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
+import { FilterChip } from '@/components/filter-chip';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { StatusPill } from '@/components/status-pill';
 import {
   Colors,
   FontFamily,
   Radius,
-  VisitorCategoryOptions,
+  VisitorCategoryFilterOptions,
   VisitorHistoryRangeOptions,
   VisitorHistoryStatusOptions,
 } from '@/constants/commonConstants';
@@ -44,39 +47,6 @@ import { useAuthStore } from '@/stores/auth-store';
 type RangeFilter = (typeof VisitorHistoryRangeOptions)[number]['value'];
 type StatusFilter = (typeof VisitorHistoryStatusOptions)[number]['value'];
 type CategoryFilter = VisitorCategory | 'ALL';
-
-const CATEGORY_FILTERS: { value: CategoryFilter; label: string }[] = [
-  { value: 'ALL', label: 'All types' },
-  ...VisitorCategoryOptions,
-];
-
-function FilterChip({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      onPress={onPress}
-      style={[styles.filterChip, selected && styles.filterChipSelected]}>
-      <Text style={[styles.filterChipLabel, selected && styles.filterChipLabelSelected]}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function getSinceDate(range: RangeFilter) {
-  const option = VisitorHistoryRangeOptions.find((item) => item.value === range);
-  if (!option?.days) return null;
-  const since = new Date();
-  since.setDate(since.getDate() - option.days);
-  return since.toISOString();
-}
 
 function getActivityTime(item: AdminVisitorHistoryItem) {
   return item.exit_at ?? item.entry_at ?? item.decision_at ?? item.created_at;
@@ -96,7 +66,7 @@ export default function AdminVisitorHistoryScreen() {
   const [flatNumber, setFlatNumber] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
-  const since = useMemo(() => getSinceDate(range), [range]);
+  const since = useMemo(() => getVisitorHistorySince(range), [range]);
   const filters = useMemo<AdminVisitorHistoryFilters>(
     () => ({
       since,
@@ -142,6 +112,9 @@ export default function AdminVisitorHistoryScreen() {
             {titleCase(item.visitor_category)} · {item.tower_code}-{item.flat_number}
             {item.is_pre_approved ? ' · Pre-approved' : ''}
           </Text>
+          {!!formatVehicleLabel(item.vehicle_number, item.vehicle_type) && (
+            <Text style={styles.cardTime}>Vehicle {formatVehicleLabel(item.vehicle_number, item.vehicle_type)}</Text>
+          )}
           <Text style={styles.cardTime}>
             Requested {formatDate(item.created_at)} at {formatTime(item.created_at)}
           </Text>
@@ -203,7 +176,7 @@ export default function AdminVisitorHistoryScreen() {
         <View style={styles.filterPanel}>
           <Text style={styles.panelLabel}>VISITOR TYPE</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-            {CATEGORY_FILTERS.map((item) => (
+            {VisitorCategoryFilterOptions.map((item) => (
               <FilterChip
                 key={item.value}
                 label={item.label}
@@ -337,18 +310,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   filterRow: { gap: 8, paddingRight: 12 },
-  filterChip: {
-    minHeight: 40,
-    justifyContent: 'center',
-    paddingHorizontal: 14,
-    borderRadius: Radius.pill,
-    borderWidth: 1,
-    borderColor: Colors.borderAlt,
-    backgroundColor: Colors.surface,
-  },
-  filterChipSelected: { borderColor: Colors.green500, backgroundColor: Colors.green500 },
-  filterChipLabel: { fontSize: 12.5, fontWeight: '600', color: Colors.textMuted },
-  filterChipLabelSelected: { color: Colors.textOnDark },
   moreFiltersButton: {
     minHeight: 46,
     marginTop: 16,

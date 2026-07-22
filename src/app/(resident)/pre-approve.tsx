@@ -1,9 +1,25 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
+import {
+  isVehicleDetailsValid,
+  normalizeSingleLineInput,
+  normalizeVehicleNumber,
+} from '@/commonFunctions';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
-import { Colors, FontFamily, Radius, VisitorCategoryOptions } from '@/constants/commonConstants';
+import { VehicleFields } from '@/components/vehicle-fields';
+import { Colors, FontFamily, Radius, VisitorCategoryOptions, type VisitorVehicleType } from '@/constants/commonConstants';
 import { useProfile } from '@/features/profile/api';
 import { useCreatePreApproval, type VisitorCategory } from '@/features/visitors/api';
 import { useAuthStore } from '@/stores/auth-store';
@@ -16,16 +32,20 @@ export default function PreApproveScreen() {
 
   const [name, setName] = useState('');
   const [category, setCategory] = useState<VisitorCategory | undefined>(undefined);
+  const [vehicleType, setVehicleType] = useState<VisitorVehicleType | null>(null);
+  const [vehicleNumber, setVehicleNumber] = useState('');
 
-  const canCreate = name.trim().length > 1 && !!category;
+  const canCreate = name.trim().length > 1 && !!category && isVehicleDetailsValid(vehicleNumber, vehicleType);
 
   async function handleCreate() {
     if (!canCreate || !category || !profileQuery.data?.flat_id) return;
     try {
       const result = await createPreApproval.mutateAsync({
         societyId: profileQuery.data.society_id,
-        visitorName: name.trim(),
+        visitorName: normalizeSingleLineInput(name),
         category,
+        vehicleType: vehicleType ?? undefined,
+        vehicleNumber: vehicleType ? normalizeVehicleNumber(vehicleNumber) : undefined,
       });
       router.replace({
         pathname: '/(resident)/gate-pass',
@@ -37,7 +57,14 @@ export default function PreApproveScreen() {
   }
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView
+        style={styles.root}
+        contentContainerStyle={styles.content}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled">
       <View style={styles.headerRow}>
         <BackArrowButton onPress={() => router.back()} />
         <Text style={styles.title}>Pre-approve a visitor</Text>
@@ -48,6 +75,7 @@ export default function PreApproveScreen() {
       <TextInput
         value={name}
         onChangeText={setName}
+        onBlur={() => setName(normalizeSingleLineInput(name))}
         placeholder="e.g. Priya Nair"
         placeholderTextColor={Colors.textFaint}
         style={styles.input}
@@ -68,6 +96,13 @@ export default function PreApproveScreen() {
         })}
       </View>
 
+      <VehicleFields
+        vehicleType={vehicleType}
+        vehicleNumber={vehicleNumber}
+        onTypeChange={setVehicleType}
+        onNumberChange={setVehicleNumber}
+      />
+
       <Pressable
         style={[styles.createButton, { backgroundColor: canCreate ? Colors.green500 : '#DDD8C8' }]}
         onPress={handleCreate}
@@ -75,7 +110,8 @@ export default function PreApproveScreen() {
         {createPreApproval.isPending && <ActivityIndicator size="small" color="#fff" />}
         <Text style={[styles.createButtonLabel, { color: canCreate ? Colors.textOnDark : '#9B9682' }]}>Create gate pass</Text>
       </Pressable>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

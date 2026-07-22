@@ -4,7 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
-import { avatarColorForName, formatTime, getInitials, getVisitorRequestStatusStyle, titleCase } from '@/commonFunctions';
+import { avatarColorForName, formatTime, formatVehicleLabel, getInitials, getVisitorRequestStatusStyle, titleCase } from '@/commonFunctions';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { useProfile } from '@/features/profile/api';
 import { useDecideVisitorRequest, useVisitorRequestDetail } from '@/features/visitors/api';
@@ -130,6 +130,9 @@ export default function VisitorRequestScreen() {
           <Text style={styles.detail}>
             For {request.flat.tower ? `${request.flat.tower.code}-${request.flat.number}` : request.flat.number}
           </Text>
+        )}
+        {!!formatVehicleLabel(request.vehicle_number, request.vehicle_type) && (
+          <Text style={styles.detail}>Vehicle: {formatVehicleLabel(request.vehicle_number, request.vehicle_type)}</Text>
         )}
       </View>
 

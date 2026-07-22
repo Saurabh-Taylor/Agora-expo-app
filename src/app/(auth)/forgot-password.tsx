@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { isValidEmail, useResendCountdown } from '@/commonFunctions';
+import { isValidEmail, normalizeEmailAddress, useResendCountdown } from '@/commonFunctions';
 import { AuthEmailField } from '@/components/auth-email-field';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { AuthRoutes, Colors, FontFamily } from '@/constants/commonConstants';
@@ -20,7 +20,7 @@ export default function ForgotPasswordScreen() {
   const { remainingSeconds, startCountdown } = useResendCountdown();
 
   async function sendResetLink() {
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = normalizeEmailAddress(email);
     if (!isValidEmail(normalizedEmail)) {
       showToast('Enter a valid email address');
       return;
