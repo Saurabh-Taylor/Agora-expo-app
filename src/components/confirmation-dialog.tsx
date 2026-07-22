@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
 
@@ -15,6 +16,8 @@ type ConfirmationDialogProps = {
   onCancel: () => void;
   onConfirm: () => void;
 };
+
+const DIALOG_TRANSITION_DURATION = 220;
 
 export function ConfirmationDialog({
   visible,
@@ -32,11 +35,13 @@ export function ConfirmationDialog({
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
-      statusBarTranslucent
-      navigationBarTranslucent
+      animationType="none"
       onRequestClose={onCancel}>
       <View style={styles.root}>
+        <Animated.View
+          entering={FadeIn.duration(DIALOG_TRANSITION_DURATION)}
+          style={[StyleSheet.absoluteFill, styles.backdrop]}
+        />
         <Pressable
           style={StyleSheet.absoluteFill}
           onPress={onCancel}
@@ -44,7 +49,10 @@ export function ConfirmationDialog({
           accessibilityRole="button"
           accessibilityLabel="Close confirmation"
         />
-        <View style={styles.card} accessibilityViewIsModal>
+        <Animated.View
+          entering={FadeIn.duration(DIALOG_TRANSITION_DURATION)}
+          style={styles.card}
+          accessibilityViewIsModal>
           <View style={styles.iconWrap}>{icon}</View>
 
           <Text style={styles.title}>{title}</Text>
@@ -80,7 +88,7 @@ export function ConfirmationDialog({
               )}
             </Pressable>
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -89,11 +97,11 @@ export function ConfirmationDialog({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: 'rgba(9,24,16,0.72)',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
   },
+  backdrop: { backgroundColor: 'rgba(9,24,16,0.72)' },
   card: {
     width: '100%',
     maxWidth: 380,

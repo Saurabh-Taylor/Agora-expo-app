@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useEffect } from 'react';
 
 import { hasCompletedOnboarding } from '@/commonFunctions';
-import { BrandedSplash } from '@/components/branded-splash';
+import { AppLoadingScreen } from '@/components/app-loading-screen';
 import { AuthRoutes } from '@/constants/commonConstants';
 
 export default function AuthEntryScreen() {
@@ -18,5 +18,5 @@ export default function AuthEntryScreen() {
     };
   }, []);
 
-  return <BrandedSplash />;
+  return <AppLoadingScreen message="Preparing sign in..." />;
 }

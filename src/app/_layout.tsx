@@ -18,7 +18,7 @@ import { useEffect } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { loadNotificationsModule } from '@/commonFunctions';
-import { BrandedSplash } from '@/components/branded-splash';
+import { AppLoadingScreen } from '@/components/app-loading-screen';
 import { SignOutDialog } from '@/components/sign-out-dialog';
 import { ToastHost } from '@/components/toast-host';
 import { AuthRoutes, Colors, FontFamily, Radius } from '@/constants/commonConstants';
@@ -96,8 +96,10 @@ function RootNavigator() {
     };
   }, [profile]);
 
-  if (isInitializing || (session && !isPasswordRecovery && profileQuery.isPending)) {
-    return <BrandedSplash accessibilityLabel={isInitializing ? 'Restoring your session' : 'Loading your account'} />;
+  if (isInitializing) return null;
+
+  if (session && !isPasswordRecovery && profileQuery.isPending) {
+    return <AppLoadingScreen message="Loading your account..." />;
   }
 
   // The access token is still technically valid, but the profile it should
@@ -177,6 +179,7 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  const isInitializing = useAuthStore((state) => state.isInitializing);
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_500Medium,
     BricolageGrotesque_600SemiBold,
@@ -189,10 +192,10 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync();
-  }, [fontsLoaded]);
+    if (fontsLoaded && !isInitializing) void SplashScreen.hideAsync();
+  }, [fontsLoaded, isInitializing]);
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded || isInitializing) return null;
 
   return (
     <QueryClientProvider client={queryClient}>
