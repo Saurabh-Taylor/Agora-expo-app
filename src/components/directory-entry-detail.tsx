@@ -149,9 +149,9 @@ export function DirectoryEntryDetail({ kind, id }: DirectoryEntryDetailProps) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.adminCanvas },
-  stateScreen: { flex: 1, backgroundColor: Colors.adminCanvas, paddingTop: 66, paddingHorizontal: 20 },
+  stateScreen: { flex: 1, backgroundColor: Colors.adminCanvas, paddingHorizontal: 20 },
   flex: { flex: 1 },
-  content: { paddingTop: 66, paddingHorizontal: 20, paddingBottom: 48 },
+  content: { paddingHorizontal: 20, paddingBottom: 48 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   editButton: {
     minWidth: 64,

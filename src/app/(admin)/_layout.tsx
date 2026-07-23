@@ -1,9 +1,30 @@
 import { Stack } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Colors } from '@/constants/commonConstants';
+
+const ADMIN_STACK_CONTENT_TOP_GAP = 18;
 
 export default function AdminLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" />
+    <Stack
+      screenOptions={{
+        animation: 'ios_from_right',
+        animationTypeForReplace: 'push',
+        headerShown: false,
+        contentStyle: {
+          backgroundColor: Colors.adminCanvas,
+          paddingTop: insets.top + ADMIN_STACK_CONTENT_TOP_GAP,
+        },
+      }}>
+      <Stack.Screen
+        name="(tabs)"
+        options={{
+          contentStyle: { backgroundColor: Colors.adminCanvas, paddingTop: 0 },
+        }}
+      />
       <Stack.Screen name="tower/[id]" />
       <Stack.Screen name="resident/[id]" />
       <Stack.Screen name="add-tower" />

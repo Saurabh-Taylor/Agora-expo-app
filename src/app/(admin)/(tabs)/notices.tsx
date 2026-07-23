@@ -1,10 +1,12 @@
 import { router, type Href } from 'expo-router';
+import { useMemo } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { formatDate, getNoticeCategoryStyle } from '@/commonFunctions';
+import { AdminTabHeader } from '@/components/admin-tab-header';
 import { AsyncState } from '@/components/async-state';
 import { StatusPill } from '@/components/status-pill';
-import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
+import { Colors, Radius } from '@/constants/commonConstants';
 import { useNotices, useNoticesRealtimeSync } from '@/features/notices/api';
 import { useProfile } from '@/features/profile/api';
 import { useAuthStore } from '@/stores/auth-store';
@@ -14,19 +16,25 @@ export default function NoticesScreen() {
   const profileQuery = useProfile(session?.user.id);
   const noticesQuery = useNotices(profileQuery.data?.society_id);
   useNoticesRealtimeSync(profileQuery.data?.society_id);
-  const notices = noticesQuery.data ?? [];
-  const publishedCount = notices.filter((notice) => notice.state === 'PUBLISHED' && !notice.archived_at).length;
-  const draftCount = notices.filter((notice) => notice.state !== 'PUBLISHED' && !notice.archived_at).length;
-  const archivedCount = notices.filter((notice) => !!notice.archived_at).length;
+  const notices = useMemo(() => noticesQuery.data ?? [], [noticesQuery.data]);
+  const { publishedCount, draftCount, archivedCount } = useMemo(() => {
+    let published = 0;
+    let drafts = 0;
+    let archived = 0;
+    for (const notice of notices) {
+      if (notice.archived_at) archived += 1;
+      else if (notice.state === 'PUBLISHED') published += 1;
+      else drafts += 1;
+    }
+    return { publishedCount: published, draftCount: drafts, archivedCount: archived };
+  }, [notices]);
 
   return (
     <View style={styles.root}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Notices</Text>
-        <Text style={styles.headerSubtitle}>
-          {publishedCount} published - {draftCount} drafts - {archivedCount} archived
-        </Text>
-      </View>
+      <AdminTabHeader
+        title="Notices"
+        subtitle={publishedCount + ' published · ' + draftCount + ' drafts · ' + archivedCount + ' archived'}
+      />
 
       <View style={styles.body}>
         <FlatList
@@ -90,10 +98,7 @@ export default function NoticesScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.adminCanvas },
-  header: { backgroundColor: Colors.green400, paddingTop: 58, paddingHorizontal: 20, paddingBottom: 30 },
-  headerTitle: { fontFamily: FontFamily.headingExtraBold, fontSize: 26, color: Colors.textOnDark },
-  headerSubtitle: { fontSize: 13, color: 'rgba(247,244,236,0.68)', marginTop: 5 },
-  body: { flex: 1, paddingHorizontal: 16, marginTop: -10 },
+  body: { flex: 1, paddingHorizontal: 16, marginTop: -26 },
   listContent: { paddingTop: 16, paddingBottom: 100, gap: 10 },
   card: {
     backgroundColor: Colors.surface,

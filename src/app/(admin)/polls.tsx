@@ -66,7 +66,7 @@ export default function PollsScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.adminCanvas, paddingTop: 66, paddingHorizontal: 16 },
+  root: { flex: 1, backgroundColor: Colors.adminCanvas, paddingHorizontal: 16 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   title: { fontFamily: FontFamily.headingExtraBold, fontSize: 22 },
   list: { marginTop: 18 },

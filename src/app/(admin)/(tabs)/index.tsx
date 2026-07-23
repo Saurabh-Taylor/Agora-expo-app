@@ -1,254 +1,386 @@
-import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import { router, type Href } from 'expo-router';
+import { useMemo } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import {
+  AdminDashboardActionCard,
+  AdminDashboardGrid,
+  AdminDashboardListRow,
+  AdminDashboardMetricCard,
+  AdminDashboardPanel,
+  AdminDashboardSection,
+} from '@/components/admin-dashboard';
 import { AsyncState } from '@/components/async-state';
 import { AgoraLogo } from '@/components/icons/agora-logo';
-import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
+import { AgoraSymbol, type AgoraSymbolName } from '@/components/icons/agora-symbol';
 import { getInitials, getTimeBasedGreeting } from '@/commonFunctions';
-import { useOpenComplaintsCount } from '@/features/complaints/api';
+import {
+  type AdminDashboardTone,
+  AdminDashboardTones,
+  Colors,
+  FontFamily,
+  Radius,
+} from '@/constants/commonConstants';
 import { usePendingBookingsCount, useTodaysBookings } from '@/features/amenities/api';
 import { useRecentAuditEvents } from '@/features/audit/api';
+import { useOpenComplaintsCount } from '@/features/complaints/api';
 import { useFlats } from '@/features/flats/api';
 import { useProfile } from '@/features/profile/api';
 import { useResidents } from '@/features/residents/api';
 import { useAuthStore } from '@/stores/auth-store';
 
-function ShieldAlertIcon() {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 3.5l9.5 16.5H2.5L12 3.5z" stroke={Colors.danger500} strokeWidth={1.8} strokeLinejoin="round" />
-      <Path d="M12 10v4M12 16.5h.01" stroke={Colors.danger500} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
-}
+type QuickAction = {
+  label: string;
+  supportingText: string;
+  icon: AgoraSymbolName;
+  tone: AdminDashboardTone;
+  route: Href;
+};
 
-function VerifyIcon() {
-  return (
-    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-      <Circle cx={9} cy={8} r={3} stroke={Colors.success700} strokeWidth={1.8} />
-      <Path d="M3.5 19c0-3.2 2.6-5.3 5.5-5.3s5.5 2.1 5.5 5.3" stroke={Colors.success700} strokeWidth={1.8} />
-      <Path d="M15 12l1.6 1.6L20 10" stroke={Colors.success700} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
+const QUICK_ACTIONS = [
+  {
+    label: 'Add resident',
+    supportingText: 'Create account',
+    icon: 'addResident',
+    tone: 'green',
+    route: '/(admin)/add-resident',
+  },
+  {
+    label: 'Publish notice',
+    supportingText: 'Reach everyone',
+    icon: 'notice',
+    tone: 'gold',
+    route: '/(admin)/compose-notice',
+  },
+  {
+    label: 'Create poll',
+    supportingText: 'Collect votes',
+    icon: 'poll',
+    tone: 'purple',
+    route: '/(admin)/create-poll',
+  },
+  {
+    label: 'Complaints',
+    supportingText: 'Review helpdesk',
+    icon: 'complaint',
+    tone: 'red',
+    route: '/(admin)/(tabs)/complaints',
+  },
+  {
+    label: 'Add staff',
+    supportingText: 'Build directory',
+    icon: 'staff',
+    tone: 'blue',
+    route: '/(admin)/add-staff',
+  },
+  {
+    label: 'Amenities',
+    supportingText: 'Manage spaces',
+    icon: 'amenity',
+    tone: 'green',
+    route: '/(admin)/amenities',
+  },
+  {
+    label: 'Audit trail',
+    supportingText: 'Review changes',
+    icon: 'audit',
+    tone: 'neutral',
+    route: '/(admin)/audit',
+  },
+  {
+    label: 'All modules',
+    supportingText: 'Explore more',
+    icon: 'more',
+    tone: 'gold',
+    route: '/(admin)/(tabs)/more',
+  },
+] as const satisfies readonly QuickAction[];
 
-function ComplaintIcon({ color = Colors.danger700 }: { color?: string }) {
-  return (
-    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 3.5l9.5 16.5H2.5L12 3.5z" stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
-      <Path d="M12 10v4M12 16.5h.01" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
-}
-
-function ApprovalsIcon() {
-  return (
-    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
-      <Rect x={5} y={3.5} width={14} height={17} rx={2} stroke="#9A6B14" strokeWidth={1.8} />
-      <Path d="M9 11l2 2 4-4.5" stroke="#9A6B14" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-function ResidentsIcon() {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Circle cx={9} cy={8} r={3.2} stroke={Colors.success700} strokeWidth={1.7} />
-      <Path d="M3 19.5c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" stroke={Colors.success700} strokeWidth={1.7} />
-      <Circle cx={17} cy={9} r={2.6} stroke={Colors.success700} strokeWidth={1.5} opacity={0.6} />
-    </Svg>
-  );
-}
-
-function FlatsIcon() {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Rect x={5} y={4} width={14} height={17} rx={1.5} stroke={Colors.textPrimary} strokeWidth={1.7} />
-      <Path d="M9 8h1M9 12h1M14 8h1M14 12h1M9 16h1M14 16h1" stroke={Colors.textPrimary} strokeWidth={1.7} strokeLinecap="round" />
-    </Svg>
-  );
-}
-
-function BookingsIcon() {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Rect x={4} y={5} width={16} height={15} rx={2} stroke="#9A6B14" strokeWidth={1.7} />
-      <Path d="M4 10h16M8 3v4M16 3v4" stroke="#9A6B14" strokeWidth={1.7} strokeLinecap="round" />
-    </Svg>
-  );
-}
+type PriorityItem = {
+  count: number;
+  title: string;
+  subtitle: string;
+  icon: AgoraSymbolName;
+  tone: AdminDashboardTone;
+  route: Href;
+};
 
 export default function AdminHomeScreen() {
   const session = useAuthStore((state) => state.session);
   const profileQuery = useProfile(session?.user.id);
-  const residentsQuery = useResidents(profileQuery.data?.society_id);
-  const flatsQuery = useFlats(profileQuery.data?.society_id);
-  const openComplaintsQuery = useOpenComplaintsCount(profileQuery.data?.society_id);
-  const pendingBookingsQuery = usePendingBookingsCount(profileQuery.data?.society_id);
-  const todaysBookingsQuery = useTodaysBookings(profileQuery.data?.society_id);
-  const auditQuery = useRecentAuditEvents(profileQuery.data?.society_id, 3);
+  const societyId = profileQuery.data?.society_id;
+  const residentsQuery = useResidents(societyId);
+  const flatsQuery = useFlats(societyId);
+  const openComplaintsQuery = useOpenComplaintsCount(societyId);
+  const pendingBookingsQuery = usePendingBookingsCount(societyId);
+  const todaysBookingsQuery = useTodaysBookings(societyId);
+  const auditQuery = useRecentAuditEvents(societyId, 3);
 
   const profile = profileQuery.data;
-  const pendingVerifyCount = residentsQuery.data?.filter((resident) => resident.is_active && !resident.is_verified).length ?? 0;
+  const pendingVerifyCount = useMemo(
+    () => residentsQuery.data?.filter((resident) => resident.is_active && !resident.is_verified).length ?? 0,
+    [residentsQuery.data],
+  );
   const openComplaints = openComplaintsQuery.data ?? 0;
   const pendingBookings = pendingBookingsQuery.data ?? 0;
-  const priorityCount = pendingVerifyCount + openComplaints + pendingBookings;
+  const priorityItems = useMemo<PriorityItem[]>(
+    () =>
+      [
+        {
+          count: pendingVerifyCount,
+          title: 'Resident verification',
+          subtitle: 'Review pending resident access',
+          icon: 'verification' as const,
+          tone: 'green' as const,
+          route: '/(admin)/(tabs)/community' as Href,
+        },
+        {
+          count: openComplaints,
+          title: 'Open complaints',
+          subtitle: 'Triage unresolved requests',
+          icon: 'complaint' as const,
+          tone: 'red' as const,
+          route: '/(admin)/(tabs)/complaints' as Href,
+        },
+        {
+          count: pendingBookings,
+          title: 'Booking approvals',
+          subtitle: 'Review amenity requests',
+          icon: 'booking' as const,
+          tone: 'gold' as const,
+          route: '/(admin)/amenities' as Href,
+        },
+      ].filter((item) => item.count > 0),
+    [openComplaints, pendingBookings, pendingVerifyCount],
+  );
 
-  const quickActions = [
-    { label: 'Add Resident', bg: '#E9F1EC', Icon: ResidentsIcon, go: () => router.push('/(admin)/add-resident') },
-    { label: 'Publish Notice', bg: '#F6ECD8', Icon: BookingsIcon, go: () => router.push('/(admin)/compose-notice') },
-    { label: 'Create Poll', bg: '#EFEAF7', Icon: BookingsIcon, go: () => router.push('/(admin)/create-poll') },
-    { label: 'Review Complaints', bg: '#F9E4E1', Icon: ComplaintIcon, go: () => router.push('/(admin)/(tabs)/complaints') },
-    { label: 'Add Staff', bg: '#E4EFF5', Icon: ResidentsIcon, go: () => router.push('/(admin)/add-staff') },
-    { label: 'Manage Amenity', bg: '#E9F1EC', Icon: BookingsIcon, go: () => router.push('/(admin)/amenities') },
-    { label: 'Audit Trail', bg: '#EEEDE4', Icon: FlatsIcon, go: () => router.push('/(admin)/audit') },
-    { label: 'More', bg: '#EEEDE4', Icon: FlatsIcon, go: () => router.push('/(admin)/(tabs)/more') },
-  ];
+  const priorityCount = priorityItems.reduce((total, item) => total + item.count, 0);
+  const priorityIsLoading =
+    residentsQuery.isLoading || openComplaintsQuery.isLoading || pendingBookingsQuery.isLoading;
+  const priorityIsError =
+    residentsQuery.isError || openComplaintsQuery.isError || pendingBookingsQuery.isError;
+  const firstName = profile?.full_name.split(' ')[0] ?? 'Admin';
+  const societyName = profile?.society?.name ?? (profileQuery.isLoading ? 'Loading society...' : 'Your society');
+  const todayLabel = new Date().toLocaleDateString([], {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'short',
+  });
+
+  function retryPriorities() {
+    residentsQuery.refetch();
+    openComplaintsQuery.refetch();
+    pendingBookingsQuery.refetch();
+  }
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.scrollContent}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={styles.scrollContent}
+      bounces={false}
+      overScrollMode="never"
+      showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
+        <View pointerEvents="none" style={styles.headerOrbLarge} />
+        <View pointerEvents="none" style={styles.headerOrbSmall} />
+
         <View style={styles.headerTopRow}>
           <View style={styles.brandRow}>
-            <AgoraLogo size={24} />
+            <AgoraLogo size={25} />
             <Text style={styles.brandLabel}>Agora</Text>
+            <View style={styles.adminBadge}>
+              <Text style={styles.adminBadgeLabel}>ADMIN</Text>
+            </View>
           </View>
           <View style={styles.avatar}>
-            <Text style={styles.avatarLabel}>{profile ? getInitials(profile.full_name) : ''}</Text>
+            <Text style={styles.avatarLabel}>{profile ? getInitials(profile.full_name) : 'A'}</Text>
           </View>
         </View>
-        <Text style={styles.greeting}>
-          {getTimeBasedGreeting()}, {profile?.full_name.split(' ')[0] ?? ''}
+
+        <Text style={styles.headerEyebrow}>{todayLabel.toUpperCase()}</Text>
+        <Text style={styles.greeting} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+          {getTimeBasedGreeting()}, {firstName}
         </Text>
-        <Text style={styles.societyName}>{profile?.society?.name ?? ''}</Text>
+        <View style={styles.societyPill}>
+          <AgoraSymbol name="flats" color={Colors.gold} size={17} />
+          <Text style={styles.societyName} numberOfLines={1}>
+            {societyName}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.body}>
-        {priorityCount > 0 ? (
-          <View style={styles.priorityCard}>
-            <View style={styles.priorityHeaderRow}>
-              <View style={styles.priorityIconWrap}>
-                <ShieldAlertIcon />
-              </View>
-              <Text style={styles.priorityTitle}>Priority Actions</Text>
-            </View>
-            <Text style={styles.prioritySub}>You have {priorityCount} pending items that need your attention.</Text>
-            <View style={styles.priorityStatsRow}>
-              <Pressable style={styles.priorityStat} onPress={() => router.push('/(admin)/(tabs)/community')}>
-                <View style={styles.priorityStatTop}>
-                  <VerifyIcon />
-                  <Text style={styles.priorityStatValue}>{pendingVerifyCount}</Text>
-                </View>
-                <Text style={styles.priorityStatLabel}>Resident Verifications</Text>
-              </Pressable>
-              <Pressable style={styles.priorityStat} onPress={() => router.push('/(admin)/(tabs)/complaints')}>
-                <View style={styles.priorityStatTop}>
-                  <ComplaintIcon />
-                  <Text style={styles.priorityStatValue}>{openComplaints}</Text>
-                </View>
-                <Text style={styles.priorityStatLabel}>Open Complaints</Text>
-              </Pressable>
-              <Pressable style={styles.priorityStat} onPress={() => router.push('/(admin)/amenities')}>
-                <View style={styles.priorityStatTop}>
-                  <ApprovalsIcon />
-                  <Text style={styles.priorityStatValue}>{pendingBookings}</Text>
-                </View>
-                <Text style={styles.priorityStatLabel}>Approvals</Text>
-              </Pressable>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.allCaughtUpCard}>
-            <Text style={styles.allCaughtUpTitle}>You&apos;re all caught up</Text>
-            <Text style={styles.allCaughtUpSub}>No pending verifications, complaints or approvals</Text>
-          </View>
-        )}
-
-        <Text style={styles.sectionTitle}>Overview</Text>
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <ResidentsIcon />
-            <Text style={styles.statValue}>{residentsQuery.data?.length ?? 0}</Text>
-            <Text style={styles.statLabel}>Total Residents</Text>
-          </View>
-          <View style={styles.statCard}>
-            <FlatsIcon />
-            <Text style={styles.statValue}>{flatsQuery.data?.length ?? 0}</Text>
-            <Text style={styles.statLabel}>Total Flats</Text>
-          </View>
-          <View style={styles.statCard}>
-            <ComplaintIcon />
-            <Text style={styles.statValue}>{openComplaints}</Text>
-            <Text style={styles.statLabel}>Open Complaints</Text>
-          </View>
-          <View style={styles.statCard}>
-            <BookingsIcon />
-            <Text style={styles.statValue}>{todaysBookingsQuery.data?.length ?? 0}</Text>
-            <Text style={styles.statLabel}>Bookings Today</Text>
-          </View>
-        </View>
-
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.quickActionsGrid}>
-          {quickActions.map((action) => (
-            <Pressable key={action.label} style={styles.quickAction} onPress={action.go}>
-              <View style={[styles.quickActionIcon, { backgroundColor: action.bg }]}>
-                <action.Icon />
-              </View>
-              <Text style={styles.quickActionLabel}>{action.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <Text style={styles.sectionTitle}>Today&apos;s Operations</Text>
-        <View style={styles.opsCard}>
-          <AsyncState
-            isLoading={todaysBookingsQuery.isLoading}
-            isError={todaysBookingsQuery.isError}
-            onRetry={() => todaysBookingsQuery.refetch()}
-            isEmpty={todaysBookingsQuery.data?.length === 0}
-            emptyMessage="Nothing scheduled for today."
-          />
-          {todaysBookingsQuery.data?.map((booking) => (
-            <View key={booking.id} style={styles.opRow}>
-              <View style={styles.opIconWrap}>
-                <BookingsIcon />
+        <View style={styles.priorityCard}>
+          <View style={styles.priorityHeader}>
+            <View style={styles.priorityTitleRow}>
+              <View style={styles.priorityHeaderIcon}>
+                <AgoraSymbol name="attention" color={Colors.danger700} size={21} />
               </View>
               <View style={styles.flex}>
-                <Text style={styles.opTitle}>{booking.amenity?.name ?? 'Amenity'}</Text>
-                <Text style={styles.opSub}>
-                  {new Date(booking.slot_start).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-                </Text>
+                <Text style={styles.priorityEyebrow}>ACTION QUEUE</Text>
+                <Text style={styles.priorityTitle}>Needs your attention</Text>
               </View>
-              <View style={styles.confirmedPill}>
-                <Text style={styles.confirmedLabel}>Confirmed</Text>
-              </View>
+              {!priorityIsLoading && !priorityIsError && (
+                <View style={styles.priorityCountBadge}>
+                  <Text style={styles.priorityCountLabel}>{priorityCount}</Text>
+                </View>
+              )}
             </View>
-          ))}
+
+            {priorityIsLoading ? (
+              <View style={styles.priorityState}>
+                <ActivityIndicator color={Colors.success700} />
+                <Text style={styles.priorityStateLabel}>Checking today&apos;s priorities...</Text>
+              </View>
+            ) : priorityIsError ? (
+              <AsyncState
+                isLoading={false}
+                isError
+                onRetry={retryPriorities}
+                errorTitle="Couldn't check your priorities"
+                errorMessage="The rest of the dashboard is still available."
+              />
+            ) : priorityItems.length > 0 ? (
+              <AdminDashboardPanel>
+                {priorityItems.map((item, index) => (
+                  <AdminDashboardListRow
+                    key={item.title}
+                    icon={item.icon}
+                    tone={item.tone}
+                    title={item.title}
+                    subtitle={item.subtitle}
+                    trailing={
+                      <View style={[styles.rowCount, { backgroundColor: AdminDashboardTones[item.tone].background }]}>
+                        <Text style={[styles.rowCountLabel, { color: AdminDashboardTones[item.tone].foreground }]}>
+                          {item.count}
+                        </Text>
+                      </View>
+                    }
+                    onPress={() => router.push(item.route)}
+                    showChevron
+                    isLast={index === priorityItems.length - 1}
+                  />
+                ))}
+              </AdminDashboardPanel>
+            ) : (
+              <View style={styles.caughtUp}>
+                <View style={styles.caughtUpIcon}>
+                  <AgoraSymbol name="success" color={Colors.success700} size={24} />
+                </View>
+                <View style={styles.flex}>
+                  <Text style={styles.caughtUpTitle}>Everything is on track</Text>
+                  <Text style={styles.caughtUpSubtitle}>No pending approvals or unresolved actions.</Text>
+                </View>
+              </View>
+            )}
+          </View>
         </View>
 
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
-        </View>
-        <View style={styles.opsCard}>
-          <AsyncState
-            isLoading={auditQuery.isLoading}
-            isError={auditQuery.isError}
-            onRetry={() => auditQuery.refetch()}
-            isEmpty={auditQuery.data?.length === 0}
-            emptyMessage="No recent activity yet."
-          />
-          {auditQuery.data?.map((event) => (
-            <View key={event.id} style={styles.activityRow}>
-              <View style={styles.activityDot} />
-              <View style={styles.flex}>
-                <Text style={styles.activityText}>{event.action}</Text>
-                <Text style={styles.activityMeta}>{new Date(event.created_at).toLocaleString()}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
+        <AdminDashboardSection title="Society at a glance" subtitle="A live snapshot of today's operations">
+          <AdminDashboardGrid>
+            <AdminDashboardMetricCard
+              icon="residents"
+              tone="green"
+              value={residentsQuery.isLoading ? '--' : (residentsQuery.data?.length ?? 0)}
+              label="Residents"
+              supportingText="Community members"
+              onPress={() => router.push('/(admin)/(tabs)/community')}
+            />
+            <AdminDashboardMetricCard
+              icon="flats"
+              tone="neutral"
+              value={flatsQuery.isLoading ? '--' : (flatsQuery.data?.length ?? 0)}
+              label="Flats"
+              supportingText="Homes configured"
+              onPress={() => router.push('/(admin)/(tabs)/community')}
+            />
+            <AdminDashboardMetricCard
+              icon="complaint"
+              tone="red"
+              value={openComplaintsQuery.isLoading ? '--' : openComplaints}
+              label="Open complaints"
+              supportingText="Awaiting resolution"
+              onPress={() => router.push('/(admin)/(tabs)/complaints')}
+            />
+            <AdminDashboardMetricCard
+              icon="booking"
+              tone="gold"
+              value={todaysBookingsQuery.isLoading ? '--' : (todaysBookingsQuery.data?.length ?? 0)}
+              label="Bookings today"
+              supportingText="Amenity schedule"
+              onPress={() => router.push('/(admin)/amenities')}
+            />
+          </AdminDashboardGrid>
+        </AdminDashboardSection>
+
+        <AdminDashboardSection title="Quick actions" subtitle="Frequent admin tasks, one tap away">
+          <AdminDashboardGrid>
+            {QUICK_ACTIONS.map((action) => (
+              <AdminDashboardActionCard
+                key={action.label}
+                icon={action.icon}
+                tone={action.tone}
+                label={action.label}
+                supportingText={action.supportingText}
+                onPress={() => router.push(action.route)}
+              />
+            ))}
+          </AdminDashboardGrid>
+        </AdminDashboardSection>
+
+        <AdminDashboardSection title="Today's bookings" subtitle="Confirmed amenity activity">
+          <AdminDashboardPanel>
+            <AsyncState
+              isLoading={todaysBookingsQuery.isLoading}
+              isError={todaysBookingsQuery.isError}
+              onRetry={() => todaysBookingsQuery.refetch()}
+              isEmpty={todaysBookingsQuery.data?.length === 0}
+              emptyTitle="No bookings today"
+              emptyMessage="Today's amenity schedule is clear."
+            />
+            {todaysBookingsQuery.data?.map((booking, index) => (
+              <AdminDashboardListRow
+                key={booking.id}
+                icon="booking"
+                tone="gold"
+                title={booking.amenity?.name ?? 'Amenity booking'}
+                subtitle={new Date(booking.slot_start).toLocaleTimeString([], {
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })}
+                trailing={
+                  <View style={styles.statusPill}>
+                    <Text style={styles.statusLabel}>Confirmed</Text>
+                  </View>
+                }
+                isLast={index === (todaysBookingsQuery.data?.length ?? 0) - 1}
+              />
+            ))}
+          </AdminDashboardPanel>
+        </AdminDashboardSection>
+
+        <AdminDashboardSection title="Recent activity" subtitle="Latest administrative changes">
+          <AdminDashboardPanel>
+            <AsyncState
+              isLoading={auditQuery.isLoading}
+              isError={auditQuery.isError}
+              onRetry={() => auditQuery.refetch()}
+              isEmpty={auditQuery.data?.length === 0}
+              emptyTitle="No recent activity"
+              emptyMessage="Administrative changes will appear here."
+            />
+            {auditQuery.data?.map((event, index) => (
+              <AdminDashboardListRow
+                key={event.id}
+                icon="audit"
+                tone="neutral"
+                title={event.action}
+                subtitle={new Date(event.created_at).toLocaleString()}
+                isLast={index === (auditQuery.data?.length ?? 0) - 1}
+              />
+            ))}
+          </AdminDashboardPanel>
+        </AdminDashboardSection>
       </View>
     </ScrollView>
   );
@@ -256,79 +388,214 @@ export default function AdminHomeScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.adminCanvas },
-  scrollContent: { paddingBottom: 108 },
-  flex: { flex: 1 },
+  scrollContent: { paddingBottom: 120 },
+  flex: { flex: 1, minWidth: 0 },
   header: {
-    backgroundColor: Colors.green400,
-    paddingTop: 58,
+    overflow: 'hidden',
+    paddingTop: 56,
     paddingHorizontal: 20,
-    paddingBottom: 60,
+    paddingBottom: 70,
+    backgroundColor: Colors.green400,
+  },
+  headerOrbLarge: {
+    position: 'absolute',
+    width: 230,
+    height: 230,
+    top: -70,
+    right: -88,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.035)',
+  },
+  headerOrbSmall: {
+    position: 'absolute',
+    width: 104,
+    height: 104,
+    right: 42,
+    bottom: 22,
+    borderRadius: 999,
+    backgroundColor: 'rgba(231,163,60,0.07)',
   },
   headerTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  brandLabel: { fontFamily: FontFamily.headingExtraBold, fontSize: 19, color: Colors.textOnDark },
+  brandLabel: {
+    fontFamily: FontFamily.headingExtraBold,
+    fontSize: 20,
+    color: Colors.textOnDark,
+  },
+  adminBadge: {
+    marginLeft: 3,
+    paddingVertical: 4,
+    paddingHorizontal: 7,
+    borderRadius: Radius.pill,
+    backgroundColor: 'rgba(231,163,60,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(231,163,60,0.35)',
+  },
+  adminBadgeLabel: {
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 8.5,
+    letterSpacing: 0.8,
+    color: Colors.gold,
+  },
   avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 999,
-    backgroundColor: Colors.textOnDark,
-    borderWidth: 2,
-    borderColor: Colors.gold,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: Colors.gold,
+    backgroundColor: Colors.textOnDark,
   },
-  avatarLabel: { fontFamily: FontFamily.headingBold, fontSize: 14, color: Colors.green500 },
-  greeting: { fontFamily: FontFamily.headingExtraBold, fontSize: 22, color: Colors.textOnDark, marginTop: 20 },
-  societyName: { fontSize: 14, fontWeight: '600', color: 'rgba(247,244,236,0.72)', marginTop: 6 },
-  body: { paddingHorizontal: 16, marginTop: -40 },
-  priorityCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.cardLarge - 2,
-    padding: 18,
-    shadowColor: '#10261B',
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.16,
-    shadowRadius: 32,
-    elevation: 4,
+  avatarLabel: {
+    fontFamily: FontFamily.headingBold,
+    fontSize: 15,
+    color: Colors.green500,
   },
-  priorityHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 11 },
-  priorityIconWrap: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#FBE7E2', alignItems: 'center', justifyContent: 'center' },
-  priorityTitle: { fontFamily: FontFamily.headingExtraBold, fontSize: 16, color: Colors.textPrimary, flex: 1 },
-  prioritySub: { fontSize: 13, color: Colors.textMuted, marginTop: 8, lineHeight: 19 },
-  priorityStatsRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
-  priorityStat: { flex: 1, backgroundColor: '#F7F4EC', borderWidth: 1, borderColor: Colors.border, borderRadius: 14, padding: 11 },
-  priorityStatTop: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  priorityStatValue: { fontFamily: FontFamily.headingExtraBold, fontSize: 16 },
-  priorityStatLabel: { fontSize: 10.5, color: Colors.textMuted, marginTop: 5, lineHeight: 13 },
-  allCaughtUpCard: {
-    backgroundColor: '#E9F1EC',
-    borderWidth: 1,
-    borderColor: '#CFE3D8',
-    borderRadius: Radius.cardLarge - 2,
-    padding: 20,
+  headerEyebrow: {
+    marginTop: 22,
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: Colors.gold,
+  },
+  greeting: {
+    marginTop: 7,
+    fontFamily: FontFamily.headingExtraBold,
+    fontSize: 29,
+    lineHeight: 32,
+    color: Colors.textOnDark,
+  },
+  societyPill: {
+    alignSelf: 'flex-start',
+    maxWidth: '90%',
+    minHeight: 34,
+    marginTop: 14,
+    paddingVertical: 7,
+    paddingHorizontal: 11,
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 7,
+    borderRadius: Radius.pill,
+    backgroundColor: 'rgba(247,244,236,0.09)',
+    borderWidth: 1,
+    borderColor: 'rgba(247,244,236,0.12)',
   },
-  allCaughtUpTitle: { fontSize: 14.5, fontWeight: '700', color: Colors.success700 },
-  allCaughtUpSub: { fontSize: 12.5, color: '#3E6B50', marginTop: 3 },
-  sectionTitle: { fontFamily: FontFamily.headingBold, fontSize: 17, marginTop: 24 },
-  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 11, marginTop: 12 },
-  statCard: { width: '47.5%', backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 18, padding: 15 },
-  statValue: { fontFamily: FontFamily.headingExtraBold, fontSize: 23, marginTop: 10 },
-  statLabel: { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
-  quickActionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9, marginTop: 12 },
-  quickAction: { width: '22%', alignItems: 'center' },
-  quickActionIcon: { width: '100%', aspectRatio: 1, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  quickActionLabel: { fontSize: 10.5, fontWeight: '600', marginTop: 7, textAlign: 'center', lineHeight: 13 },
-  opsCard: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 20, marginTop: 12 },
-  opRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#F0ECE0' },
-  opIconWrap: { width: 38, height: 38, borderRadius: 11, backgroundColor: '#F6ECD8', alignItems: 'center', justifyContent: 'center' },
-  opTitle: { fontSize: 14, fontWeight: '600' },
-  opSub: { fontSize: 12, color: Colors.textMuted, marginTop: 1 },
-  confirmedPill: { backgroundColor: '#E3F2E9', borderRadius: 999, paddingVertical: 4, paddingHorizontal: 10 },
-  confirmedLabel: { fontSize: 11, fontWeight: '700', color: Colors.success600 },
-  activityRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#F0ECE0' },
-  activityDot: { width: 8, height: 8, borderRadius: 999, backgroundColor: Colors.success600 },
-  activityText: { fontSize: 13.5, color: '#2C3830', lineHeight: 18 },
-  activityMeta: { fontSize: 11.5, color: Colors.textFaint, marginTop: 2 },
+  societyName: {
+    flexShrink: 1,
+    fontFamily: FontFamily.bodyMedium,
+    fontSize: 12.5,
+    color: 'rgba(247,244,236,0.82)',
+  },
+  body: { paddingHorizontal: 16, marginTop: -52 },
+  priorityCard: {
+    padding: 16,
+    borderRadius: Radius.cardLarge,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    shadowColor: Colors.green900,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 28,
+    elevation: 5,
+  },
+  priorityHeader: { gap: 14 },
+  priorityTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  priorityHeaderIcon: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    backgroundColor: AdminDashboardTones.red.background,
+  },
+  priorityEyebrow: {
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 9,
+    letterSpacing: 1.2,
+    color: Colors.textMuted,
+  },
+  priorityTitle: {
+    marginTop: 2,
+    fontFamily: FontFamily.headingBold,
+    fontSize: 17,
+    color: Colors.textPrimary,
+  },
+  priorityCountBadge: {
+    minWidth: 30,
+    height: 30,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 15,
+    backgroundColor: AdminDashboardTones.red.background,
+  },
+  priorityCountLabel: {
+    fontFamily: FontFamily.headingBold,
+    fontSize: 13,
+    color: Colors.danger700,
+  },
+  priorityState: {
+    minHeight: 82,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  priorityStateLabel: {
+    fontFamily: FontFamily.bodyRegular,
+    fontSize: 12.5,
+    color: Colors.textMuted,
+  },
+  rowCount: {
+    minWidth: 27,
+    height: 27,
+    paddingHorizontal: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+  },
+  rowCountLabel: {
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 12,
+  },
+  caughtUp: {
+    minHeight: 78,
+    padding: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: Radius.card,
+    backgroundColor: AdminDashboardTones.green.background,
+  },
+  caughtUpIcon: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 21,
+    backgroundColor: Colors.surface,
+  },
+  caughtUpTitle: {
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 13.5,
+    color: Colors.success700,
+  },
+  caughtUpSubtitle: {
+    marginTop: 2,
+    fontFamily: FontFamily.bodyRegular,
+    fontSize: 11.5,
+    color: AdminDashboardTones.green.foreground,
+  },
+  statusPill: {
+    paddingVertical: 5,
+    paddingHorizontal: 9,
+    borderRadius: Radius.pill,
+    backgroundColor: AdminDashboardTones.green.background,
+  },
+  statusLabel: {
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 10.5,
+    color: Colors.success700,
+  },
 });

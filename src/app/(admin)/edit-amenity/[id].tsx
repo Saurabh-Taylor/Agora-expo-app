@@ -5,7 +5,7 @@ import { getErrorMessage } from '@/commonFunctions';
 import { AmenityForm, type AmenityFormValue } from '@/components/amenity-form';
 import { AsyncState } from '@/components/async-state';
 import { Colors } from '@/constants/commonConstants';
-import { useAmenityDetail, useUpdateAmenity } from '@/features/amenities/api';
+import { useAmenityDetail, useAmenityImageUrls, useSetAmenityImages, useUpdateAmenity } from '@/features/amenities/api';
 import { useProfile } from '@/features/profile/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { showToast } from '@/stores/toast-store';
@@ -16,12 +16,17 @@ export default function EditAmenityScreen() {
   const profileQuery = useProfile(session?.user.id);
   const amenityQuery = useAmenityDetail(id, profileQuery.data?.society_id);
   const updateAmenity = useUpdateAmenity();
+  const setAmenityImages = useSetAmenityImages();
   const amenity = amenityQuery.data;
+  const imageUrlsQuery = useAmenityImageUrls(amenity?.image_paths ?? [], profileQuery.data?.society_id);
+  const isImageLoading = !!amenity?.image_paths.length && imageUrlsQuery.isLoading;
 
   async function handleSubmit(value: AmenityFormValue) {
     if (!amenity || !profileQuery.data) return;
     try {
-      await updateAmenity.mutateAsync({ id: amenity.id, societyId: profileQuery.data.society_id, ...value });
+      const { photos, ...details } = value;
+      await updateAmenity.mutateAsync({ id: amenity.id, societyId: profileQuery.data.society_id, ...details });
+      await setAmenityImages.mutateAsync({ amenityId: amenity.id, societyId: profileQuery.data.society_id, photos, previousPaths: amenity.image_paths });
       showToast('Amenity updated');
       router.back();
     } catch (error) {
@@ -29,15 +34,16 @@ export default function EditAmenityScreen() {
     }
   }
 
-  if (!amenity) {
+  if (!amenity || isImageLoading || imageUrlsQuery.isError) {
     return (
       <View style={{ flex: 1, backgroundColor: Colors.adminCanvas }}>
         <AsyncState
-          isLoading={profileQuery.isLoading || amenityQuery.isLoading}
-          isError={profileQuery.isError || amenityQuery.isError}
+          isLoading={profileQuery.isLoading || amenityQuery.isLoading || isImageLoading}
+          isError={profileQuery.isError || amenityQuery.isError || imageUrlsQuery.isError}
           onRetry={() => {
             profileQuery.refetch();
             amenityQuery.refetch();
+            imageUrlsQuery.refetch();
           }}
           isEmpty={!profileQuery.isLoading && !amenityQuery.isLoading && !profileQuery.isError && !amenityQuery.isError}
           emptyMessage="This amenity isn't available."
@@ -56,8 +62,9 @@ export default function EditAmenityScreen() {
         description: amenity.description ?? '',
         openTime: amenity.open_time?.slice(0, 5) ?? '07:00',
         closeTime: amenity.close_time?.slice(0, 5) ?? '21:00',
+        photos: amenity.image_paths.map((path) => ({ uri: imageUrlsQuery.data?.[path] ?? '', base64: null, fileSize: null, storagePath: path })),
       }}
-      isPending={updateAmenity.isPending}
+      isPending={updateAmenity.isPending || setAmenityImages.isPending}
       onSubmit={handleSubmit}
     />
   );

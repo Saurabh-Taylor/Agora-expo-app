@@ -107,7 +107,7 @@ export default function ComposeNoticeScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.adminCanvas },
-  content: { paddingTop: 66, paddingHorizontal: 20, paddingBottom: 40 },
+  content: { paddingHorizontal: 20, paddingBottom: 40 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   title: { fontFamily: FontFamily.headingExtraBold, fontSize: 22 },
   label: { fontSize: 11, letterSpacing: 1.5, fontWeight: '700', color: Colors.textMutedAlt, marginTop: 22 },

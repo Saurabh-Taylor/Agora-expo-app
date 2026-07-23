@@ -5,6 +5,7 @@ import { AdminTabBar, type AdminTabBarProps } from '@/components/admin-tab-bar';
 export default function AdminTabsLayout() {
   return (
     <Tabs
+      detachInactiveScreens={false}
       screenOptions={{ headerShown: false }}
       tabBar={(props) => <AdminTabBar {...(props as unknown as AdminTabBarProps)} />}>
       <Tabs.Screen name="index" />

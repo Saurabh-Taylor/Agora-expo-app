@@ -3,9 +3,10 @@ import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { formatDate, getComplaintPriorityStyle, getComplaintStatusStyle } from '@/commonFunctions';
+import { AdminTabbedHeader } from '@/components/admin-tabbed-header';
 import { AsyncState } from '@/components/async-state';
 import { StatusPill } from '@/components/status-pill';
-import { Colors, ComplaintStatuses, FontFamily, Radius } from '@/constants/commonConstants';
+import { Colors, ComplaintStatuses, Radius } from '@/constants/commonConstants';
 import { useAdminComplaints, useComplaintRealtimeSync, type ComplaintStatus } from '@/features/complaints/api';
 import { useProfile } from '@/features/profile/api';
 import { useAuthStore } from '@/stores/auth-store';
@@ -23,10 +24,19 @@ export default function AdminComplaintsScreen() {
   useComplaintRealtimeSync(profileQuery.data?.society_id);
   const [filter, setFilter] = useState<ComplaintStatus | 'ALL'>('ALL');
 
-  const openCount = complaints.filter((c) => c.status !== 'RESOLVED').length;
-  const resolvedToday = complaints.filter(
-    (c) => c.status === 'RESOLVED' && c.resolved_at && new Date(c.resolved_at).toDateString() === new Date().toDateString(),
-  ).length;
+  const { openCount, resolvedToday } = useMemo(() => {
+    const today = new Date().toDateString();
+    let open = 0;
+    let resolved = 0;
+    for (const complaint of complaints) {
+      if (complaint.status !== 'RESOLVED') {
+        open += 1;
+      } else if (complaint.resolved_at && new Date(complaint.resolved_at).toDateString() === today) {
+        resolved += 1;
+      }
+    }
+    return { openCount: open, resolvedToday: resolved };
+  }, [complaints]);
 
   const filtered = useMemo(
     () => (filter === 'ALL' ? complaints : complaints.filter((c) => c.status === filter)),
@@ -35,26 +45,14 @@ export default function AdminComplaintsScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={styles.headerBlock}>
-        <Text style={styles.title}>Complaints</Text>
-        <Text style={styles.subtitle}>
-          {openCount} open · {resolvedToday} resolved today
-        </Text>
-      </View>
-
-      <View style={styles.filterRow}>
-        {FILTERS.map((item) => {
-          const active = filter === item.value;
-          return (
-            <Pressable
-              key={item.value}
-              onPress={() => setFilter(item.value)}
-              style={[styles.filterChip, active ? styles.filterChipActive : styles.filterChipInactive]}>
-              <Text style={active ? styles.filterLabelActive : styles.filterLabelInactive}>{item.label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <AdminTabbedHeader
+        title="Operations"
+        subtitle={openCount + ' open complaints · ' + resolvedToday + ' resolved today'}
+        options={FILTERS}
+        value={filter}
+        onChange={setFilter}
+        accessibilityLabel="Complaint status filters"
+      />
 
       <FlatList
         style={styles.list}
@@ -100,15 +98,6 @@ export default function AdminComplaintsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.adminCanvas },
-  headerBlock: { paddingTop: 66, paddingHorizontal: 16 },
-  title: { fontFamily: FontFamily.headingExtraBold, fontSize: 26 },
-  subtitle: { fontSize: 13, color: Colors.textMuted, marginTop: 3 },
-  filterRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', paddingHorizontal: 16, marginTop: 16 },
-  filterChip: { paddingVertical: 9, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1.5 },
-  filterChipActive: { backgroundColor: Colors.green500, borderColor: Colors.green500 },
-  filterChipInactive: { backgroundColor: Colors.surface, borderColor: Colors.borderAlt },
-  filterLabelActive: { fontSize: 13, fontWeight: '600', color: Colors.textOnDark },
-  filterLabelInactive: { fontSize: 13, fontWeight: '600', color: '#3E4A40' },
   list: { flex: 1, paddingHorizontal: 16, marginTop: 4 },
   listContent: { paddingTop: 12, paddingBottom: 100, gap: 10 },
   card: {

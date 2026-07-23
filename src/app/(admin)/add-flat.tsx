@@ -143,8 +143,8 @@ export default function AddFlatScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.adminCanvas },
-  emptyRoot: { paddingTop: 66, paddingHorizontal: 20 },
-  content: { paddingTop: 66, paddingHorizontal: 20, paddingBottom: 40 },
+  emptyRoot: { paddingHorizontal: 20 },
+  content: { paddingHorizontal: 20, paddingBottom: 40 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   title: { fontFamily: FontFamily.headingExtraBold, fontSize: 22, color: Colors.textPrimary },
   subtitle: { fontSize: 13, color: Colors.textMuted, marginTop: 2 },

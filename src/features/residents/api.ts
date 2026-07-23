@@ -11,7 +11,7 @@ const RESIDENT_SELECT = '*, flat:flats(id, number, floor, tower_id)';
 
 export function useResidents(
   societyId: string | null | undefined,
-  options: { activeOnly?: boolean } = {},
+  options: { activeOnly?: boolean; enabled?: boolean } = {},
 ) {
   const activeOnly = options.activeOnly ?? false;
   return useQuery({
@@ -27,7 +27,7 @@ export function useResidents(
       if (error) throw error;
       return data as unknown as ResidentProfile[];
     },
-    enabled: !!societyId,
+    enabled: !!societyId && (options.enabled ?? true),
   });
 }
 

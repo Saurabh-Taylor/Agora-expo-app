@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { getErrorMessage } from '@/commonFunctions';
+import { AmenityGallery } from '@/components/amenity-gallery';
 import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
@@ -121,6 +122,7 @@ export default function BookAmenityScreen() {
         <BackArrowButton onPress={() => router.back()} />
         <Text style={styles.title}>{amenity.name}</Text>
       </View>
+      <AmenityGallery imagePaths={amenity.image_paths} societyId={societyId} />
       {!!amenity.description && <Text style={styles.description}>{amenity.description}</Text>}
 
       <Text style={styles.label}>DATE</Text>

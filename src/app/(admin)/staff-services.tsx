@@ -153,7 +153,7 @@ export default function StaffServicesScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.adminCanvas },
   flex: { flex: 1 },
-  content: { paddingTop: 66, paddingHorizontal: 16, paddingBottom: 48 },
+  content: { paddingHorizontal: 16, paddingBottom: 48 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   title: { fontFamily: FontFamily.headingExtraBold, fontSize: 22, color: Colors.textPrimary },
   segmented: { flexDirection: 'row', backgroundColor: '#EBE6D8', borderRadius: 14, padding: 4, marginTop: 18 },

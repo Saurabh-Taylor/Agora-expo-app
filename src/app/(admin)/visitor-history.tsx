@@ -296,7 +296,7 @@ export default function AdminVisitorHistoryScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.adminCanvas },
-  content: { paddingTop: 62, paddingHorizontal: 16, paddingBottom: 52, flexGrow: 1 },
+  content: { paddingHorizontal: 16, paddingBottom: 52, flexGrow: 1 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   headerCopy: { flex: 1 },
   title: { fontFamily: FontFamily.headingExtraBold, fontSize: 25, color: Colors.textPrimary },

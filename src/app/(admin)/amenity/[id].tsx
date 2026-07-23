@@ -8,6 +8,7 @@ import {
   getErrorMessage,
   getInitials,
 } from '@/commonFunctions';
+import { AmenityGallery } from '@/components/amenity-gallery';
 import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { StatusPill } from '@/components/status-pill';
@@ -91,6 +92,7 @@ export default function AdminAmenityDetailScreen() {
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
       <BackArrowButton onPress={() => router.back()} />
+      <AmenityGallery imagePaths={amenity.image_paths} societyId={societyId} />
 
       <View style={styles.headerRow}>
         <View style={styles.iconWrap}>
@@ -203,9 +205,9 @@ export default function AdminAmenityDetailScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.adminCanvas },
-  emptyRoot: { flex: 1, backgroundColor: Colors.adminCanvas, paddingTop: 66, paddingHorizontal: 20 },
+  emptyRoot: { flex: 1, backgroundColor: Colors.adminCanvas, paddingHorizontal: 20 },
   flex: { flex: 1 },
-  content: { paddingTop: 66, paddingHorizontal: 20, paddingBottom: 48 },
+  content: { paddingHorizontal: 20, paddingBottom: 48 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 13, marginTop: 16 },
   iconWrap: { width: 56, height: 56, borderRadius: 16, backgroundColor: '#E9F1EC', alignItems: 'center', justifyContent: 'center' },
   iconLabel: { fontFamily: FontFamily.headingExtraBold, fontSize: 22, color: Colors.success700 },

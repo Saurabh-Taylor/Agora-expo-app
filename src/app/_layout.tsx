@@ -12,9 +12,11 @@ import {
 } from '@expo-google-fonts/schibsted-grotesk';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
-import { router, Stack } from 'expo-router';
+import { router, Stack, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { loadNotificationsModule } from '@/commonFunctions';
@@ -28,6 +30,56 @@ import { queryClient } from '@/lib/query-client';
 import { useAuthStore } from '@/stores/auth-store';
 
 SplashScreen.preventAutoHideAsync();
+
+const DARK_AUTH_STATUS_BAR_SCREENS = new Set(['forgot-password', 'login', 'onboarding', 'reset-password']);
+const DARK_RESIDENT_STATUS_BAR_SCREENS = new Set(['gate-pass', 'payment-success', 'visitor-request']);
+
+function AppStatusBar() {
+  const segments = useSegments() as string[];
+  const [appliedSystemBackground, setAppliedSystemBackground] = useState<string>();
+  const routeGroup = segments[0];
+  const section = segments[1];
+  const tabScreen = segments[2] ?? 'index';
+  const isAdminRoute = routeGroup === '(admin)';
+  const isAdminTabRoute = isAdminRoute && section === '(tabs)';
+
+  const usesDarkBackground =
+    routeGroup === 'change-password' ||
+    (routeGroup === '(auth)' && DARK_AUTH_STATUS_BAR_SCREENS.has(section)) ||
+    (routeGroup === '(resident)' &&
+      ((section === '(tabs)' && tabScreen === 'index') ||
+        DARK_RESIDENT_STATUS_BAR_SCREENS.has(section))) ||
+    (routeGroup === '(guard)' && section === '(tabs)' && tabScreen === 'index') ||
+    isAdminTabRoute;
+  const systemBackgroundColor = isAdminRoute
+    ? isAdminTabRoute
+      ? Colors.green400
+      : Colors.adminCanvas
+    : usesDarkBackground
+      ? Colors.green600
+      : Colors.canvas;
+
+  useEffect(() => {
+    let isActive = true;
+
+    SystemUI.setBackgroundColorAsync(systemBackgroundColor)
+      .then(() => {
+        if (isActive) setAppliedSystemBackground(systemBackgroundColor);
+      })
+      .catch(() => {
+        if (isActive) setAppliedSystemBackground(undefined);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [systemBackgroundColor]);
+
+  const isSystemBackgroundReady = appliedSystemBackground === systemBackgroundColor;
+  const statusBarStyle = usesDarkBackground || (isAdminRoute && !isSystemBackgroundReady) ? 'light' : 'dark';
+
+  return <StatusBar animated={false} hidden={false} style={statusBarStyle} />;
+}
 
 // Push is a convenience layer and must never prevent the route tree from
 // mounting. The lazy loader returns null on Android Expo Go, where the native
@@ -200,6 +252,7 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <RootNavigator />
+      <AppStatusBar />
       <ToastHost />
       <SignOutDialog />
     </QueryClientProvider>

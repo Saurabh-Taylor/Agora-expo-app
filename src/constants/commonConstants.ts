@@ -53,6 +53,17 @@ export const Colors = {
   categorySecurity: { text: '#1D5C45', bg: '#E9F1EC' },
 } as const;
 
+export const AdminDashboardTones = {
+  green: { background: Colors.categorySecurity.bg, foreground: Colors.categorySecurity.text },
+  gold: { background: Colors.categoryBilling.bg, foreground: Colors.categoryBilling.text },
+  blue: { background: Colors.categoryWater.bg, foreground: Colors.categoryWater.text },
+  purple: { background: Colors.categoryEvent.bg, foreground: Colors.categoryEvent.text },
+  red: { background: '#F9E4E1', foreground: Colors.danger700 },
+  neutral: { background: Colors.categoryGeneral.bg, foreground: Colors.categoryGeneral.text },
+} as const;
+
+export type AdminDashboardTone = keyof typeof AdminDashboardTones;
+
 // Person-avatar background palette (residents/staff/bookings) — cycled
 // deterministically by name, see commonFunctions#avatarColorForName.
 export const AvatarPalette = ['#E7A33C', '#B9A7D6', '#8FB3C7', '#A7C4B5', '#D6C9A8', '#E0A9A0'] as const;
@@ -62,6 +73,13 @@ export const AvatarPalette = ['#E7A33C', '#B9A7D6', '#8FB3C7', '#A7C4B5', '#D6C9
 // the admin complaint list/triage labels.
 export const ComplaintCategories = ['Plumbing', 'Electrical', 'Cleanliness', 'Security', 'Noise', 'Other'] as const;
 export const COMPLAINT_ATTACHMENTS_BUCKET = 'complaint-attachments';
+export const AMENITY_IMAGES_BUCKET = 'amenity-images';
+export const AMENITY_IMAGE_MAX_COUNT = 4;
+export const AMENITY_IMAGE_MAX_BYTES = 4 * 1024 * 1024;
+export const AMENITY_IMAGE_SIGNED_URL_SECONDS = 60 * 60;
+export const ADMIN_TAB_BAR_HORIZONTAL_PADDING = 6;
+export const ADMIN_TAB_ACTIVE_INDICATOR_SIZE = 48;
+export const ADMIN_TAB_TRANSITION_DURATION = 180;
 export const COMPLAINT_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
 export const COMPLAINT_ATTACHMENT_SIGNED_URL_SECONDS = 60 * 60;
 
@@ -75,6 +93,12 @@ export const ComplaintStatuses = [
   { value: 'OPEN', label: 'Open' },
   { value: 'IN_PROGRESS', label: 'In progress' },
   { value: 'RESOLVED', label: 'Resolved' },
+] as const;
+
+export const AdminCommunityTabs = [
+  { value: 'Towers', label: 'Towers' },
+  { value: 'Flats', label: 'Flats' },
+  { value: 'Residents', label: 'Residents' },
 ] as const;
 
 export const NoticeCategories = [

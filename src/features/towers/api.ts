@@ -15,7 +15,10 @@ export type Tower = {
   created_at: string;
 };
 
-export function useTowers(societyId: string | null | undefined) {
+export function useTowers(
+  societyId: string | null | undefined,
+  options: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: ['towers', societyId],
     queryFn: async () => {
@@ -27,7 +30,7 @@ export function useTowers(societyId: string | null | undefined) {
       if (error) throw error;
       return data as Tower[];
     },
-    enabled: !!societyId,
+    enabled: !!societyId && (options.enabled ?? true),
   });
 }
 
@@ -115,25 +118,54 @@ export type TowerStats = Tower & {
 
 // Combines towers + flats + residents into per-tower occupancy rollups.
 // Shared by Home, Community, and Tower detail.
-export function useTowerStats(societyId: string | null | undefined) {
-  const towers = useTowers(societyId);
-  const flats = useFlats(societyId);
-  const residents = useResidents(societyId);
+export function useTowerStats(
+  societyId: string | null | undefined,
+  options: { enabled?: boolean } = {},
+) {
+  const enabled = options.enabled ?? true;
+  const towers = useTowers(societyId, { enabled });
+  const flats = useFlats(societyId, { enabled });
+  const residents = useResidents(societyId, { enabled });
 
   const data = useMemo<TowerStats[] | undefined>(() => {
     if (!towers.data || !flats.data || !residents.data) return undefined;
+
+    const flatTowerById = new Map<string, string>();
+    const totalsByTower = new Map<string, number>();
+    for (const flat of flats.data) {
+      flatTowerById.set(flat.id, flat.tower_id);
+      totalsByTower.set(flat.tower_id, (totalsByTower.get(flat.tower_id) ?? 0) + 1);
+    }
+
+    const occupiedByTower = new Map<string, Set<string>>();
+    const ownersByTower = new Map<string, number>();
+    const tenantsByTower = new Map<string, number>();
+    for (const resident of residents.data) {
+      if (!resident.flat_id) continue;
+      const towerId = flatTowerById.get(resident.flat_id);
+      if (!towerId) continue;
+
+      const occupiedFlatIds = occupiedByTower.get(towerId) ?? new Set<string>();
+      occupiedFlatIds.add(resident.flat_id);
+      occupiedByTower.set(towerId, occupiedFlatIds);
+
+      if (resident.occupancy_type === 'OWNER') {
+        ownersByTower.set(towerId, (ownersByTower.get(towerId) ?? 0) + 1);
+      } else if (resident.occupancy_type === 'TENANT') {
+        tenantsByTower.set(towerId, (tenantsByTower.get(towerId) ?? 0) + 1);
+      }
+    }
+
     return towers.data.map((tower) => {
-      const towerFlats = flats.data.filter((flat) => flat.tower_id === tower.id);
-      const flatIds = new Set(towerFlats.map((flat) => flat.id));
-      const towerResidents = residents.data.filter((resident) => resident.flat_id && flatIds.has(resident.flat_id));
-      const occupiedFlatIds = new Set(towerResidents.map((resident) => resident.flat_id));
+      const totalFlats = totalsByTower.get(tower.id) ?? 0;
+      const occupiedFlats = occupiedByTower.get(tower.id)?.size ?? 0;
       return {
         ...tower,
-        totalFlats: towerFlats.length,
-        occupiedFlats: occupiedFlatIds.size,
-        vacantFlats: towerFlats.length - occupiedFlatIds.size,
-        owners: towerResidents.filter((resident) => resident.occupancy_type === 'OWNER').length,
-        tenants: towerResidents.filter((resident) => resident.occupancy_type === 'TENANT').length,
+        totalFlats,
+        occupiedFlats,
+        vacantFlats: totalFlats - occupiedFlats,
+        owners: ownersByTower.get(tower.id) ?? 0,
+        tenants: tenantsByTower.get(tower.id) ?? 0,
       };
     });
   }, [towers.data, flats.data, residents.data]);

@@ -1,7 +1,10 @@
+import { decode } from 'base64-arraybuffer';
+import * as Crypto from 'expo-crypto';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import { getUniqueRealtimeChannelTopic, invalidateSocietyAmenities } from '@/commonFunctions';
+import { AMENITY_IMAGES_BUCKET, AMENITY_IMAGE_MAX_BYTES, AMENITY_IMAGE_MAX_COUNT, AMENITY_IMAGE_SIGNED_URL_SECONDS } from '@/constants/commonConstants';
 import { sendPushNotification } from '@/features/notifications/api';
 import { supabase } from '@/lib/supabase';
 
@@ -12,6 +15,7 @@ export type Amenity = {
   society_id: string;
   name: string;
   description: string | null;
+  image_paths: string[];
   open_time: string | null;
   close_time: string | null;
   is_active: boolean;
@@ -80,7 +84,7 @@ export function useAmenities(societyId: string | null | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('amenities')
-        .select('id, society_id, name, description, open_time, close_time, is_active, created_at, updated_at')
+        .select('id, society_id, name, description, image_paths, open_time, close_time, is_active, created_at, updated_at')
         .eq('society_id', societyId as string)
         .order('is_active', { ascending: false })
         .order('name');
@@ -97,7 +101,7 @@ export function useAmenityDetail(id: string | undefined, societyId: string | nul
     queryFn: async () => {
       const { data, error } = await supabase
         .from('amenities')
-        .select('id, society_id, name, description, open_time, close_time, is_active, created_at, updated_at')
+        .select('id, society_id, name, description, image_paths, open_time, close_time, is_active, created_at, updated_at')
         .eq('id', id as string)
         .eq('society_id', societyId as string)
         .single();
@@ -154,6 +158,114 @@ export function useUpdateAmenity() {
       const result = data as Amenity | null;
       if (!result || result.society_id !== input.societyId) throw new Error('Updated amenity returned an invalid society scope');
       return result;
+    },
+    onSuccess: (_data, input) => invalidateSocietyAmenities(queryClient, input.societyId),
+  });
+}
+
+
+export type AmenityPhotoInput = {
+  uri: string;
+  base64: string | null;
+  fileSize: number | null;
+  storagePath: string | null;
+};
+
+export function useAmenityImageUrls(
+  imagePaths: string[],
+  societyId: string | null | undefined,
+) {
+  const stablePaths = [...imagePaths].sort();
+  return useQuery({
+    queryKey: ['amenities', societyId, 'image-urls', stablePaths],
+    queryFn: async () => {
+      if (stablePaths.some((path) => !path.startsWith((societyId as string) + '/'))) {
+        throw new Error('Amenity photo has an invalid society scope');
+      }
+      if (stablePaths.length === 0) return {} as Record<string, string>;
+      const { data, error } = await supabase.storage
+        .from(AMENITY_IMAGES_BUCKET)
+        .createSignedUrls(stablePaths, AMENITY_IMAGE_SIGNED_URL_SECONDS);
+      if (error) throw error;
+      return Object.fromEntries(
+        (data ?? [])
+          .filter((item) => !!item.signedUrl)
+          .map((item) => [item.path, item.signedUrl]),
+      ) as Record<string, string>;
+    },
+    enabled: !!societyId && stablePaths.length > 0,
+    staleTime: (AMENITY_IMAGE_SIGNED_URL_SECONDS - 300) * 1000,
+  });
+}
+
+export function useSetAmenityImages() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      amenityId: string;
+      societyId: string;
+      photos: AmenityPhotoInput[];
+      previousPaths: string[];
+    }) => {
+      const uploadedPaths: string[] = [];
+      try {
+        if (input.photos.length > AMENITY_IMAGE_MAX_COUNT) {
+          throw new Error('An amenity can have at most 4 photos');
+        }
+
+        const uploadResults = await Promise.allSettled(
+          input.photos.map(async (photo) => {
+            if (photo.storagePath) return photo.storagePath;
+            if (!photo.base64) throw new Error('A selected amenity photo could not be read');
+            const fileBody = decode(photo.base64);
+            if (
+              (photo.fileSize && photo.fileSize > AMENITY_IMAGE_MAX_BYTES) ||
+              fileBody.byteLength > AMENITY_IMAGE_MAX_BYTES
+            ) {
+              throw new Error('Each amenity photo must be smaller than 4 MB');
+            }
+            const path =
+              input.societyId + '/' + input.amenityId + '/' + Crypto.randomUUID() + '.jpg';
+            const { error } = await supabase.storage
+              .from(AMENITY_IMAGES_BUCKET)
+              .upload(path, fileBody, { contentType: 'image/jpeg', upsert: false });
+            if (error) throw error;
+            uploadedPaths.push(path);
+            return path;
+          }),
+        );
+        const failedUpload = uploadResults.find((result) => result.status === 'rejected');
+        if (failedUpload?.status === 'rejected') throw failedUpload.reason;
+        const imagePaths = uploadResults.map((result) =>
+          result.status === 'fulfilled' ? result.value : '',
+        );
+
+        const { data, error } = await supabase
+          .rpc('set_admin_amenity_images', {
+            target_amenity_id: input.amenityId,
+            requested_image_paths: imagePaths,
+          })
+          .single();
+        if (error) throw error;
+        const result = data as Amenity | null;
+        if (!result || result.society_id !== input.societyId) {
+          throw new Error('Updated amenity photos returned an invalid society scope');
+        }
+
+        const removedPaths = input.previousPaths.filter((path) => !imagePaths.includes(path));
+        if (removedPaths.length > 0) {
+          const { error: removeError } = await supabase.storage
+            .from(AMENITY_IMAGES_BUCKET)
+            .remove(removedPaths);
+          if (removeError) console.warn('Could not remove superseded amenity photos', removeError);
+        }
+        return result;
+      } catch (error) {
+        if (uploadedPaths.length > 0) {
+          await supabase.storage.from(AMENITY_IMAGES_BUCKET).remove(uploadedPaths);
+        }
+        throw error;
+      }
     },
     onSuccess: (_data, input) => invalidateSocietyAmenities(queryClient, input.societyId),
   });

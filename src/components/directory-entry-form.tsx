@@ -234,8 +234,8 @@ export function DirectoryEntryFormScreen({ kind, id }: DirectoryEntryFormScreenP
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.adminCanvas },
-  stateScreen: { flex: 1, backgroundColor: Colors.adminCanvas, paddingTop: 66, paddingHorizontal: 20 },
-  content: { paddingTop: 66, paddingHorizontal: 20, paddingBottom: 48 },
+  stateScreen: { flex: 1, backgroundColor: Colors.adminCanvas, paddingHorizontal: 20 },
+  content: { paddingHorizontal: 20, paddingBottom: 48 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   title: { flex: 1, fontFamily: FontFamily.headingExtraBold, fontSize: 22, color: Colors.textPrimary },
   label: { fontSize: 11, letterSpacing: 1.5, fontWeight: '700', color: Colors.textMutedAlt, marginTop: 22 },

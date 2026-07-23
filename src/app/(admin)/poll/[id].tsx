@@ -135,8 +135,8 @@ export default function AdminPollResultsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.adminCanvas },
-  emptyRoot: { flex: 1, backgroundColor: Colors.adminCanvas, paddingTop: 66, paddingHorizontal: 20 },
-  content: { paddingTop: 66, paddingHorizontal: 20, paddingBottom: 48 },
+  emptyRoot: { flex: 1, backgroundColor: Colors.adminCanvas, paddingHorizontal: 20 },
+  content: { paddingHorizontal: 20, paddingBottom: 48 },
   stateRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16 },
   stateDot: { width: 7, height: 7, borderRadius: 999 },
   stateLabel: { fontSize: 10.5, letterSpacing: 1, fontWeight: '700' },

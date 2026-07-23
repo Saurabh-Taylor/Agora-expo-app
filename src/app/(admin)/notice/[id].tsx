@@ -203,7 +203,7 @@ function NoticeManager({ notice, societyId }: { notice: Notice; societyId: strin
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.adminCanvas },
-  content: { paddingTop: 66, paddingHorizontal: 20, paddingBottom: 48 },
+  content: { paddingHorizontal: 20, paddingBottom: 48 },
   flex: { flex: 1 },
   headerRow: { flexDirection: 'row', alignItems: 'center' },
   editButton: {

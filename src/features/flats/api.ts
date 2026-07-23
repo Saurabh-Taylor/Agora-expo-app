@@ -11,7 +11,10 @@ export type Flat = {
   created_at: string;
 };
 
-export function useFlats(societyId: string | null | undefined) {
+export function useFlats(
+  societyId: string | null | undefined,
+  options: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: ['flats', societyId],
     queryFn: async () => {
@@ -24,7 +27,7 @@ export function useFlats(societyId: string | null | undefined) {
       if (error) throw error;
       return data as Flat[];
     },
-    enabled: !!societyId,
+    enabled: !!societyId && (options.enabled ?? true),
   });
 }
 

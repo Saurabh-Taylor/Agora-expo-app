@@ -177,7 +177,7 @@ function ComplaintTriageForm({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.adminCanvas },
-  content: { paddingTop: 66, paddingHorizontal: 20, paddingBottom: 48 },
+  content: { paddingHorizontal: 20, paddingBottom: 48 },
   flex: { flex: 1 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 },
   priorityDot: { width: 8, height: 8, borderRadius: 999 },

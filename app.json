@@ -7,6 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "agoraexpoapp",
     "userInterfaceStyle": "automatic",
+    "backgroundColor": "#123528",
     "ios": {
       "icon": "./assets/expo.icon"
     },
@@ -17,7 +18,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.saurabh.agora"
     },
     "web": {
       "output": "static",
@@ -28,7 +30,10 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0F2C1F"
+          "backgroundColor": "#0F2C1F",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 114,
+          "resizeMode": "contain"
         }
       ],
       "expo-sqlite",
@@ -49,12 +54,24 @@
       ],
       "expo-font",
       "expo-image",
-      "expo-status-bar",
+      [
+        "expo-status-bar",
+        {
+          "hidden": false,
+          "style": "light"
+        }
+      ],
       "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "921bb818-11c6-4a01-9265-c22fb4a76eb5"
+      }
     }
   }
 }

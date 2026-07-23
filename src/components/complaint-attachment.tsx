@@ -1,9 +1,8 @@
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { FullScreenImageViewer } from '@/components/full-screen-image-viewer';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { useComplaintAttachmentUrl } from '@/features/complaints/api';
 
@@ -11,77 +10,6 @@ type ComplaintAttachmentProps = {
   attachmentPath: string | null;
   societyId: string;
 };
-
-const MAX_ATTACHMENT_ZOOM = 4;
-
-function ZoomableAttachmentImage({ uri }: { uri: string }) {
-  const scale = useSharedValue(1);
-  const savedScale = useSharedValue(1);
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const savedTranslateX = useSharedValue(0);
-  const savedTranslateY = useSharedValue(0);
-  const viewportWidth = useSharedValue(0);
-  const viewportHeight = useSharedValue(0);
-
-  const pinchGesture = Gesture.Pinch()
-    .onUpdate((event) => {
-      scale.value = Math.min(MAX_ATTACHMENT_ZOOM, Math.max(1, savedScale.value * event.scale));
-    })
-    .onEnd(() => {
-      savedScale.value = scale.value;
-
-      if (scale.value === 1) {
-        translateX.value = withTiming(0);
-        translateY.value = withTiming(0);
-        savedTranslateX.value = 0;
-        savedTranslateY.value = 0;
-        return;
-      }
-
-      const maxX = (viewportWidth.value * (scale.value - 1)) / 2;
-      const maxY = (viewportHeight.value * (scale.value - 1)) / 2;
-      const clampedX = Math.min(maxX, Math.max(-maxX, translateX.value));
-      const clampedY = Math.min(maxY, Math.max(-maxY, translateY.value));
-      translateX.value = withTiming(clampedX);
-      translateY.value = withTiming(clampedY);
-      savedTranslateX.value = clampedX;
-      savedTranslateY.value = clampedY;
-    });
-
-  const panGesture = Gesture.Pan()
-    .onUpdate((event) => {
-      if (scale.value <= 1) return;
-
-      const maxX = (viewportWidth.value * (scale.value - 1)) / 2;
-      const maxY = (viewportHeight.value * (scale.value - 1)) / 2;
-      translateX.value = Math.min(maxX, Math.max(-maxX, savedTranslateX.value + event.translationX));
-      translateY.value = Math.min(maxY, Math.max(-maxY, savedTranslateY.value + event.translationY));
-    })
-    .onEnd(() => {
-      savedTranslateX.value = translateX.value;
-      savedTranslateY.value = translateY.value;
-    });
-
-  const imageStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }, { translateY: translateY.value }, { scale: scale.value }],
-  }));
-
-  return (
-    <GestureDetector gesture={Gesture.Simultaneous(pinchGesture, panGesture)}>
-      <Animated.View
-        style={styles.zoomViewport}
-        onLayout={(event) => {
-          viewportWidth.value = event.nativeEvent.layout.width;
-          viewportHeight.value = event.nativeEvent.layout.height;
-        }}>
-        <Animated.View style={[styles.fullImage, imageStyle]}>
-          <Image source={{ uri }} style={styles.fullImage} contentFit="contain" />
-        </Animated.View>
-      </Animated.View>
-    </GestureDetector>
-  );
-}
 
 export function ComplaintAttachment({ attachmentPath, societyId }: ComplaintAttachmentProps) {
   const [isViewerOpen, setIsViewerOpen] = useState(false);
@@ -125,24 +53,13 @@ export function ComplaintAttachment({ attachmentPath, societyId }: ComplaintAtta
         )}
       </View>
 
-      <Modal
+      <FullScreenImageViewer
+        uri={attachmentQuery.data ?? null}
         visible={isViewerOpen}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={() => setIsViewerOpen(false)}>
-        <GestureHandlerRootView style={styles.viewer}>
-          {isViewerOpen && attachmentQuery.data && <ZoomableAttachmentImage uri={attachmentQuery.data} />}
-          <Text style={styles.gestureHint}>Pinch to zoom · Drag to move</Text>
-          <Pressable
-            style={styles.closeButton}
-            onPress={() => setIsViewerOpen(false)}
-            accessibilityRole="button"
-            accessibilityLabel="Close attachment">
-            <Text style={styles.closeLabel}>Close</Text>
-          </Pressable>
-        </GestureHandlerRootView>
-      </Modal>
+        onClose={() => setIsViewerOpen(false)}
+        accessibilityLabel="Close complaint attachment"
+      />
+
     </>
   );
 }
@@ -172,27 +89,4 @@ const styles = StyleSheet.create({
   },
   previewLabel: { fontFamily: FontFamily.bodySemiBold, fontSize: 13.5, color: Colors.textPrimary },
   previewHint: { fontSize: 11.5, color: Colors.textMuted },
-  viewer: {
-    flex: 1,
-    backgroundColor: 'rgba(5, 12, 8, 0.96)',
-    paddingHorizontal: 16,
-    paddingTop: 56,
-    paddingBottom: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  zoomViewport: { width: '100%', flex: 1, overflow: 'hidden' },
-  fullImage: { width: '100%', height: '100%' },
-  gestureHint: { marginTop: 14, fontSize: 12.5, color: Colors.textFaint },
-  closeButton: {
-    minWidth: 112,
-    minHeight: 48,
-    marginTop: 18,
-    paddingHorizontal: 24,
-    borderRadius: Radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.surface,
-  },
-  closeLabel: { fontSize: 14.5, fontWeight: '700', color: Colors.textPrimary },
 });

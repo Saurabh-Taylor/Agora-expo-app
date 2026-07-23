@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -7,7 +8,7 @@ import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { StatusPill } from '@/components/status-pill';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
-import { useAmenities, useAmenityRealtimeSync, useCancelBooking, useFlatBookings } from '@/features/amenities/api';
+import { useAmenities, useAmenityImageUrls, useAmenityRealtimeSync, useCancelBooking, useFlatBookings } from '@/features/amenities/api';
 import { useProfile } from '@/features/profile/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { showToast } from '@/stores/toast-store';
@@ -27,6 +28,8 @@ export default function ResidentAmenitiesScreen() {
   useAmenityRealtimeSync(societyId);
 
   const amenities = amenitiesQuery.data ?? [];
+  const coverPaths = amenities.flatMap((amenity) => amenity.image_paths.slice(0, 1));
+  const coverUrlsQuery = useAmenityImageUrls(coverPaths, societyId);
   const bookings = bookingsQuery.data ?? [];
 
   async function handleCancel(bookingId: string) {
@@ -80,9 +83,13 @@ export default function ResidentAmenitiesScreen() {
               onPress={() => router.push(`/(resident)/book-amenity/${amenity.id}`)}
               accessibilityRole="button"
               accessibilityLabel={`Book ${amenity.name}`}>
-              <View style={styles.iconWrap}>
-                <Text style={styles.iconLabel}>{getInitials(amenity.name)}</Text>
-              </View>
+              {amenity.image_paths[0] && coverUrlsQuery.data?.[amenity.image_paths[0]] ? (
+                <Image source={{ uri: coverUrlsQuery.data[amenity.image_paths[0]] }} style={styles.coverImage} contentFit="cover" transition={150} />
+              ) : (
+                <View style={styles.iconWrap}>
+                  <Text style={styles.iconLabel}>{getInitials(amenity.name)}</Text>
+                </View>
+              )}
               <View style={styles.flex}>
                 <Text style={styles.name}>{amenity.name}</Text>
                 <Text style={styles.timings}>{formatAmenityTimings(amenity.open_time, amenity.close_time)}</Text>
@@ -165,6 +172,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 13,
   },
+  coverImage: { width: 64, height: 64, borderRadius: 14 },
   iconWrap: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#E9F1EC', alignItems: 'center', justifyContent: 'center' },
   iconLabel: { fontFamily: FontFamily.headingBold, fontSize: 18, color: Colors.success700 },
   name: { fontSize: 15, fontWeight: '700' },

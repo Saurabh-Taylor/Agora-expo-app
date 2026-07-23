@@ -50,6 +50,18 @@ export function normalizeEmailAddress(value: string) {
   return value.trim().toLowerCase();
 }
 
+export function getCenteredTabIndicatorX(
+  containerWidth: number,
+  tabCount: number,
+  tabIndex: number,
+  horizontalPadding: number,
+  indicatorWidth: number,
+) {
+  if (containerWidth <= 0 || tabCount <= 0 || tabIndex < 0) return 0;
+  const tabWidth = (containerWidth - horizontalPadding * 2) / tabCount;
+  return horizontalPadding + tabWidth * (tabIndex + 0.5) - indicatorWidth / 2;
+}
+
 export function useResendCountdown() {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const timer = useRef<ReturnType<typeof setInterval> | undefined>(undefined);

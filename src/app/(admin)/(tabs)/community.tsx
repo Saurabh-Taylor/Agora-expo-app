@@ -3,20 +3,21 @@ import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
+import { AdminTabbedHeader } from '@/components/admin-tabbed-header';
 import { AsyncState } from '@/components/async-state';
 import { StatusPill } from '@/components/status-pill';
-import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
+import { AdminCommunityTabs, Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { avatarColorForName, getInitials, getVerificationStatusStyle } from '@/commonFunctions';
 import { useFlats } from '@/features/flats/api';
 import { useProfile } from '@/features/profile/api';
-import { useTowerStats } from '@/features/towers/api';
+import { useTowers, useTowerStats } from '@/features/towers/api';
 import { useResidents } from '@/features/residents/api';
 import { useAuthStore } from '@/stores/auth-store';
 
 const RING_RADIUS = 15.5;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
-type CommunityTab = 'Towers' | 'Flats' | 'Residents';
+type CommunityTab = (typeof AdminCommunityTabs)[number]['value'];
 
 function TowerIcon() {
   return (
@@ -65,36 +66,57 @@ export default function CommunityScreen() {
   const session = useAuthStore((state) => state.session);
   const profileQuery = useProfile(session?.user.id);
   const societyId = profileQuery.data?.society_id;
-  const towerStatsQuery = useTowerStats(societyId);
-  const flatsQuery = useFlats(societyId);
-  const residentsQuery = useResidents(societyId);
+  const isTowersTab = activeTab === 'Towers';
+  const isFlatsTab = activeTab === 'Flats';
+  const isResidentsTab = activeTab === 'Residents';
+  const towerStatsQuery = useTowerStats(societyId, { enabled: isTowersTab });
+  const towersQuery = useTowers(societyId, { enabled: isFlatsTab });
+  const flatsQuery = useFlats(societyId, { enabled: isFlatsTab });
+  const residentsQuery = useResidents(societyId, { enabled: isFlatsTab || isResidentsTab });
 
   const query = search.trim().toLowerCase();
 
   const filteredTowers = useMemo(
-    () => (towerStatsQuery.data ?? []).filter((t) => !query || t.name.toLowerCase().includes(query)),
-    [towerStatsQuery.data, query],
-  );
-  const filteredFlats = useMemo(
     () =>
-      (flatsQuery.data ?? [])
-        .map((flat) => ({
-          ...flat,
-          tower: towerStatsQuery.data?.find((tower) => tower.id === flat.tower_id),
-          resident: residentsQuery.data?.find((resident) => resident.flat_id === flat.id),
-        }))
-        .filter(
-          (flat) =>
-            !query ||
-            flat.number.toLowerCase().includes(query) ||
-            flat.tower?.name.toLowerCase().includes(query) ||
-            flat.tower?.code.toLowerCase().includes(query),
-        ),
-    [flatsQuery.data, residentsQuery.data, towerStatsQuery.data, query],
+      isTowersTab
+        ? (towerStatsQuery.data ?? []).filter(
+            (tower) => !query || tower.name.toLowerCase().includes(query),
+          )
+        : [],
+    [isTowersTab, query, towerStatsQuery.data],
   );
+  const filteredFlats = useMemo(() => {
+    if (!isFlatsTab) return [];
+
+    const towerById = new Map((towersQuery.data ?? []).map((tower) => [tower.id, tower]));
+    const residentByFlatId = new Map(
+      (residentsQuery.data ?? [])
+        .filter((resident) => !!resident.flat_id)
+        .map((resident) => [resident.flat_id as string, resident]),
+    );
+
+    return (flatsQuery.data ?? [])
+      .map((flat) => ({
+        ...flat,
+        tower: towerById.get(flat.tower_id),
+        resident: residentByFlatId.get(flat.id),
+      }))
+      .filter(
+        (flat) =>
+          !query ||
+          flat.number.toLowerCase().includes(query) ||
+          flat.tower?.name.toLowerCase().includes(query) ||
+          flat.tower?.code.toLowerCase().includes(query),
+      );
+  }, [flatsQuery.data, isFlatsTab, query, residentsQuery.data, towersQuery.data]);
   const filteredResidents = useMemo(
-    () => (residentsQuery.data ?? []).filter((r) => !query || r.full_name.toLowerCase().includes(query)),
-    [residentsQuery.data, query],
+    () =>
+      isResidentsTab
+        ? (residentsQuery.data ?? []).filter(
+            (resident) => !query || resident.full_name.toLowerCase().includes(query),
+          )
+        : [],
+    [isResidentsTab, query, residentsQuery.data],
   );
 
   const searchPlaceholder =
@@ -112,21 +134,17 @@ export default function CommunityScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Community</Text>
-        <Text style={styles.headerSubtitle}>Manage buildings, flats & residents</Text>
-      </View>
+      <AdminTabbedHeader
+        title="Community"
+        subtitle="Manage buildings, flats & residents"
+        options={AdminCommunityTabs}
+        value={activeTab}
+        onChange={setActiveTab}
+        accessibilityLabel="Community sections"
+        containerWidth="78%"
+      />
 
       <View style={styles.body}>
-        <View style={styles.segmented}>
-          {(['Towers', 'Flats', 'Residents'] as const).map((tab) => (
-            <Pressable key={tab} style={styles.segment} onPress={() => setActiveTab(tab)}>
-              <Text style={[styles.segmentLabel, activeTab === tab && styles.segmentLabelActive]}>{tab}</Text>
-              {activeTab === tab && <View style={styles.segmentIndicator} />}
-            </Pressable>
-          ))}
-        </View>
-
         <View style={styles.searchRow}>
           <TextInput
             value={search}
@@ -152,7 +170,10 @@ export default function CommunityScreen() {
               />
             }
             renderItem={({ item }) => {
-              const pct = item.totalFlats > 0 ? Math.round((item.occupiedFlats / item.totalFlats) * 100) : 0;
+              const pct =
+                item.totalFlats > 0
+                  ? Math.round((item.occupiedFlats / item.totalFlats) * 1000) / 10
+                  : 0;
               return (
                 <Pressable style={styles.towerRow} onPress={() => router.push(`/(admin)/tower/${item.id}`)}>
                   <TowerIcon />
@@ -177,11 +198,11 @@ export default function CommunityScreen() {
             contentContainerStyle={styles.listContent}
             ListEmptyComponent={
               <AsyncState
-                isLoading={flatsQuery.isLoading || towerStatsQuery.isLoading || residentsQuery.isLoading}
-                isError={flatsQuery.isError || towerStatsQuery.isError || residentsQuery.isError}
+                isLoading={flatsQuery.isLoading || towersQuery.isLoading || residentsQuery.isLoading}
+                isError={flatsQuery.isError || towersQuery.isError || residentsQuery.isError}
                 onRetry={() => {
                   flatsQuery.refetch();
-                  towerStatsQuery.refetch();
+                  towersQuery.refetch();
                   residentsQuery.refetch();
                 }}
                 isEmpty={filteredFlats.length === 0}
@@ -264,25 +285,7 @@ export default function CommunityScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.adminCanvas },
   flex: { flex: 1, minWidth: 0 },
-  header: { backgroundColor: Colors.green400, paddingTop: 58, paddingHorizontal: 20, paddingBottom: 54 },
-  headerTitle: { fontFamily: FontFamily.headingExtraBold, fontSize: 26, color: Colors.textOnDark },
-  headerSubtitle: { fontSize: 14, color: 'rgba(247,244,236,0.68)', marginTop: 5 },
-  body: { flex: 1, paddingHorizontal: 16, marginTop: -26 },
-  segmented: {
-    flexDirection: 'row',
-    backgroundColor: Colors.surface,
-    borderRadius: 20,
-    padding: 6,
-    shadowColor: '#10261B',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.14,
-    shadowRadius: 28,
-    elevation: 3,
-  },
-  segment: { flex: 1, alignItems: 'center', paddingVertical: 12 },
-  segmentLabel: { fontSize: 14.5, fontWeight: '700', color: Colors.textFaint },
-  segmentLabelActive: { color: Colors.green400 },
-  segmentIndicator: { height: 2.5, width: '80%', backgroundColor: Colors.green400, marginTop: 8, borderRadius: 2 },
+  body: { flex: 1, paddingHorizontal: 16 },
   searchRow: { marginTop: 16 },
   searchInput: {
     backgroundColor: Colors.surface,
