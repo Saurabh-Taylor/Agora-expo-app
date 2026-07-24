@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { getQueryKey } from '@/commonFunctions';
+import { QueryKeyRoots } from '@/constants/commonConstants';
 import { supabase } from '@/lib/supabase';
 
 export type AuditEvent = {
@@ -11,20 +13,9 @@ export type AuditEvent = {
   created_at: string;
 };
 
-// Called from other feature mutations (towers, residents, ...) right after a
-// write succeeds, so the admin Home feed reflects real actions immediately.
-export async function logAuditEvent(params: { societyId: string; actorId: string; action: string; detail?: string }) {
-  await supabase.from('audit_events').insert({
-    society_id: params.societyId,
-    actor_id: params.actorId,
-    action: params.action,
-    detail: params.detail,
-  });
-}
-
 export function useRecentAuditEvents(societyId: string | null | undefined, limit: number) {
   return useQuery({
-    queryKey: ['audit-events', societyId, limit],
+    queryKey: getQueryKey(QueryKeyRoots.auditEvents, societyId, limit),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('audit_events')

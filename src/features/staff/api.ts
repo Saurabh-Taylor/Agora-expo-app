@@ -1,7 +1,14 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { getUniqueRealtimeChannelTopic, invalidateSocietyDirectory } from '@/commonFunctions';
+import {
+  assertSocietyRecord,
+  getQueryKey,
+  invalidateSocietyDirectory,
+  removeRealtimeSubscription,
+  subscribeToRealtimeTables,
+} from '@/commonFunctions';
+import { QueryKeyRoots } from '@/constants/commonConstants';
 import { supabase } from '@/lib/supabase';
 
 export type StaffStatus = 'ON_DUTY' | 'OFF_DUTY';
@@ -29,12 +36,7 @@ export type ServiceProvider = {
   updated_at: string;
 };
 
-const directoryKey = (societyId: string | null | undefined) => ['directory', societyId] as const;
-
-function assertSociety<T extends { society_id: string }>(record: T, societyId: string) {
-  if (record.society_id !== societyId) throw new Error('The server returned a record outside your society');
-  return record;
-}
+const directoryKey = (societyId: string | null | undefined) => getQueryKey(QueryKeyRoots.directory, societyId);
 
 export function useStaff(societyId: string | null | undefined) {
   return useQuery({
@@ -63,7 +65,7 @@ export function useStaffDetail(id: string | undefined, societyId: string | null 
         .eq('society_id', societyId as string)
         .single();
       if (error) throw error;
-      return assertSociety(data as StaffMember, societyId as string);
+      return assertSocietyRecord(data as StaffMember, societyId as string);
     },
     enabled: !!id && !!societyId,
   });
@@ -90,7 +92,7 @@ export function useSaveStaff() {
         requested_phone: input.phone,
       });
       if (error) throw error;
-      return assertSociety(data as StaffMember, input.societyId);
+      return assertSocietyRecord(data as StaffMember, input.societyId);
     },
     onSuccess: (_data, input) => invalidateSocietyDirectory(queryClient, input.societyId),
   });
@@ -107,7 +109,7 @@ export function useSetStaffStatus() {
         requested_status: input.status,
       });
       if (error) throw error;
-      return assertSociety(data as StaffMember, input.societyId);
+      return assertSocietyRecord(data as StaffMember, input.societyId);
     },
     onSuccess: (_data, input) => invalidateSocietyDirectory(queryClient, input.societyId),
   });
@@ -140,7 +142,7 @@ export function useServiceProviderDetail(id: string | undefined, societyId: stri
         .eq('society_id', societyId as string)
         .single();
       if (error) throw error;
-      return assertSociety(data as ServiceProvider, societyId as string);
+      return assertSocietyRecord(data as ServiceProvider, societyId as string);
     },
     enabled: !!id && !!societyId,
   });
@@ -165,7 +167,7 @@ export function useSaveServiceProvider() {
         requested_phone: input.phone,
       });
       if (error) throw error;
-      return assertSociety(data as ServiceProvider, input.societyId);
+      return assertSocietyRecord(data as ServiceProvider, input.societyId);
     },
     onSuccess: (_data, input) => invalidateSocietyDirectory(queryClient, input.societyId),
   });
@@ -182,7 +184,7 @@ export function useSetServiceProviderStatus() {
         requested_status: input.status,
       });
       if (error) throw error;
-      return assertSociety(data as ServiceProvider, input.societyId);
+      return assertSocietyRecord(data as ServiceProvider, input.societyId);
     },
     onSuccess: (_data, input) => invalidateSocietyDirectory(queryClient, input.societyId),
   });
@@ -193,20 +195,17 @@ export function useDirectoryRealtimeSync(societyId: string | null | undefined) {
 
   useEffect(() => {
     if (!societyId) return;
-    const channel = supabase
-      .channel(getUniqueRealtimeChannelTopic('directory:' + societyId))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'staff', filter: `society_id=eq.${societyId}` }, () => {
-        void invalidateSocietyDirectory(queryClient, societyId);
-      })
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'service_providers', filter: `society_id=eq.${societyId}` },
-        () => void invalidateSocietyDirectory(queryClient, societyId),
-      )
-      .subscribe();
+    const channel = subscribeToRealtimeTables(
+      'directory:' + societyId,
+      [
+        { table: 'staff', filter: 'society_id=eq.' + societyId },
+        { table: 'service_providers', filter: 'society_id=eq.' + societyId },
+      ],
+      () => void invalidateSocietyDirectory(queryClient, societyId),
+    );
 
     return () => {
-      void supabase.removeChannel(channel);
+      void removeRealtimeSubscription(channel);
     };
   }, [queryClient, societyId]);
 }

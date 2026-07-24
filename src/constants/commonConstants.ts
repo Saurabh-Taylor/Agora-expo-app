@@ -77,10 +77,22 @@ export const AMENITY_IMAGES_BUCKET = 'amenity-images';
 export const AMENITY_IMAGE_MAX_COUNT = 4;
 export const AMENITY_IMAGE_MAX_BYTES = 4 * 1024 * 1024;
 export const AMENITY_IMAGE_SIGNED_URL_SECONDS = 60 * 60;
-export const ADMIN_TAB_BAR_HORIZONTAL_PADDING = 6;
-export const ADMIN_TAB_ACTIVE_INDICATOR_SIZE = 48;
-export const ADMIN_TAB_TRANSITION_DURATION = 180;
+export const AmenityBookingTypes = [
+  { value: 'EXCLUSIVE', label: 'Exclusive', description: 'One booking reserves the entire slot.' },
+  { value: 'SHARED', label: 'Shared', description: 'Multiple residents can book until capacity is reached.' },
+] as const;
+export const AmenitySlotDurations = [30, 60, 120] as const;
+export const AMENITY_DEFAULT_SLOT_DURATION_MINUTES = 120;
+export const AMENITY_DEFAULT_ADVANCE_BOOKING_DAYS = 7;
+export const AMENITY_DEFAULT_DAILY_BOOKING_LIMIT = 1;
+export const AMENITY_MAX_ADVANCE_BOOKING_DAYS = 90;
+export const AMENITY_MAX_SHARED_CAPACITY = 100;
 export const COMPLAINT_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
+export const AMENITY_MAX_DAILY_BOOKING_LIMIT = 20;
+export const AmenityNotificationTypes = {
+  decision: 'BOOKING_DECISION',
+  maintenanceCancelled: 'BOOKING_MAINTENANCE_CANCELLED',
+} as const;
 export const COMPLAINT_ATTACHMENT_SIGNED_URL_SECONDS = 60 * 60;
 
 export const ComplaintPriorities = [
@@ -224,6 +236,28 @@ export const AuthRoutes = {
   onboarding: '/(auth)/onboarding',
 } as const;
 
+export const QueryKeyRoots = {
+  amenities: 'amenities',
+  auditEvents: 'audit-events',
+  complaints: 'complaints',
+  complaintAttachment: 'complaint-attachment',
+  directory: 'directory',
+  dues: 'dues',
+  flats: 'flats',
+  guardResidentSearch: 'guard-resident-search',
+  notices: 'notices',
+  polls: 'polls',
+  profile: 'profile',
+  resident: 'resident',
+  residents: 'residents',
+  towers: 'towers',
+  visitorLogbook: 'visitor-logbook',
+  visitorLogbookLocations: 'visitor-logbook-locations',
+  visitorRequests: 'visitor-requests',
+} as const;
+
+export type QueryKeyRoot = (typeof QueryKeyRoots)[keyof typeof QueryKeyRoots];
+
 export const FontFamily = {
   headingExtraLight: 'BricolageGrotesque_200ExtraLight',
   headingLight: 'BricolageGrotesque_300Light',
@@ -238,25 +272,6 @@ export const FontFamily = {
   bodyBold: 'SchibstedGrotesk_700Bold',
 } as const;
 
-// Overline labels: 10-12px, uppercase, letter-spacing 0.14-0.22em, weight 700
-export const OverlineText = {
-  fontSize: 11,
-  letterSpacing: 2, // ~0.18em at 11px
-  fontWeight: '700',
-  textTransform: 'uppercase',
-} as const;
-
-export const Spacing = {
-  half: 2,
-  one: 4,
-  two: 8,
-  three: 12,
-  four: 16,
-  five: 24,
-  six: 32,
-  seven: 40,
-} as const;
-
 // Cards 16-24px, buttons/inputs 14-18px, pills/avatars 999px
 export const Radius = {
   input: 14,
@@ -264,12 +279,6 @@ export const Radius = {
   card: 20,
   cardLarge: 24,
   pill: 999,
-} as const;
-
-export const AnimationDuration = {
-  fast: 300,
-  medium: 450,
-  slow: 600,
 } as const;
 
 export const Easing = {

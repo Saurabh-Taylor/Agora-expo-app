@@ -1,10 +1,19 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { QueryClient } from '@tanstack/react-query';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import Constants, { AppOwnership } from 'expo-constants';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
-import { AUTH_RESEND_SECONDS, AvatarPalette, Colors, ONBOARDING_COMPLETE_STORAGE_KEY } from '@/constants/commonConstants';
+import {
+  AUTH_RESEND_SECONDS,
+  AvatarPalette,
+  Colors,
+  ONBOARDING_COMPLETE_STORAGE_KEY,
+  QueryKeyRoots,
+  type QueryKeyRoot,
+} from '@/constants/commonConstants';
+import { supabase } from '@/lib/supabase';
 
 let onboardingCompletedCache: boolean | undefined;
 
@@ -50,18 +59,6 @@ export function normalizeEmailAddress(value: string) {
   return value.trim().toLowerCase();
 }
 
-export function getCenteredTabIndicatorX(
-  containerWidth: number,
-  tabCount: number,
-  tabIndex: number,
-  horizontalPadding: number,
-  indicatorWidth: number,
-) {
-  if (containerWidth <= 0 || tabCount <= 0 || tabIndex < 0) return 0;
-  const tabWidth = (containerWidth - horizontalPadding * 2) / tabCount;
-  return horizontalPadding + tabWidth * (tabIndex + 0.5) - indicatorWidth / 2;
-}
-
 export function useResendCountdown() {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const timer = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
@@ -102,6 +99,92 @@ let realtimeChannelSequence = 0;
 export function getUniqueRealtimeChannelTopic(topic: string) {
   realtimeChannelSequence += 1;
   return topic + ':' + realtimeChannelSequence;
+}
+
+export function getQueryKey(root: QueryKeyRoot, ...segments: readonly unknown[]) {
+  return [root, ...segments] as const;
+}
+
+export function invalidateVisitorRequests(queryClient: QueryClient) {
+  return queryClient.invalidateQueries({
+    queryKey: getQueryKey(QueryKeyRoots.visitorRequests),
+  });
+}
+
+export function invalidateAuditEvents(queryClient: QueryClient, societyId: string) {
+  return queryClient.invalidateQueries({
+    queryKey: getQueryKey(QueryKeyRoots.auditEvents, societyId),
+  });
+}
+
+export function assertSocietyRecord<T extends { society_id: string }>(
+  record: T | null | undefined,
+  societyId: string,
+  errorMessage = 'The server returned a record outside your society',
+) {
+  if (!record || record.society_id !== societyId) throw new Error(errorMessage);
+  return record;
+}
+
+export function assertSocietyRecords<T extends { society_id: string }>(
+  records: T[],
+  societyId: string,
+  errorMessage = 'The server returned records outside your society',
+) {
+  if (records.some((record) => record.society_id !== societyId)) {
+    throw new Error(errorMessage);
+  }
+  return records;
+}
+
+export function assertFlatRecord<T extends { society_id: string; flat_id: string }>(
+  record: T | null | undefined,
+  societyId: string,
+  flatId: string,
+  errorMessage = 'The server returned a record outside your flat',
+) {
+  if (!record || record.society_id !== societyId || record.flat_id !== flatId) {
+    throw new Error(errorMessage);
+  }
+  return record;
+}
+
+export function assertFlatRecords<T extends { society_id: string; flat_id: string }>(
+  records: T[],
+  societyId: string,
+  flatId: string,
+  errorMessage = 'The server returned records outside your flat',
+) {
+  if (records.some((record) => record.society_id !== societyId || record.flat_id !== flatId)) {
+    throw new Error(errorMessage);
+  }
+  return records;
+}
+
+export type RealtimeTableSubscription = {
+  table: string;
+  filter: string;
+  event?: '*' | 'INSERT' | 'UPDATE' | 'DELETE';
+};
+
+export function subscribeToRealtimeTables(
+  topic: string,
+  subscriptions: readonly RealtimeTableSubscription[],
+  onChange: () => void,
+) {
+  let channel = supabase.channel(getUniqueRealtimeChannelTopic(topic));
+  subscriptions.forEach(({ table, filter, event = '*' }) => {
+    channel = channel.on(
+      'postgres_changes',
+      { event, schema: 'public', table, filter },
+      onChange,
+    );
+  });
+  return channel.subscribe();
+}
+
+export function removeRealtimeSubscription(channel: RealtimeChannel) {
+  return supabase.removeChannel(channel);
 }
 
 export function getInitials(fullName: string) {
@@ -214,7 +297,7 @@ export function getNoticeCategoryStyle(category: keyof typeof NOTICE_CATEGORY_ST
 }
 
 export function invalidateSocietyNotices(queryClient: QueryClient, societyId: string) {
-  return queryClient.invalidateQueries({ queryKey: ['notices', societyId] });
+  return queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.notices, societyId) });
 }
 
 export function getPublishedNoticePushInput(notice: { id: string; title: string }) {
@@ -351,11 +434,31 @@ export function formatVisitDuration(entryAt: string, exitAt: string | null) {
 const BOOKING_STATUS_STYLES = {
   PENDING: { label: 'Pending', color: '#9A6B14', bg: '#F6ECD8' },
   CONFIRMED: { label: 'Confirmed', color: Colors.success600, bg: '#E3F2E9' },
-  CANCELLED: { label: 'Declined', color: Colors.danger700, bg: '#F9E4E1' },
+  CANCELLED: { label: 'Cancelled', color: Colors.danger700, bg: '#F9E4E1' },
 } as const;
 
-export function getBookingStatusStyle(status: keyof typeof BOOKING_STATUS_STYLES) {
-  return BOOKING_STATUS_STYLES[status];
+export function getBookingStatusStyle(
+  status: keyof typeof BOOKING_STATUS_STYLES,
+  statusReason?: string | null,
+) {
+  if (status !== 'CANCELLED') return BOOKING_STATUS_STYLES[status];
+  const label = statusReason?.startsWith('Declined')
+    ? 'Declined'
+    : statusReason?.startsWith('Cancelled because')
+      ? 'Maintenance'
+      : 'Cancelled';
+  return { ...BOOKING_STATUS_STYLES.CANCELLED, label };
+}
+
+const AMENITY_SLOT_STATUS_STYLES = {
+  AVAILABLE: { label: 'Available', color: Colors.success700, bg: '#E3F2E9' },
+  FULL: { label: 'Full', color: Colors.danger700, bg: '#F9E4E1' },
+  BLOCKED: { label: 'Blocked', color: Colors.textMuted, bg: '#EEEDE4' },
+  PAST: { label: 'Past', color: Colors.textFaint, bg: '#EEEDE4' },
+} as const;
+
+export function getAmenitySlotStatusStyle(status: keyof typeof AMENITY_SLOT_STATUS_STYLES) {
+  return AMENITY_SLOT_STATUS_STYLES[status];
 }
 
 const STAFF_STATUS_STYLES = {
@@ -377,7 +480,7 @@ export function getServiceProviderStatusStyle(status: keyof typeof SERVICE_PROVI
 }
 
 export function invalidateSocietyDirectory(queryClient: QueryClient, societyId: string) {
-  return queryClient.invalidateQueries({ queryKey: ['directory', societyId] });
+  return queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.directory, societyId) });
 }
 
 export function isValidDirectoryPhone(phone: string) {
@@ -395,7 +498,7 @@ export function formatMonthYear(iso: string) {
 }
 
 export function invalidateSocietyAmenities(queryClient: QueryClient, societyId: string) {
-  return queryClient.invalidateQueries({ queryKey: ['amenities', societyId] });
+  return queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.amenities, societyId) });
 }
 
 export function formatAmenityTimings(openTime: string | null, closeTime: string | null) {
@@ -410,6 +513,54 @@ export function formatBookingSlot(start: string, end: string) {
   const startTime = startDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   const endTime = endDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   return `${day} · ${startTime} – ${endTime}`;
+
+}
+export function buildAmenityDateOptions(advanceBookingDays: number) {
+  return Array.from({ length: advanceBookingDays + 1 }, (_, index) => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + index);
+    return date;
+  });
+}
+
+export function formatDateForDatabase(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function formatAmenitySlotTime(startTime: string, endTime: string) {
+  return `${startTime.slice(0, 5)} – ${endTime.slice(0, 5)}`;
+}
+
+export function getAmenityRpcConfiguration(input: {
+  name: string;
+  description: string;
+  openTime: string;
+  closeTime: string;
+  bookingType: 'EXCLUSIVE' | 'SHARED';
+  slotDurationMinutes: number;
+  maxBookingsPerSlot: number;
+  advanceBookingDays: number;
+  maxBookingsPerResidentPerDay: number;
+  requiresAdminApproval: boolean;
+  rulesAndRegulations: string;
+}) {
+  return {
+    requested_name: input.name,
+    requested_description: input.description,
+    requested_open_time: input.openTime,
+    requested_close_time: input.closeTime,
+    requested_booking_type: input.bookingType,
+    requested_slot_duration_minutes: input.slotDurationMinutes,
+    requested_max_bookings_per_slot: input.maxBookingsPerSlot,
+    requested_advance_booking_days: input.advanceBookingDays,
+    requested_max_bookings_per_resident_per_day: input.maxBookingsPerResidentPerDay,
+    requested_requires_admin_approval: input.requiresAdminApproval,
+    requested_rules_and_regulations: input.rulesAndRegulations,
+  };
 }
 
 export function isValidAmenityTimeRange(openTime: string, closeTime: string) {
@@ -417,8 +568,16 @@ export function isValidAmenityTimeRange(openTime: string, closeTime: string) {
   return timePattern.test(openTime) && timePattern.test(closeTime) && openTime < closeTime;
 }
 
+
+export function isValidAmenitySlotSchedule(openTime: string, closeTime: string, slotDurationMinutes: number) {
+  if (!isValidAmenityTimeRange(openTime, closeTime) || slotDurationMinutes <= 0) return false;
+  const [openHour, openMinute] = openTime.split(':').map(Number);
+  const [closeHour, closeMinute] = closeTime.split(':').map(Number);
+  const operatingMinutes = closeHour * 60 + closeMinute - (openHour * 60 + openMinute);
+  return operatingMinutes >= slotDurationMinutes && operatingMinutes % slotDurationMinutes === 0;
+}
 export function invalidateSocietyComplaints(queryClient: QueryClient, societyId: string) {
-  return queryClient.invalidateQueries({ queryKey: ['complaints', societyId] });
+  return queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.complaints, societyId) });
 }
 
 export function isPollOpen(poll: { state: 'ACTIVE' | 'CLOSED'; closes_at: string | null; archived_at: string | null }) {
@@ -431,7 +590,7 @@ export function getPollDisplayState(poll: { state: 'ACTIVE' | 'CLOSED'; closes_a
 }
 
 export function invalidateSocietyPolls(queryClient: QueryClient, societyId: string) {
-  return queryClient.invalidateQueries({ queryKey: ['polls', societyId] });
+  return queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.polls, societyId) });
 }
 
 type PollOptionRow = { id: string; label: string; sort_order: number; vote_count: number };

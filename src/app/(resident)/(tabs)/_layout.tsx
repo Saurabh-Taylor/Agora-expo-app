@@ -1,12 +1,12 @@
 import { Tabs } from 'expo-router';
 
-import { ResidentTabBar, type ResidentTabBarProps } from '@/components/resident-tab-bar';
+import { ResidentTabBar, type RoleTabBarProps } from '@/components/role-tab-bar';
 
 export default function ResidentTabsLayout() {
   return (
     <Tabs
       screenOptions={{ headerShown: false }}
-      tabBar={(props) => <ResidentTabBar {...(props as unknown as ResidentTabBarProps)} />}>
+      tabBar={(props) => <ResidentTabBar {...(props as unknown as RoleTabBarProps)} />}>
       <Tabs.Screen name="index" />
       <Tabs.Screen name="gate" />
       <Tabs.Screen name="community" />

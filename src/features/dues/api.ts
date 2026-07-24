@@ -1,7 +1,14 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { getUniqueRealtimeChannelTopic } from '@/commonFunctions';
+import {
+  assertFlatRecord,
+  assertFlatRecords,
+  getQueryKey,
+  removeRealtimeSubscription,
+  subscribeToRealtimeTables,
+} from '@/commonFunctions';
+import { QueryKeyRoots } from '@/constants/commonConstants';
 import { supabase } from '@/lib/supabase';
 
 export type DuesStatus = 'UNPAID' | 'PAID';
@@ -30,14 +37,7 @@ export type MaintenancePayment = {
 };
 
 const duesKey = (societyId: string | null | undefined, flatId: string | null | undefined) =>
-  ['dues', societyId, flatId] as const;
-
-function assertDueScope(due: MaintenanceDue, societyId: string, flatId: string) {
-  if (due.society_id !== societyId || due.flat_id !== flatId) {
-    throw new Error('The server returned a maintenance due outside your flat');
-  }
-  return due;
-}
+  getQueryKey(QueryKeyRoots.dues, societyId, flatId);
 
 export function useFlatDues(flatId: string | null | undefined, societyId: string | null | undefined) {
   return useQuery({
@@ -50,7 +50,12 @@ export function useFlatDues(flatId: string | null | undefined, societyId: string
         .eq('flat_id', flatId as string)
         .order('due_date', { ascending: false });
       if (error) throw error;
-      return (data ?? []).map((due) => assertDueScope(due as MaintenanceDue, societyId as string, flatId as string));
+      return assertFlatRecords(
+        (data ?? []) as MaintenanceDue[],
+        societyId as string,
+        flatId as string,
+        'The server returned maintenance dues outside your flat',
+      );
     },
     enabled: !!flatId && !!societyId,
   });
@@ -72,7 +77,12 @@ export function useDueDetail(
         .eq('flat_id', flatId as string)
         .single();
       if (error) throw error;
-      return assertDueScope(data as MaintenanceDue, societyId as string, flatId as string);
+      return assertFlatRecord(
+        data as MaintenanceDue,
+        societyId as string,
+        flatId as string,
+        'The server returned a maintenance due outside your flat',
+      );
     },
     enabled: !!id && !!flatId && !!societyId,
   });
@@ -112,21 +122,13 @@ export function useDuesRealtimeSync(
 
   useEffect(() => {
     if (!flatId || !societyId) return;
-    const channel = supabase
-      .channel(getUniqueRealtimeChannelTopic('dues:' + societyId + ':' + flatId))
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'maintenance_dues',
-          filter: `society_id=eq.${societyId}`,
-        },
-        () => void queryClient.invalidateQueries({ queryKey: duesKey(societyId, flatId) }),
-      )
-      .subscribe();
+    const channel = subscribeToRealtimeTables(
+      'dues:' + societyId + ':' + flatId,
+      [{ table: 'maintenance_dues', filter: 'society_id=eq.' + societyId }],
+      () => void queryClient.invalidateQueries({ queryKey: duesKey(societyId, flatId) }),
+    );
     return () => {
-      void supabase.removeChannel(channel);
+      void removeRealtimeSubscription(channel);
     };
   }, [flatId, queryClient, societyId]);
 }

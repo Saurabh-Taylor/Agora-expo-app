@@ -22,6 +22,7 @@ import {
   formatVehicleLabel,
   formatVisitDuration,
   getCurrentLogbookMonth,
+  getQueryKey,
   getLogbookMonthBounds,
   getVisitorHistorySince,
   getVisitorRequestStatusStyle,
@@ -39,6 +40,7 @@ import {
   GuardLogbookRangeOptions,
   GuardLogbookStateOptions,
   LOGBOOK_LOCATION_SEARCH_DEBOUNCE_MS,
+  QueryKeyRoots,
   Radius,
   VisitorCategoryFilterOptions,
 } from '@/constants/commonConstants';
@@ -273,7 +275,7 @@ export function GuardVisitorLogbook({ societyId }: { societyId: string | null | 
   async function refreshFirstPage() {
     realtimeNotice.clearNewActivity();
     await queryClient.resetQueries({
-      queryKey: ['visitor-logbook', societyId, filters],
+      queryKey: getQueryKey(QueryKeyRoots.visitorLogbook, societyId, filters),
       exact: true,
     });
   }

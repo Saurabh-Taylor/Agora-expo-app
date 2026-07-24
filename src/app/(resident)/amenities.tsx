@@ -121,7 +121,7 @@ export default function ResidentAmenitiesScreen() {
             onAction={() => setTab('Browse')}
           />
           {bookings.map((booking) => {
-            const statusStyle = getBookingStatusStyle(booking.status);
+            const statusStyle = getBookingStatusStyle(booking.status, booking.status_reason);
             const canCancel = booking.status !== 'CANCELLED' && new Date(booking.slot_start).getTime() > screenOpenedAt;
             return (
               <View key={booking.id} style={styles.bookingCard}>

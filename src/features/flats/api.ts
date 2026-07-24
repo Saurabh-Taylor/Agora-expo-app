@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { assertSocietyRecord, getQueryKey, invalidateAuditEvents } from '@/commonFunctions';
+import { QueryKeyRoots } from '@/constants/commonConstants';
 import { supabase } from '@/lib/supabase';
 
 export type Flat = {
@@ -16,7 +18,7 @@ export function useFlats(
   options: { enabled?: boolean } = {},
 ) {
   return useQuery({
-    queryKey: ['flats', societyId],
+    queryKey: getQueryKey(QueryKeyRoots.flats, societyId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('flats')
@@ -37,7 +39,7 @@ export type FlatWithTower = Flat & {
 
 export function useFlatWithTower(flatId: string | null | undefined, societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['flats', societyId, flatId],
+    queryKey: getQueryKey(QueryKeyRoots.flats, societyId, flatId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('flats')
@@ -69,14 +71,16 @@ export function useCreateFlat() {
         requested_floor: input.floor,
       });
       if (error) throw error;
-      const flat = data as Flat;
-      if (!flat || flat.society_id !== input.societyId) throw new Error('The flat could not be created in this society');
-      return flat;
+      return assertSocietyRecord(
+        data as Flat | null,
+        input.societyId,
+        'The flat could not be created in this society',
+      );
     },
     onSuccess: (flat) => {
-      queryClient.invalidateQueries({ queryKey: ['flats', flat.society_id] });
-      queryClient.invalidateQueries({ queryKey: ['towers', flat.society_id] });
-      queryClient.invalidateQueries({ queryKey: ['audit-events', flat.society_id] });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.flats, flat.society_id) });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.towers, flat.society_id) });
+      invalidateAuditEvents(queryClient, flat.society_id);
     },
   });
 }
@@ -98,14 +102,16 @@ export function useUpdateFlat() {
         requested_floor: input.floor,
       });
       if (error) throw error;
-      const flat = data as Flat;
-      if (!flat || flat.society_id !== input.societyId) throw new Error('The flat could not be updated in this society');
-      return flat;
+      return assertSocietyRecord(
+        data as Flat | null,
+        input.societyId,
+        'The flat could not be updated in this society',
+      );
     },
     onSuccess: (flat) => {
-      queryClient.invalidateQueries({ queryKey: ['flats', flat.society_id] });
-      queryClient.invalidateQueries({ queryKey: ['flats', flat.society_id, flat.id] });
-      queryClient.invalidateQueries({ queryKey: ['audit-events', flat.society_id] });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.flats, flat.society_id) });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.flats, flat.society_id, flat.id) });
+      invalidateAuditEvents(queryClient, flat.society_id);
     },
   });
 }
@@ -120,9 +126,9 @@ export function useDeleteEmptyFlat() {
       return true;
     },
     onSuccess: (_data, input) => {
-      queryClient.invalidateQueries({ queryKey: ['flats', input.societyId] });
-      queryClient.invalidateQueries({ queryKey: ['towers', input.societyId] });
-      queryClient.invalidateQueries({ queryKey: ['audit-events', input.societyId] });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.flats, input.societyId) });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.towers, input.societyId) });
+      invalidateAuditEvents(queryClient, input.societyId);
     },
   });
 }
@@ -145,7 +151,9 @@ export async function findOrCreateFlat(params: { societyId: string; towerId: str
     requested_floor: floor,
   });
   if (error) throw error;
-  const created = data as Flat;
-  if (!created || created.society_id !== societyId) throw new Error('The flat could not be created in this society');
-  return created;
+  return assertSocietyRecord(
+    data as Flat | null,
+    societyId,
+    'The flat could not be created in this society',
+  );
 }

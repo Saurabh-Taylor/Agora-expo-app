@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { getQueryKey } from '@/commonFunctions';
+import { QueryKeyRoots } from '@/constants/commonConstants';
 import { supabase } from '@/lib/supabase';
 
 export type UserRole = 'RESIDENT' | 'GUARD' | 'ADMIN';
@@ -22,7 +24,7 @@ export type Profile = {
 
 export function useProfile(userId: string | undefined) {
   return useQuery({
-    queryKey: ['profile', userId],
+    queryKey: getQueryKey(QueryKeyRoots.profile, userId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')

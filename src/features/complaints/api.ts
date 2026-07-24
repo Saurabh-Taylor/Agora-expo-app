@@ -3,11 +3,12 @@ import { decode } from 'base64-arraybuffer';
 import * as Crypto from 'expo-crypto';
 import { useEffect } from 'react';
 
-import { getUniqueRealtimeChannelTopic, invalidateSocietyComplaints } from '@/commonFunctions';
+import { assertFlatRecord, assertSocietyRecord, getQueryKey, invalidateSocietyComplaints, removeRealtimeSubscription, subscribeToRealtimeTables } from '@/commonFunctions';
 import {
   COMPLAINT_ATTACHMENTS_BUCKET,
   COMPLAINT_ATTACHMENT_MAX_BYTES,
   COMPLAINT_ATTACHMENT_SIGNED_URL_SECONDS,
+  QueryKeyRoots,
 } from '@/constants/commonConstants';
 import { sendPushNotification } from '@/features/notifications/api';
 import { supabase } from '@/lib/supabase';
@@ -38,7 +39,7 @@ const COMPLAINT_SELECT =
 
 export function useOpenComplaintsCount(societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['complaints', societyId, 'open-count'],
+    queryKey: getQueryKey(QueryKeyRoots.complaints, societyId, 'open-count'),
     queryFn: async () => {
       const { count, error } = await supabase
         .from('complaints')
@@ -54,7 +55,7 @@ export function useOpenComplaintsCount(societyId: string | null | undefined) {
 
 export function useAdminComplaints(societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['complaints', societyId, 'admin'],
+    queryKey: getQueryKey(QueryKeyRoots.complaints, societyId, 'admin'),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('complaints')
@@ -78,7 +79,7 @@ export type ComplaintEvent = {
 
 export function useComplaintDetail(id: string | undefined, societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['complaints', societyId, 'detail', id],
+    queryKey: getQueryKey(QueryKeyRoots.complaints, societyId, 'detail', id),
     queryFn: async () => {
       const [complaintResult, eventsResult] = await Promise.all([
         supabase
@@ -127,11 +128,11 @@ export function useUpdateComplaint() {
         })
         .single();
       if (error) throw error;
-      const result = data as Complaint | null;
-      if (!result || result.society_id !== input.societyId) {
-        throw new Error('Updated complaint returned an invalid society scope');
-      }
-      return result;
+      return assertSocietyRecord(
+        data as Complaint | null,
+        input.societyId,
+        'Updated complaint returned an invalid society scope',
+      );
     },
     onSuccess: (complaint, input) => {
       invalidateSocietyComplaints(queryClient, input.societyId);
@@ -148,7 +149,7 @@ export function useUpdateComplaint() {
 
 export function useFlatComplaints(flatId: string | null | undefined, societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['complaints', societyId, 'flat', flatId],
+    queryKey: getQueryKey(QueryKeyRoots.complaints, societyId, 'flat', flatId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('complaints')
@@ -207,7 +208,7 @@ export function useComplaintAttachmentUrl(
   societyId: string | null | undefined,
 ) {
   return useQuery({
-    queryKey: ['complaint-attachment', societyId, attachmentPath],
+    queryKey: getQueryKey(QueryKeyRoots.complaintAttachment, societyId, attachmentPath),
     queryFn: async () => {
       if (!attachmentPath?.startsWith((societyId as string) + '/')) {
         throw new Error('Complaint attachment has an invalid society scope');
@@ -239,11 +240,12 @@ export function useCreateComplaint() {
           })
           .single();
         if (error) throw error;
-        const result = data as Complaint | null;
-        if (!result || result.society_id !== input.societyId || result.flat_id !== input.flatId) {
-          throw new Error('Created complaint returned an invalid ownership scope');
-        }
-        return result;
+        return assertFlatRecord(
+          data as Complaint | null,
+          input.societyId,
+          input.flatId,
+          'Created complaint returned an invalid ownership scope',
+        );
       } catch (error) {
         if (attachmentPath) {
           await supabase.storage.from(COMPLAINT_ATTACHMENTS_BUCKET).remove([attachmentPath]);
@@ -263,22 +265,17 @@ export function useComplaintRealtimeSync(societyId: string | null | undefined) {
     const refreshComplaints = () => {
       invalidateSocietyComplaints(queryClient, societyId);
     };
-    const channel = supabase
-      .channel(getUniqueRealtimeChannelTopic('complaints:' + societyId))
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'complaints', filter: `society_id=eq.${societyId}` },
-        refreshComplaints,
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'complaint_events', filter: `society_id=eq.${societyId}` },
-        refreshComplaints,
-      )
-      .subscribe();
+    const channel = subscribeToRealtimeTables(
+      'complaints:' + societyId,
+      [
+        { table: 'complaints', filter: 'society_id=eq.' + societyId },
+        { table: 'complaint_events', filter: 'society_id=eq.' + societyId, event: 'INSERT' },
+      ],
+      refreshComplaints,
+    );
 
     return () => {
-      supabase.removeChannel(channel);
+      void removeRealtimeSubscription(channel);
     };
   }, [queryClient, societyId]);
 }

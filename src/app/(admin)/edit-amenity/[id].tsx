@@ -62,6 +62,13 @@ export default function EditAmenityScreen() {
         description: amenity.description ?? '',
         openTime: amenity.open_time?.slice(0, 5) ?? '07:00',
         closeTime: amenity.close_time?.slice(0, 5) ?? '21:00',
+        bookingType: amenity.booking_type,
+        slotDurationMinutes: amenity.slot_duration_minutes,
+        maxBookingsPerSlot: amenity.max_bookings_per_slot,
+        advanceBookingDays: amenity.advance_booking_days,
+        maxBookingsPerResidentPerDay: amenity.max_bookings_per_resident_per_day,
+        requiresAdminApproval: amenity.requires_admin_approval,
+        rulesAndRegulations: amenity.rules_and_regulations ?? '',
         photos: amenity.image_paths.map((path) => ({ uri: imageUrlsQuery.data?.[path] ?? '', base64: null, fileSize: null, storagePath: path })),
       }}
       isPending={updateAmenity.isPending || setAmenityImages.isPending}

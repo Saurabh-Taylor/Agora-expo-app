@@ -2,7 +2,7 @@ import "@supabase/functions-js/edge-runtime.d.ts";
 import { withSupabase } from "@supabase/server";
 
 type Role = "RESIDENT" | "GUARD" | "ADMIN";
-type NotificationType = "VISITOR_REQUEST" | "VISITOR_DECISION" | "NOTICE" | "COMPLAINT_STATUS" | "BOOKING_DECISION";
+type NotificationType = "VISITOR_REQUEST" | "VISITOR_DECISION" | "NOTICE" | "COMPLAINT_STATUS" | "BOOKING_DECISION" | "BOOKING_MAINTENANCE_CANCELLED";
 
 type SendPushBody = {
   data?: {
@@ -215,19 +215,33 @@ async function resolveAudience(
     };
   }
 
-  if (type === "BOOKING_DECISION") {
-    if (caller.role !== "ADMIN" || !data.bookingId) return jsonError("Admin booking decision required", 403);
+  if (type === "BOOKING_DECISION" || type === "BOOKING_MAINTENANCE_CANCELLED") {
+    if (caller.role !== "ADMIN" || !data.bookingId) return jsonError("Admin booking update required", 403);
 
     const { data: booking, error } = await admin
       .from("amenity_bookings")
-      .select("id, society_id, booked_by, status, slot_start, decided_by, amenity:amenities(name)")
+      .select("id, society_id, booked_by, status, status_reason, slot_start, decided_by, amenity:amenities(name)")
       .eq("id", data.bookingId)
       .eq("society_id", caller.society_id)
       .single();
-    if (error || !booking || booking.decided_by !== caller.id || !["CONFIRMED", "CANCELLED"].includes(booking.status)) {
-      return jsonError("Booking decision is not available", 403);
+    if (error || !booking || booking.decided_by !== caller.id) {
+      return jsonError("Booking update is not available", 403);
     }
 
+    if (type === "BOOKING_MAINTENANCE_CANCELLED") {
+      if (booking.status !== "CANCELLED" || !booking.status_reason?.startsWith("Cancelled because")) {
+        return jsonError("Maintenance cancellation is not available", 403);
+      }
+      return {
+        profileIds: [booking.booked_by],
+        title: `${booking.amenity?.name ?? "Amenity"} booking cancelled`,
+        body: booking.status_reason,
+      };
+    }
+
+    if (!["CONFIRMED", "CANCELLED"].includes(booking.status)) {
+      return jsonError("Booking decision is not available", 403);
+    }
     const decision = booking.status === "CONFIRMED" ? "confirmed" : "declined";
     return {
       profileIds: [booking.booked_by],

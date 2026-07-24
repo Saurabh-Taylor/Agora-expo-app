@@ -23,7 +23,7 @@ import { loadNotificationsModule } from '@/commonFunctions';
 import { AppLoadingScreen } from '@/components/app-loading-screen';
 import { SignOutDialog } from '@/components/sign-out-dialog';
 import { ToastHost } from '@/components/toast-host';
-import { AuthRoutes, Colors, FontFamily, Radius } from '@/constants/commonConstants';
+import { AmenityNotificationTypes, AuthRoutes, Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { useRegisterPushToken } from '@/features/notifications/api';
 import { useProfile } from '@/features/profile/api';
 import { queryClient } from '@/lib/query-client';
@@ -135,7 +135,12 @@ function RootNavigator() {
             router.push(`/(resident)/notice/${data.noticeId}`);
           } else if (data?.type === 'COMPLAINT_STATUS' && data.complaintId && profile.role === 'RESIDENT') {
             router.push(`/(resident)/complaint/${data.complaintId}`);
-          } else if (data?.type === 'BOOKING_DECISION' && data.bookingId && profile.role === 'RESIDENT') {
+          } else if (
+            (data?.type === AmenityNotificationTypes.decision
+              || data?.type === AmenityNotificationTypes.maintenanceCancelled)
+            && data.bookingId
+            && profile.role === 'RESIDENT'
+          ) {
             router.push({ pathname: '/(resident)/amenities', params: { tab: 'bookings' } });
           }
         });

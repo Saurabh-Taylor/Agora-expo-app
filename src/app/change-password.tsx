@@ -2,8 +2,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { getQueryKey } from '@/commonFunctions';
 import { SetPasswordForm } from '@/components/set-password-form';
-import { Colors, FontFamily } from '@/constants/commonConstants';
+import { Colors, FontFamily, QueryKeyRoots } from '@/constants/commonConstants';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/auth-store';
 import { showToast } from '@/stores/toast-store';
@@ -28,7 +29,7 @@ export default function ChangePasswordScreen() {
       showToast(profileError.message);
       return;
     }
-    queryClient.invalidateQueries({ queryKey: ['profile', session.user.id] });
+    queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.profile, session.user.id) });
   }
 
   return (

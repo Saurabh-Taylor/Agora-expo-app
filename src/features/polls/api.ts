@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
-import { getUniqueRealtimeChannelTopic, invalidateSocietyPolls } from '@/commonFunctions';
+import { assertSocietyRecord, getQueryKey, invalidateSocietyPolls, removeRealtimeSubscription, subscribeToRealtimeTables } from '@/commonFunctions';
+import { QueryKeyRoots } from '@/constants/commonConstants';
 import { supabase } from '@/lib/supabase';
 
 export type PollState = 'ACTIVE' | 'CLOSED';
@@ -37,7 +38,7 @@ const POLL_SELECT =
 
 export function usePolls(societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['polls', societyId],
+    queryKey: getQueryKey(QueryKeyRoots.polls, societyId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('polls')
@@ -53,7 +54,7 @@ export function usePolls(societyId: string | null | undefined) {
 
 export function usePollDetail(id: string | undefined, societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['polls', societyId, 'detail', id],
+    queryKey: getQueryKey(QueryKeyRoots.polls, societyId, 'detail', id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('polls')
@@ -87,9 +88,11 @@ export function useCreatePoll() {
         })
         .single();
       if (error) throw error;
-      const result = data as { id: string; society_id: string } | null;
-      if (!result || result.society_id !== input.societyId) throw new Error('Created poll returned an invalid society scope');
-      return result;
+      return assertSocietyRecord(
+        data as { id: string; society_id: string } | null,
+        input.societyId,
+        'Created poll returned an invalid society scope',
+      );
     },
     onSuccess: (_data, input) => invalidateSocietyPolls(queryClient, input.societyId),
   });
@@ -121,9 +124,11 @@ export function useClosePoll() {
     mutationFn: async ({ id, societyId }: { id: string; societyId: string }) => {
       const { data, error } = await supabase.rpc('close_admin_poll', { target_poll_id: id }).single();
       if (error) throw error;
-      const result = data as { society_id: string } | null;
-      if (!result || result.society_id !== societyId) throw new Error('Closed poll returned an invalid society scope');
-      return result;
+      return assertSocietyRecord(
+        data as { society_id: string } | null,
+        societyId,
+        'Closed poll returned an invalid society scope',
+      );
     },
     onSuccess: (_data, input) => invalidateSocietyPolls(queryClient, input.societyId),
   });
@@ -135,9 +140,11 @@ export function useArchivePoll() {
     mutationFn: async ({ id, societyId }: { id: string; societyId: string }) => {
       const { data, error } = await supabase.rpc('archive_admin_poll', { target_poll_id: id }).single();
       if (error) throw error;
-      const result = data as { society_id: string } | null;
-      if (!result || result.society_id !== societyId) throw new Error('Archived poll returned an invalid society scope');
-      return result;
+      return assertSocietyRecord(
+        data as { society_id: string } | null,
+        societyId,
+        'Archived poll returned an invalid society scope',
+      );
     },
     onSuccess: (_data, input) => invalidateSocietyPolls(queryClient, input.societyId),
   });
@@ -151,22 +158,17 @@ export function usePollVotesRealtimeSync(societyId: string | null | undefined) {
     const refreshPolls = () => {
       invalidateSocietyPolls(queryClient, societyId);
     };
-    const channel = supabase
-      .channel(getUniqueRealtimeChannelTopic('poll-results:' + societyId))
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'poll_options', filter: `society_id=eq.${societyId}` },
-        refreshPolls,
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'polls', filter: `society_id=eq.${societyId}` },
-        refreshPolls,
-      )
-      .subscribe();
+    const channel = subscribeToRealtimeTables(
+      'poll-results:' + societyId,
+      [
+        { table: 'poll_options', filter: 'society_id=eq.' + societyId, event: 'UPDATE' },
+        { table: 'polls', filter: 'society_id=eq.' + societyId, event: 'UPDATE' },
+      ],
+      refreshPolls,
+    );
 
     return () => {
-      supabase.removeChannel(channel);
+      void removeRealtimeSubscription(channel);
     };
   }, [societyId, queryClient]);
 }

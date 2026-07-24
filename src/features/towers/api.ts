@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
+import { assertSocietyRecord, getQueryKey, invalidateAuditEvents } from '@/commonFunctions';
+import { QueryKeyRoots } from '@/constants/commonConstants';
 import { useFlats } from '@/features/flats/api';
 import { useResidents } from '@/features/residents/api';
 import { supabase } from '@/lib/supabase';
@@ -20,7 +22,7 @@ export function useTowers(
   options: { enabled?: boolean } = {},
 ) {
   return useQuery({
-    queryKey: ['towers', societyId],
+    queryKey: getQueryKey(QueryKeyRoots.towers, societyId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('towers')
@@ -51,14 +53,16 @@ export function useCreateTower() {
         requested_units_per_floor: unitsPerFloor,
       });
       if (error) throw error;
-      const tower = data as Tower;
-      if (!tower || tower.society_id !== societyId) throw new Error('The tower could not be created in this society');
-      return tower;
+      return assertSocietyRecord(
+        data as Tower | null,
+        societyId,
+        'The tower could not be created in this society',
+      );
     },
     onSuccess: (tower) => {
-      queryClient.invalidateQueries({ queryKey: ['towers', tower.society_id] });
-      queryClient.invalidateQueries({ queryKey: ['flats', tower.society_id] });
-      queryClient.invalidateQueries({ queryKey: ['audit-events', tower.society_id] });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.towers, tower.society_id) });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.flats, tower.society_id) });
+      invalidateAuditEvents(queryClient, tower.society_id);
     },
   });
 }
@@ -80,13 +84,15 @@ export function useUpdateTower() {
         requested_code: input.code.trim(),
       });
       if (error) throw error;
-      const tower = data as Tower;
-      if (!tower || tower.society_id !== input.societyId) throw new Error('The tower could not be updated in this society');
-      return tower;
+      return assertSocietyRecord(
+        data as Tower | null,
+        input.societyId,
+        'The tower could not be updated in this society',
+      );
     },
     onSuccess: (tower) => {
-      queryClient.invalidateQueries({ queryKey: ['towers', tower.society_id] });
-      queryClient.invalidateQueries({ queryKey: ['audit-events', tower.society_id] });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.towers, tower.society_id) });
+      invalidateAuditEvents(queryClient, tower.society_id);
     },
   });
 }
@@ -101,9 +107,9 @@ export function useDeleteEmptyTower() {
       return true;
     },
     onSuccess: (_data, input) => {
-      queryClient.invalidateQueries({ queryKey: ['towers', input.societyId] });
-      queryClient.invalidateQueries({ queryKey: ['flats', input.societyId] });
-      queryClient.invalidateQueries({ queryKey: ['audit-events', input.societyId] });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.towers, input.societyId) });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.flats, input.societyId) });
+      invalidateAuditEvents(queryClient, input.societyId);
     },
   });
 }

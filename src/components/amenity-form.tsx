@@ -5,11 +5,19 @@ import { useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
-import { getErrorMessage, isValidAmenityTimeRange } from '@/commonFunctions';
+import { getErrorMessage, isValidAmenitySlotSchedule, isValidAmenityTimeRange } from '@/commonFunctions';
 import { FullScreenImageViewer } from '@/components/full-screen-image-viewer';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import {
+  AMENITY_DEFAULT_ADVANCE_BOOKING_DAYS,
+  AMENITY_DEFAULT_DAILY_BOOKING_LIMIT,
+  AMENITY_DEFAULT_SLOT_DURATION_MINUTES,
   AMENITY_IMAGE_MAX_COUNT,
+  AMENITY_MAX_ADVANCE_BOOKING_DAYS,
+  AMENITY_MAX_DAILY_BOOKING_LIMIT,
+  AMENITY_MAX_SHARED_CAPACITY,
+  AmenityBookingTypes,
+  AmenitySlotDurations,
   Colors,
   FontFamily,
   Radius,
@@ -23,6 +31,13 @@ export type AmenityFormValue = {
   description: string;
   openTime: string;
   closeTime: string;
+  bookingType: 'EXCLUSIVE' | 'SHARED';
+  slotDurationMinutes: number;
+  maxBookingsPerSlot: number;
+  advanceBookingDays: number;
+  maxBookingsPerResidentPerDay: number;
+  requiresAdminApproval: boolean;
+  rulesAndRegulations: string;
   photos: AmenityPhotoInput[];
 };
 
@@ -56,7 +71,20 @@ function GallerySourceIcon() {
 export function AmenityForm({
   title,
   submitLabel,
-  initialValue = { name: '', description: '', openTime: '07:00', closeTime: '21:00', photos: [] },
+  initialValue = {
+    name: '',
+    description: '',
+    openTime: '07:00',
+    closeTime: '21:00',
+    bookingType: 'EXCLUSIVE',
+    slotDurationMinutes: AMENITY_DEFAULT_SLOT_DURATION_MINUTES,
+    maxBookingsPerSlot: 1,
+    advanceBookingDays: AMENITY_DEFAULT_ADVANCE_BOOKING_DAYS,
+    maxBookingsPerResidentPerDay: AMENITY_DEFAULT_DAILY_BOOKING_LIMIT,
+    requiresAdminApproval: true,
+    rulesAndRegulations: '',
+    photos: [],
+  },
   isPending,
   onSubmit,
 }: AmenityFormProps) {
@@ -64,14 +92,30 @@ export function AmenityForm({
   const [description, setDescription] = useState(initialValue.description);
   const [openTime, setOpenTime] = useState(initialValue.openTime);
   const [closeTime, setCloseTime] = useState(initialValue.closeTime);
+  const [bookingType, setBookingType] = useState(initialValue.bookingType);
+  const [slotDurationMinutes, setSlotDurationMinutes] = useState(initialValue.slotDurationMinutes);
+  const [maxBookingsPerSlot, setMaxBookingsPerSlot] = useState(String(initialValue.maxBookingsPerSlot));
+  const [advanceBookingDays, setAdvanceBookingDays] = useState(String(initialValue.advanceBookingDays));
+  const [maxBookingsPerResidentPerDay, setMaxBookingsPerResidentPerDay] = useState(String(initialValue.maxBookingsPerResidentPerDay));
+  const [requiresAdminApproval, setRequiresAdminApproval] = useState(initialValue.requiresAdminApproval);
+  const [rulesAndRegulations, setRulesAndRegulations] = useState(initialValue.rulesAndRegulations);
   const [photos, setPhotos] = useState(initialValue.photos);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSourceChooserOpen, setIsSourceChooserOpen] = useState(false);
   const [viewerUri, setViewerUri] = useState<string | null>(null);
 
-  const canSave = name.trim().length > 1 && isValidAmenityTimeRange(openTime, closeTime);
-
+  const canSave = name.trim().length > 1
+    && isValidAmenitySlotSchedule(openTime, closeTime, slotDurationMinutes)
+    && Number.isInteger(Number(maxBookingsPerSlot))
+    && Number(maxBookingsPerSlot) > 0
+    && Number(maxBookingsPerSlot) <= AMENITY_MAX_SHARED_CAPACITY
+    && Number.isInteger(Number(advanceBookingDays))
+    && Number(advanceBookingDays) >= 0
+    && Number(advanceBookingDays) <= AMENITY_MAX_ADVANCE_BOOKING_DAYS
+    && Number.isInteger(Number(maxBookingsPerResidentPerDay))
+    && Number(maxBookingsPerResidentPerDay) > 0
+    && Number(maxBookingsPerResidentPerDay) <= AMENITY_MAX_DAILY_BOOKING_LIMIT;
   async function selectPhotos(source: 'camera' | 'library') {
     const remaining = AMENITY_IMAGE_MAX_COUNT - photos.length;
     if (remaining <= 0) {
@@ -163,10 +207,17 @@ export function AmenityForm({
       description: description.trim(),
       openTime,
       closeTime,
+      bookingType,
+      slotDurationMinutes,
+      maxBookingsPerSlot: bookingType === 'EXCLUSIVE' ? 1 : Number(maxBookingsPerSlot),
+      advanceBookingDays: Number(advanceBookingDays),
+      maxBookingsPerResidentPerDay: Number(maxBookingsPerResidentPerDay),
+      requiresAdminApproval,
+      rulesAndRegulations: rulesAndRegulations.trim(),
       photos,
     });
-  }
 
+  }
   function handleSelectPhotoSource(source: 'camera' | 'library') {
     setIsSourceChooserOpen(false);
     void selectPhotos(source);
@@ -349,6 +400,112 @@ export function AmenityForm({
         <Text style={styles.validationError}>Use 24-hour HH:MM times, with opening before closing.</Text>
       )}
 
+      {isValidAmenityTimeRange(openTime, closeTime)
+        && !isValidAmenitySlotSchedule(openTime, closeTime, slotDurationMinutes) && (
+          <Text style={styles.validationError}>Operating hours must divide evenly into the selected slot duration.</Text>
+        )}
+      <Text style={styles.sectionTitle}>Booking setup</Text>
+      <Text style={styles.fieldHint}>Choose how residents share and reserve this amenity.</Text>
+
+      <Text style={styles.label}>BOOKING TYPE</Text>
+      <View style={styles.optionRow}>
+        {AmenityBookingTypes.map((option) => {
+          const selected = bookingType === option.value;
+          return (
+            <Pressable
+              key={option.value}
+              style={[styles.optionCard, selected && styles.optionCardSelected]}
+              onPress={() => {
+                setBookingType(option.value);
+                if (option.value === 'EXCLUSIVE') setMaxBookingsPerSlot('1');
+              }}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}>
+              <Text style={[styles.optionTitle, selected && styles.optionTitleSelected]}>{option.label}</Text>
+              <Text style={[styles.optionDescription, selected && styles.optionDescriptionSelected]}>{option.description}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <Text style={styles.label}>SLOT DURATION</Text>
+      <View style={styles.chipRow}>
+        {AmenitySlotDurations.map((minutes) => {
+          const selected = slotDurationMinutes === minutes;
+          return (
+            <Pressable
+              key={minutes}
+              style={[styles.choiceChip, selected && styles.choiceChipSelected]}
+              onPress={() => setSlotDurationMinutes(minutes)}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}>
+              <Text style={[styles.choiceChipLabel, selected && styles.choiceChipLabelSelected]}>
+                {minutes < 60 ? `${minutes} min` : `${minutes / 60} hr`}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={styles.fieldHint}>Operating hours must divide evenly into this duration.</Text>
+
+      {bookingType === 'SHARED' && (
+        <>
+          <Text style={styles.label}>BOOKINGS PER SLOT</Text>
+          <TextInput
+            value={maxBookingsPerSlot}
+            onChangeText={setMaxBookingsPerSlot}
+            placeholder="e.g. 15"
+            placeholderTextColor={Colors.textFaint}
+            style={styles.input}
+            keyboardType="number-pad"
+            maxLength={3}
+          />
+        </>
+      )}
+
+      <View style={styles.row}>
+        <View style={styles.flex}>
+          <Text style={styles.label}>BOOK DAYS AHEAD</Text>
+          <TextInput value={advanceBookingDays} onChangeText={setAdvanceBookingDays} style={styles.input} keyboardType="number-pad" maxLength={2} />
+        </View>
+        <View style={styles.flex}>
+          <Text style={styles.label}>DAILY LIMIT</Text>
+          <TextInput value={maxBookingsPerResidentPerDay} onChangeText={setMaxBookingsPerResidentPerDay} style={styles.input} keyboardType="number-pad" maxLength={2} />
+        </View>
+      </View>
+
+      <Text style={styles.label}>CONFIRMATION</Text>
+      <View style={styles.optionRow}>
+        <Pressable
+          style={[styles.optionCard, requiresAdminApproval && styles.optionCardSelected]}
+          onPress={() => setRequiresAdminApproval(true)}
+          accessibilityRole="button"
+          accessibilityState={{ selected: requiresAdminApproval }}>
+          <Text style={[styles.optionTitle, requiresAdminApproval && styles.optionTitleSelected]}>Admin approval</Text>
+          <Text style={[styles.optionDescription, requiresAdminApproval && styles.optionDescriptionSelected]}>Requests stay pending until reviewed.</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.optionCard, !requiresAdminApproval && styles.optionCardSelected]}
+          onPress={() => setRequiresAdminApproval(false)}
+          accessibilityRole="button"
+          accessibilityState={{ selected: !requiresAdminApproval }}>
+          <Text style={[styles.optionTitle, !requiresAdminApproval && styles.optionTitleSelected]}>Instant</Text>
+          <Text style={[styles.optionDescription, !requiresAdminApproval && styles.optionDescriptionSelected]}>Available capacity confirms immediately.</Text>
+        </Pressable>
+      </View>
+
+      <Text style={styles.label}>RULES (OPTIONAL)</Text>
+      <TextInput
+        value={rulesAndRegulations}
+        onChangeText={setRulesAndRegulations}
+        placeholder="What residents should know before booking"
+        placeholderTextColor={Colors.textFaint}
+        style={[styles.input, styles.rulesInput]}
+        multiline
+        maxLength={1000}
+        textAlignVertical="top"
+      />
+
       <Pressable style={[styles.saveButton, (!canSave || isProcessing) && styles.saveDisabled]} onPress={handleSave} disabled={!canSave || isPending || isProcessing} accessibilityRole="button" accessibilityLabel={submitLabel}>
         {isPending && <ActivityIndicator size="small" color={Colors.textOnDark} />}
         <Text style={[styles.saveLabel, (!canSave || isProcessing) && styles.saveLabelDisabled]}>
@@ -369,7 +526,6 @@ export function AmenityForm({
           />
           <View style={styles.sourceSheet}>
             <View style={styles.sourceHandle} />
-            <Text style={styles.sourceTitle}>Add amenity photos</Text>
             <Text style={styles.sourceText}>Choose where you want to add photos from.</Text>
             <Pressable
               style={styles.sourceOption}
@@ -471,6 +627,21 @@ const styles = StyleSheet.create({
   sourceOptionText: { marginTop: 2, fontSize: 11, color: Colors.textMuted },
   sourceCancel: { minHeight: 48, marginTop: 14, borderRadius: Radius.button, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8E2D4' },
   sourceCancelLabel: { fontSize: 13.5, fontWeight: '700', color: Colors.textMutedAlt },
+  sectionTitle: { marginTop: 28, fontFamily: FontFamily.headingBold, fontSize: 17, color: Colors.textPrimary },
+  fieldHint: { marginTop: 6, fontSize: 11.5, lineHeight: 17, color: Colors.textMuted },
+  optionRow: { flexDirection: 'row', gap: 9, marginTop: 9 },
+  optionCard: { flex: 1, minHeight: 86, padding: 12, borderRadius: 14, borderWidth: 1.5, borderColor: Colors.borderAlt, backgroundColor: Colors.surface },
+  optionCardSelected: { borderColor: Colors.green500, backgroundColor: '#EAF2ED' },
+  optionTitle: { fontSize: 13, fontWeight: '800', color: Colors.textPrimary },
+  optionTitleSelected: { color: Colors.success700 },
+  optionDescription: { marginTop: 4, fontSize: 10.5, lineHeight: 15, color: Colors.textMuted },
+  optionDescriptionSelected: { color: Colors.textMutedAlt },
+  chipRow: { flexDirection: 'row', gap: 8, marginTop: 9 },
+  choiceChip: { minHeight: 40, paddingHorizontal: 16, borderRadius: 999, borderWidth: 1.5, borderColor: Colors.borderAlt, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.surface },
+  choiceChipSelected: { borderColor: Colors.green500, backgroundColor: Colors.green500 },
+  choiceChipLabel: { fontSize: 12.5, fontWeight: '700', color: Colors.textMutedAlt },
+  choiceChipLabelSelected: { color: Colors.textOnDark },
+  rulesInput: { minHeight: 96 },
   saveButton: { marginTop: 30, minHeight: 54, borderRadius: Radius.card - 2, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 9, backgroundColor: Colors.green500 },
   saveDisabled: { backgroundColor: '#DDD8C8' },
   saveLabel: { fontSize: 15.5, fontWeight: '700', color: Colors.textOnDark },

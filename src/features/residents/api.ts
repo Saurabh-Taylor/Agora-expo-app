@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { assertSocietyRecord, getQueryKey, invalidateAuditEvents } from '@/commonFunctions';
+import { QueryKeyRoots } from '@/constants/commonConstants';
 import type { Profile } from '@/features/profile/api';
 import { supabase } from '@/lib/supabase';
 
@@ -15,7 +17,7 @@ export function useResidents(
 ) {
   const activeOnly = options.activeOnly ?? false;
   return useQuery({
-    queryKey: ['residents', societyId, activeOnly ? 'active' : 'all'],
+    queryKey: getQueryKey(QueryKeyRoots.residents, societyId, activeOnly ? 'active' : 'all'),
     queryFn: async () => {
       let query = supabase
         .from('profiles')
@@ -33,7 +35,7 @@ export function useResidents(
 
 export function useResident(id: string | undefined, societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['resident', societyId, id],
+    queryKey: getQueryKey(QueryKeyRoots.resident, societyId, id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
@@ -66,14 +68,16 @@ export function useSetResidentVerified() {
         requested_verified: verified,
       });
       if (error) throw error;
-      const resident = data as ResidentProfile;
-      if (!resident || resident.society_id !== societyId) throw new Error('The resident could not be updated');
-      return resident;
+      return assertSocietyRecord(
+        data as ResidentProfile | null,
+        societyId,
+        'The resident could not be updated',
+      );
     },
     onSuccess: (resident) => {
-      queryClient.invalidateQueries({ queryKey: ['residents', resident.society_id] });
-      queryClient.invalidateQueries({ queryKey: ['resident', resident.society_id, resident.id] });
-      queryClient.invalidateQueries({ queryKey: ['audit-events', resident.society_id] });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.residents, resident.society_id) });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.resident, resident.society_id, resident.id) });
+      invalidateAuditEvents(queryClient, resident.society_id);
     },
   });
 }
@@ -101,15 +105,17 @@ export function useUpdateResident() {
         requested_verified: input.isVerified,
       });
       if (error) throw error;
-      const resident = data as ResidentProfile;
-      if (!resident || resident.society_id !== input.societyId) throw new Error('The resident could not be updated');
-      return resident;
+      return assertSocietyRecord(
+        data as ResidentProfile | null,
+        input.societyId,
+        'The resident could not be updated',
+      );
     },
     onSuccess: (resident) => {
-      queryClient.invalidateQueries({ queryKey: ['residents', resident.society_id] });
-      queryClient.invalidateQueries({ queryKey: ['resident', resident.society_id, resident.id] });
-      queryClient.invalidateQueries({ queryKey: ['flats', resident.society_id] });
-      queryClient.invalidateQueries({ queryKey: ['audit-events', resident.society_id] });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.residents, resident.society_id) });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.resident, resident.society_id, resident.id) });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.flats, resident.society_id) });
+      invalidateAuditEvents(queryClient, resident.society_id);
     },
   });
 }
@@ -131,14 +137,16 @@ export function useSetResidentActive() {
         requested_active: active,
       });
       if (error) throw error;
-      const resident = data as ResidentProfile;
-      if (!resident || resident.society_id !== societyId) throw new Error('The resident access could not be updated');
-      return resident;
+      return assertSocietyRecord(
+        data as ResidentProfile | null,
+        societyId,
+        'The resident access could not be updated',
+      );
     },
     onSuccess: (resident) => {
-      queryClient.invalidateQueries({ queryKey: ['residents', resident.society_id] });
-      queryClient.invalidateQueries({ queryKey: ['resident', resident.society_id, resident.id] });
-      queryClient.invalidateQueries({ queryKey: ['audit-events', resident.society_id] });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.residents, resident.society_id) });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.resident, resident.society_id, resident.id) });
+      invalidateAuditEvents(queryClient, resident.society_id);
     },
   });
 }
@@ -183,9 +191,9 @@ export function useCreateResident() {
       return data;
     },
     onSuccess: (_data, input) => {
-      queryClient.invalidateQueries({ queryKey: ['residents', input.societyId] });
-      queryClient.invalidateQueries({ queryKey: ['flats', input.societyId] });
-      queryClient.invalidateQueries({ queryKey: ['audit-events', input.societyId] });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.residents, input.societyId) });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.flats, input.societyId) });
+      invalidateAuditEvents(queryClient, input.societyId);
     },
   });
 }

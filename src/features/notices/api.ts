@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { getPublishedNoticePushInput, getUniqueRealtimeChannelTopic, invalidateSocietyNotices } from '@/commonFunctions';
+import { assertSocietyRecord, getPublishedNoticePushInput, getQueryKey, invalidateAuditEvents, invalidateSocietyNotices, removeRealtimeSubscription, subscribeToRealtimeTables } from '@/commonFunctions';
+import { QueryKeyRoots } from '@/constants/commonConstants';
 import { sendPushNotification } from '@/features/notifications/api';
 import { supabase } from '@/lib/supabase';
 
@@ -27,7 +28,7 @@ const NOTICE_SELECT =
 
 export function useNotices(societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['notices', societyId],
+    queryKey: getQueryKey(QueryKeyRoots.notices, societyId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('notices')
@@ -43,7 +44,7 @@ export function useNotices(societyId: string | null | undefined) {
 
 export function useNoticeDetail(id: string | undefined, societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['notices', 'detail', societyId, id],
+    queryKey: getQueryKey(QueryKeyRoots.notices, societyId, 'detail', id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('notices')
@@ -77,13 +78,15 @@ export function useCreateNotice() {
         publish_now: input.publishNow,
       });
       if (error) throw error;
-      const notice = data as Notice;
-      if (!notice || notice.society_id !== input.societyId) throw new Error('The notice could not be created');
-      return notice;
+      return assertSocietyRecord(
+        data as Notice | null,
+        input.societyId,
+        'The notice could not be created',
+      );
     },
     onSuccess: (notice) => {
       invalidateSocietyNotices(queryClient, notice.society_id);
-      queryClient.invalidateQueries({ queryKey: ['audit-events', notice.society_id] });
+      invalidateAuditEvents(queryClient, notice.society_id);
       if (notice.state === 'PUBLISHED') {
         void sendPushNotification(getPublishedNoticePushInput(notice));
       }
@@ -110,14 +113,16 @@ export function useUpdateNotice() {
         requested_category: input.category,
       });
       if (error) throw error;
-      const notice = data as Notice;
-      if (!notice || notice.society_id !== input.societyId) throw new Error('The notice could not be updated');
-      return notice;
+      return assertSocietyRecord(
+        data as Notice | null,
+        input.societyId,
+        'The notice could not be updated',
+      );
     },
     onSuccess: (notice) => {
       invalidateSocietyNotices(queryClient, notice.society_id);
-      queryClient.invalidateQueries({ queryKey: ['notices', 'detail', notice.society_id, notice.id] });
-      queryClient.invalidateQueries({ queryKey: ['audit-events', notice.society_id] });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.notices, notice.society_id, 'detail', notice.id) });
+      invalidateAuditEvents(queryClient, notice.society_id);
     },
   });
 }
@@ -128,14 +133,16 @@ export function usePublishNotice() {
     mutationFn: async ({ id, societyId }: { id: string; societyId: string }) => {
       const { data, error } = await supabase.rpc('publish_admin_notice', { target_notice_id: id });
       if (error) throw error;
-      const notice = data as Notice;
-      if (!notice || notice.society_id !== societyId) throw new Error('The notice could not be published');
-      return notice;
+      return assertSocietyRecord(
+        data as Notice | null,
+        societyId,
+        'The notice could not be published',
+      );
     },
     onSuccess: (notice) => {
       invalidateSocietyNotices(queryClient, notice.society_id);
-      queryClient.invalidateQueries({ queryKey: ['notices', 'detail', notice.society_id, notice.id] });
-      queryClient.invalidateQueries({ queryKey: ['audit-events', notice.society_id] });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.notices, notice.society_id, 'detail', notice.id) });
+      invalidateAuditEvents(queryClient, notice.society_id);
       void sendPushNotification(getPublishedNoticePushInput(notice));
     },
   });
@@ -147,14 +154,16 @@ export function useArchiveNotice() {
     mutationFn: async ({ id, societyId }: { id: string; societyId: string }) => {
       const { data, error } = await supabase.rpc('archive_admin_notice', { target_notice_id: id });
       if (error) throw error;
-      const notice = data as Notice;
-      if (!notice || notice.society_id !== societyId) throw new Error('The notice could not be archived');
-      return notice;
+      return assertSocietyRecord(
+        data as Notice | null,
+        societyId,
+        'The notice could not be archived',
+      );
     },
     onSuccess: (notice) => {
       invalidateSocietyNotices(queryClient, notice.society_id);
-      queryClient.invalidateQueries({ queryKey: ['notices', 'detail', notice.society_id, notice.id] });
-      queryClient.invalidateQueries({ queryKey: ['audit-events', notice.society_id] });
+      queryClient.invalidateQueries({ queryKey: getQueryKey(QueryKeyRoots.notices, notice.society_id, 'detail', notice.id) });
+      invalidateAuditEvents(queryClient, notice.society_id);
     },
   });
 }
@@ -164,17 +173,14 @@ export function useNoticesRealtimeSync(societyId: string | null | undefined) {
 
   useEffect(() => {
     if (!societyId) return;
-    const channel = supabase
-      .channel(getUniqueRealtimeChannelTopic('notices:' + societyId))
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'notices', filter: 'society_id=eq.' + societyId },
-        () => invalidateSocietyNotices(queryClient, societyId),
-      )
-      .subscribe();
+    const channel = subscribeToRealtimeTables(
+      'notices:' + societyId,
+      [{ table: 'notices', filter: 'society_id=eq.' + societyId }],
+      () => invalidateSocietyNotices(queryClient, societyId),
+    );
 
     return () => {
-      supabase.removeChannel(channel);
+      void removeRealtimeSubscription(channel);
     };
   }, [queryClient, societyId]);
 }

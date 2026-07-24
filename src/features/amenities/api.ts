@@ -3,12 +3,14 @@ import * as Crypto from 'expo-crypto';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
-import { getUniqueRealtimeChannelTopic, invalidateSocietyAmenities } from '@/commonFunctions';
-import { AMENITY_IMAGES_BUCKET, AMENITY_IMAGE_MAX_BYTES, AMENITY_IMAGE_MAX_COUNT, AMENITY_IMAGE_SIGNED_URL_SECONDS } from '@/constants/commonConstants';
+import { assertFlatRecord, assertSocietyRecord, getAmenityRpcConfiguration, getQueryKey, invalidateSocietyAmenities, removeRealtimeSubscription, subscribeToRealtimeTables } from '@/commonFunctions';
+import { AMENITY_IMAGES_BUCKET, AMENITY_IMAGE_MAX_BYTES, AMENITY_IMAGE_MAX_COUNT, AMENITY_IMAGE_SIGNED_URL_SECONDS, AmenityNotificationTypes, QueryKeyRoots } from '@/constants/commonConstants';
 import { sendPushNotification } from '@/features/notifications/api';
 import { supabase } from '@/lib/supabase';
 
+
 export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED';
+export type AmenityBookingType = 'EXCLUSIVE' | 'SHARED';
 
 export type Amenity = {
   id: string;
@@ -18,6 +20,13 @@ export type Amenity = {
   image_paths: string[];
   open_time: string | null;
   close_time: string | null;
+  booking_type: AmenityBookingType;
+  slot_duration_minutes: number;
+  max_bookings_per_slot: number;
+  advance_booking_days: number;
+  max_bookings_per_resident_per_day: number;
+  requires_admin_approval: boolean;
+  rules_and_regulations: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -29,18 +38,19 @@ export type AmenityBooking = {
   amenity_id: string;
   flat_id: string;
   booked_by: string;
+  slot_id: string | null;
   slot_start: string;
   slot_end: string;
   status: BookingStatus;
+  status_reason: string | null;
   decided_by: string | null;
   decided_at: string | null;
   updated_at: string;
   amenity: { name: string } | null;
 };
-
 export function usePendingBookingsCount(societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['amenities', societyId, 'pending-count'],
+    queryKey: getQueryKey(QueryKeyRoots.amenities, societyId, 'pending-count'),
     queryFn: async () => {
       const { count, error } = await supabase
         .from('amenity_bookings')
@@ -56,7 +66,7 @@ export function usePendingBookingsCount(societyId: string | null | undefined) {
 
 export function useTodaysBookings(societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['amenities', societyId, 'today'],
+    queryKey: getQueryKey(QueryKeyRoots.amenities, societyId, 'today'),
     queryFn: async () => {
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
@@ -65,7 +75,7 @@ export function useTodaysBookings(societyId: string | null | undefined) {
 
       const { data, error } = await supabase
         .from('amenity_bookings')
-        .select('id, society_id, amenity_id, flat_id, booked_by, slot_start, slot_end, status, decided_by, decided_at, updated_at, amenity:amenities(name)')
+        .select('id, society_id, amenity_id, flat_id, booked_by, slot_id, slot_start, slot_end, status, status_reason, decided_by, decided_at, updated_at, amenity:amenities(name)')
         .eq('society_id', societyId as string)
         .eq('status', 'CONFIRMED')
         .gte('slot_start', startOfDay.toISOString())
@@ -80,11 +90,11 @@ export function useTodaysBookings(societyId: string | null | undefined) {
 
 export function useAmenities(societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['amenities', societyId, 'list'],
+    queryKey: getQueryKey(QueryKeyRoots.amenities, societyId, 'list'),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('amenities')
-        .select('id, society_id, name, description, image_paths, open_time, close_time, is_active, created_at, updated_at')
+        .select('id, society_id, name, description, image_paths, open_time, close_time, booking_type, slot_duration_minutes, max_bookings_per_slot, advance_booking_days, max_bookings_per_resident_per_day, requires_admin_approval, rules_and_regulations, is_active, created_at, updated_at')
         .eq('society_id', societyId as string)
         .order('is_active', { ascending: false })
         .order('name');
@@ -97,11 +107,11 @@ export function useAmenities(societyId: string | null | undefined) {
 
 export function useAmenityDetail(id: string | undefined, societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['amenities', societyId, 'detail', id],
+    queryKey: getQueryKey(QueryKeyRoots.amenities, societyId, 'detail', id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('amenities')
-        .select('id, society_id, name, description, image_paths, open_time, close_time, is_active, created_at, updated_at')
+        .select('id, society_id, name, description, image_paths, open_time, close_time, booking_type, slot_duration_minutes, max_bookings_per_slot, advance_booking_days, max_bookings_per_resident_per_day, requires_admin_approval, rules_and_regulations, is_active, created_at, updated_at')
         .eq('id', id as string)
         .eq('society_id', societyId as string)
         .single();
@@ -112,30 +122,35 @@ export function useAmenityDetail(id: string | undefined, societyId: string | nul
   });
 }
 
-type AmenityFormInput = {
+export type AmenityFormInput = {
   societyId: string;
   name: string;
   description: string;
   openTime: string;
   closeTime: string;
+  bookingType: 'EXCLUSIVE' | 'SHARED';
+  slotDurationMinutes: number;
+  maxBookingsPerSlot: number;
+  advanceBookingDays: number;
+  maxBookingsPerResidentPerDay: number;
+  requiresAdminApproval: boolean;
+  rulesAndRegulations: string;
 };
+
 
 export function useCreateAmenity() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: AmenityFormInput) => {
       const { data, error } = await supabase
-        .rpc('create_admin_amenity', {
-          requested_name: input.name,
-          requested_description: input.description,
-          requested_open_time: input.openTime,
-          requested_close_time: input.closeTime,
-        })
+        .rpc('create_admin_amenity', getAmenityRpcConfiguration(input))
         .single();
       if (error) throw error;
-      const result = data as Amenity | null;
-      if (!result || result.society_id !== input.societyId) throw new Error('Created amenity returned an invalid society scope');
-      return result;
+      return assertSocietyRecord(
+        data as Amenity | null,
+        input.societyId,
+        'Created amenity returned an invalid society scope',
+      );
     },
     onSuccess: (_data, input) => invalidateSocietyAmenities(queryClient, input.societyId),
   });
@@ -148,21 +163,19 @@ export function useUpdateAmenity() {
       const { data, error } = await supabase
         .rpc('update_admin_amenity', {
           target_amenity_id: input.id,
-          requested_name: input.name,
-          requested_description: input.description,
-          requested_open_time: input.openTime,
-          requested_close_time: input.closeTime,
+          ...getAmenityRpcConfiguration(input),
         })
         .single();
       if (error) throw error;
-      const result = data as Amenity | null;
-      if (!result || result.society_id !== input.societyId) throw new Error('Updated amenity returned an invalid society scope');
-      return result;
+      return assertSocietyRecord(
+        data as Amenity | null,
+        input.societyId,
+        'Updated amenity returned an invalid society scope',
+      );
     },
     onSuccess: (_data, input) => invalidateSocietyAmenities(queryClient, input.societyId),
   });
 }
-
 
 export type AmenityPhotoInput = {
   uri: string;
@@ -177,7 +190,7 @@ export function useAmenityImageUrls(
 ) {
   const stablePaths = [...imagePaths].sort();
   return useQuery({
-    queryKey: ['amenities', societyId, 'image-urls', stablePaths],
+    queryKey: getQueryKey(QueryKeyRoots.amenities, societyId, 'image-urls', stablePaths),
     queryFn: async () => {
       if (stablePaths.some((path) => !path.startsWith((societyId as string) + '/'))) {
         throw new Error('Amenity photo has an invalid society scope');
@@ -279,9 +292,11 @@ export function useSetAmenityActive() {
         .rpc('set_admin_amenity_active', { target_amenity_id: id, requested_active: isActive })
         .single();
       if (error) throw error;
-      const result = data as Amenity | null;
-      if (!result || result.society_id !== societyId) throw new Error('Amenity availability returned an invalid society scope');
-      return result;
+      return assertSocietyRecord(
+        data as Amenity | null,
+        societyId,
+        'Amenity availability returned an invalid society scope',
+      );
     },
     onSuccess: (_data, input) => invalidateSocietyAmenities(queryClient, input.societyId),
   });
@@ -294,6 +309,7 @@ export type AmenityBookingWithFlat = {
   slot_start: string;
   slot_end: string;
   status: BookingStatus;
+  status_reason: string | null;
   booked_by: string;
   decided_by: string | null;
   decided_at: string | null;
@@ -302,11 +318,11 @@ export type AmenityBookingWithFlat = {
 };
 
 const BOOKING_SELECT =
-  'id, society_id, amenity_id, slot_start, slot_end, status, booked_by, decided_by, decided_at, flat:flats(number, tower:towers(code)), booked_by_profile:profiles!amenity_bookings_booked_by_same_society_fkey(full_name)';
+  'id, society_id, amenity_id, slot_start, slot_end, status, status_reason, booked_by, decided_by, decided_at, flat:flats(number, tower:towers(code)), booked_by_profile:profiles!amenity_bookings_booked_by_same_society_fkey(full_name)';
 
 export function useAmenityBookings(amenityId: string | undefined, societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['amenities', societyId, 'bookings', amenityId],
+    queryKey: getQueryKey(QueryKeyRoots.amenities, societyId, 'bookings', amenityId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('amenity_bookings')
@@ -338,16 +354,18 @@ export function useDecideBooking() {
         })
         .single();
       if (error) throw error;
-      const result = data as AmenityBooking | null;
-      if (!result || result.society_id !== input.societyId) throw new Error('Booking decision returned an invalid society scope');
-      return result;
+      return assertSocietyRecord(
+        data as AmenityBooking | null,
+        input.societyId,
+        'Booking decision returned an invalid society scope',
+      );
     },
     onSuccess: (booking, input) => {
       invalidateSocietyAmenities(queryClient, input.societyId);
       void sendPushNotification({
         title: 'Amenity booking updated',
         body: `Your booking was ${booking.status === 'CONFIRMED' ? 'confirmed' : 'declined'}.`,
-        data: { type: 'BOOKING_DECISION', bookingId: booking.id },
+        data: { type: AmenityNotificationTypes.decision, bookingId: booking.id },
       });
     },
   });
@@ -359,17 +377,18 @@ export type FlatBooking = {
   amenity_id: string;
   slot_start: string;
   slot_end: string;
+  status_reason: string | null;
   status: BookingStatus;
   amenity: { name: string } | null;
 };
 
 export function useFlatBookings(flatId: string | null | undefined, societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['amenities', societyId, 'my-bookings', flatId],
+    queryKey: getQueryKey(QueryKeyRoots.amenities, societyId, 'my-bookings', flatId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('amenity_bookings')
-        .select('id, society_id, amenity_id, slot_start, slot_end, status, amenity:amenities(name)')
+        .select('id, society_id, amenity_id, slot_start, slot_end, status, status_reason, amenity:amenities(name)')
         .eq('flat_id', flatId as string)
         .eq('society_id', societyId as string)
         .order('slot_start', { ascending: false });
@@ -384,8 +403,8 @@ type CreateBookingInput = {
   societyId: string;
   flatId: string;
   amenityId: string;
-  slotStart: string;
-  slotEnd: string;
+  slotId: string;
+  bookingDate: string;
 };
 
 export function useCreateBooking() {
@@ -395,16 +414,17 @@ export function useCreateBooking() {
       const { data, error } = await supabase
         .rpc('create_resident_amenity_booking', {
           target_amenity_id: input.amenityId,
-          requested_slot_start: input.slotStart,
-          requested_slot_end: input.slotEnd,
+          target_slot_id: input.slotId,
+          requested_date: input.bookingDate,
         })
         .single();
       if (error) throw error;
-      const result = data as AmenityBooking | null;
-      if (!result || result.society_id !== input.societyId || result.flat_id !== input.flatId) {
-        throw new Error('Created booking returned an invalid ownership scope');
-      }
-      return result;
+      return assertFlatRecord(
+        data as AmenityBooking | null,
+        input.societyId,
+        input.flatId,
+        'Created booking returned an invalid ownership scope',
+      );
     },
     onSuccess: (_data, input) => invalidateSocietyAmenities(queryClient, input.societyId),
   });
@@ -416,34 +436,153 @@ export function useCancelBooking() {
     mutationFn: async ({ id, societyId }: { id: string; societyId: string }) => {
       const { data, error } = await supabase.rpc('cancel_resident_amenity_booking', { target_booking_id: id }).single();
       if (error) throw error;
-      const result = data as AmenityBooking | null;
-      if (!result || result.society_id !== societyId) throw new Error('Cancelled booking returned an invalid society scope');
-      return result;
+      return assertSocietyRecord(
+        data as AmenityBooking | null,
+        societyId,
+        'Cancelled booking returned an invalid society scope',
+      );
     },
     onSuccess: (_data, input) => invalidateSocietyAmenities(queryClient, input.societyId),
   });
 }
 
-export type UnavailableSlot = { slot_start: string; slot_end: string };
+export type AmenitySlotStatus = 'AVAILABLE' | 'FULL' | 'BLOCKED' | 'PAST';
 
-export function useAmenityUnavailableSlots(
+export type AmenitySlot = {
+  id: string;
+  society_id: string;
+  amenity_id: string;
+  start_time: string;
+  end_time: string;
+  is_active: boolean;
+};
+
+export type AmenitySlotAvailability = {
+  slot_id: string;
+  slot_start: string;
+  slot_end: string;
+  status: AmenitySlotStatus;
+  active_bookings: number;
+  remaining_capacity: number;
+};
+
+export type AmenityBlock = {
+  id: string;
+  society_id: string;
+  amenity_id: string;
+  block_date: string;
+  slot_id: string | null;
+  reason: string;
+  is_active: boolean;
+  slot: { start_time: string; end_time: string } | null;
+};
+
+export function useAmenitySlots(amenityId: string | undefined, societyId: string | null | undefined) {
+  return useQuery({
+    queryKey: getQueryKey(QueryKeyRoots.amenities, societyId, 'slots', amenityId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('amenity_slots')
+        .select('id, society_id, amenity_id, start_time, end_time, is_active')
+        .eq('amenity_id', amenityId as string)
+        .eq('society_id', societyId as string)
+        .eq('is_active', true)
+        .order('start_time');
+      if (error) throw error;
+      return (data ?? []) as AmenitySlot[];
+    },
+    enabled: !!amenityId && !!societyId,
+  });
+}
+
+export function useAmenitySlotAvailability(
   amenityId: string | undefined,
   societyId: string | null | undefined,
-  rangeStart: string | undefined,
-  rangeEnd: string | undefined,
+  bookingDate: string | undefined,
 ) {
   return useQuery({
-    queryKey: ['amenities', societyId, 'availability', amenityId, rangeStart, rangeEnd],
+    queryKey: getQueryKey(QueryKeyRoots.amenities, societyId, 'availability', amenityId, bookingDate),
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_amenity_unavailable_slots', {
+      const { data, error } = await supabase.rpc('get_amenity_slot_availability', {
         target_amenity_id: amenityId,
-        range_start: rangeStart,
-        range_end: rangeEnd,
+        requested_date: bookingDate,
       });
       if (error) throw error;
-      return (data ?? []) as UnavailableSlot[];
+      return (data ?? []) as AmenitySlotAvailability[];
     },
-    enabled: !!amenityId && !!societyId && !!rangeStart && !!rangeEnd,
+    enabled: !!amenityId && !!societyId && !!bookingDate,
+  });
+}
+
+export function useAmenityBlocks(amenityId: string | undefined, societyId: string | null | undefined) {
+  return useQuery({
+    queryKey: getQueryKey(QueryKeyRoots.amenities, societyId, 'blocks', amenityId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('amenity_blocks')
+        .select('id, society_id, amenity_id, block_date, slot_id, reason, is_active, slot:amenity_slots(start_time, end_time)')
+        .eq('amenity_id', amenityId as string)
+        .eq('society_id', societyId as string)
+        .eq('is_active', true)
+        .order('block_date');
+      if (error) throw error;
+      return (data ?? []) as unknown as AmenityBlock[];
+    },
+    enabled: !!amenityId && !!societyId,
+  });
+}
+
+type CreateAmenityBlockInput = {
+  amenityId: string;
+  societyId: string;
+  blockDate: string;
+  slotId: string | null;
+  reason: string;
+  cancelExistingBookings: boolean;
+};
+
+export function useCreateAmenityBlock() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CreateAmenityBlockInput) => {
+      const { data, error } = await supabase.rpc('create_admin_amenity_block', {
+        target_amenity_id: input.amenityId,
+        requested_block_date: input.blockDate,
+        target_slot_id: input.slotId,
+        requested_reason: input.reason,
+        cancel_existing_bookings: input.cancelExistingBookings,
+      }).single();
+      if (error) throw error;
+      return data as { block_id: string; cancelled_booking_ids: string[] };
+    },
+    onSuccess: (result, input) => {
+      invalidateSocietyAmenities(queryClient, input.societyId);
+      result.cancelled_booking_ids.forEach((bookingId) => {
+        void sendPushNotification({
+          title: 'Amenity booking cancelled',
+          body: 'Your booking was cancelled because the amenity is unavailable.',
+          data: { type: AmenityNotificationTypes.maintenanceCancelled, bookingId },
+        });
+      });
+    },
+  });
+}
+
+export function useRemoveAmenityBlock() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, societyId }: { id: string; societyId: string }) => {
+      const { data, error } = await supabase.rpc('remove_admin_amenity_block', {
+        target_block_id: id,
+      }).single();
+      if (error) throw error;
+      return assertSocietyRecord(
+        data as AmenityBlock | null,
+        societyId,
+        'Removed amenity block returned an invalid society scope',
+      );
+    },
+    onSuccess: (_data, input) => invalidateSocietyAmenities(queryClient, input.societyId),
   });
 }
 
@@ -455,22 +594,19 @@ export function useAmenityRealtimeSync(societyId: string | null | undefined) {
     const refreshAmenities = () => {
       invalidateSocietyAmenities(queryClient, societyId);
     };
-    const channel = supabase
-      .channel(getUniqueRealtimeChannelTopic('amenities:' + societyId))
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'amenities', filter: `society_id=eq.${societyId}` },
-        refreshAmenities,
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'amenity_bookings', filter: `society_id=eq.${societyId}` },
-        refreshAmenities,
-      )
-      .subscribe();
+    const channel = subscribeToRealtimeTables(
+      'amenities:' + societyId,
+      [
+        { table: 'amenities', filter: 'society_id=eq.' + societyId },
+        { table: 'amenity_bookings', filter: 'society_id=eq.' + societyId },
+        { table: 'amenity_slots', filter: 'society_id=eq.' + societyId },
+        { table: 'amenity_blocks', filter: 'society_id=eq.' + societyId },
+      ],
+      refreshAmenities,
+    );
 
     return () => {
-      supabase.removeChannel(channel);
+      void removeRealtimeSubscription(channel);
     };
   }, [queryClient, societyId]);
 }

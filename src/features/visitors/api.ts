@@ -2,12 +2,22 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { useEffect, useState } from 'react';
 
 import {
+  assertFlatRecords,
+  assertSocietyRecords,
   getEffectiveVisitorRequestStatus,
-  getUniqueRealtimeChannelTopic,
+  getQueryKey,
+  invalidateVisitorRequests,
   isVisitorReadyForEntry,
+  removeRealtimeSubscription,
+  subscribeToRealtimeTables,
   titleCase,
 } from '@/commonFunctions';
-import { LOGBOOK_LOCATION_SEARCH_LIMIT, VISITOR_LOGBOOK_PAGE_SIZE, type VisitorVehicleType } from '@/constants/commonConstants';
+import {
+  LOGBOOK_LOCATION_SEARCH_LIMIT,
+  QueryKeyRoots,
+  VISITOR_LOGBOOK_PAGE_SIZE,
+  type VisitorVehicleType,
+} from '@/constants/commonConstants';
 import { sendPushNotification } from '@/features/notifications/api';
 import { supabase } from '@/lib/supabase';
 
@@ -59,7 +69,7 @@ export function useAdminVisitorHistory(
   filters: AdminVisitorHistoryFilters,
 ) {
   return useInfiniteQuery({
-    queryKey: ['visitor-requests', 'admin-history', societyId, filters],
+    queryKey: getQueryKey(QueryKeyRoots.visitorRequests, 'admin-history', societyId, filters),
     queryFn: async ({ pageParam }) => {
       const cursor = pageParam as AdminVisitorHistoryCursor | null;
       const { data, error } = await supabase.rpc('list_admin_visitor_history', {
@@ -75,9 +85,7 @@ export function useAdminVisitorHistory(
       if (error) throw error;
 
       const rows = (data ?? []) as AdminVisitorHistoryItem[];
-      if (rows.some((row) => row.society_id !== societyId)) {
-        throw new Error('Visitor history returned an invalid society scope');
-      }
+      assertSocietyRecords(rows, societyId as string, 'Visitor history returned an invalid society scope');
 
       const items = rows.slice(0, ADMIN_VISITOR_HISTORY_PAGE_SIZE);
       const lastItem = items.at(-1);
@@ -113,7 +121,7 @@ export function useLogbookLocationSearch(
 ) {
   const normalizedSearch = search.trim();
   return useQuery({
-    queryKey: ['visitor-logbook-locations', societyId, normalizedSearch],
+    queryKey: getQueryKey(QueryKeyRoots.visitorLogbookLocations, societyId, normalizedSearch),
     queryFn: async () => {
       const { data, error } = await supabase.rpc('search_guard_logbook_locations', {
         requested_search: normalizedSearch,
@@ -122,10 +130,11 @@ export function useLogbookLocationSearch(
       if (error) throw error;
 
       const locations = (data ?? []) as LogbookLocationResult[];
-      if (locations.some((location) => location.society_id !== societyId)) {
-        throw new Error('Location search returned an invalid society scope');
-      }
-      return locations;
+      return assertSocietyRecords(
+        locations,
+        societyId as string,
+        'Location search returned an invalid society scope',
+      );
     },
     enabled: enabled && !!societyId && normalizedSearch.length > 0,
     staleTime: 5 * 60_000,
@@ -173,7 +182,7 @@ export function useSocietyVisitorLogbook(
   filters: SocietyVisitorLogbookFilters,
 ) {
   return useInfiniteQuery({
-    queryKey: ['visitor-logbook', societyId, filters],
+    queryKey: getQueryKey(QueryKeyRoots.visitorLogbook, societyId, filters),
     queryFn: async ({ pageParam }) => {
       const cursor = pageParam as SocietyVisitorLogbookCursor | null;
       const { data, error } = await supabase.rpc('list_society_visitor_logbook', {
@@ -194,9 +203,7 @@ export function useSocietyVisitorLogbook(
 
       const payload = data as unknown as SocietyVisitorLogbookPayload;
       const rows = Array.isArray(payload?.items) ? payload.items : [];
-      if (rows.some((row) => row.society_id !== societyId)) {
-        throw new Error('Visitor logbook returned an invalid society scope');
-      }
+      assertSocietyRecords(rows, societyId as string, 'Visitor logbook returned an invalid society scope');
 
       const items = rows.slice(0, VISITOR_LOGBOOK_PAGE_SIZE);
       const lastItem = items.at(-1);
@@ -232,7 +239,7 @@ const VISITOR_REQUEST_WITH_FLAT_SELECT =
 
 export function usePendingVisitorRequests(societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['visitor-requests', 'pending', societyId],
+    queryKey: getQueryKey(QueryKeyRoots.visitorRequests, 'pending', societyId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('visitor_requests')
@@ -249,7 +256,7 @@ export function usePendingVisitorRequests(societyId: string | null | undefined) 
 
 export function useTodaysVisitorRequestsCount(societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['visitor-requests', 'today-count', societyId],
+    queryKey: getQueryKey(QueryKeyRoots.visitorRequests, 'today-count', societyId),
     queryFn: async () => {
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
@@ -278,7 +285,7 @@ export type GuardResidentSearchResult = {
 export function useGuardResidentSearch(search: string, societyId: string | null | undefined) {
   const normalizedSearch = search.trim();
   return useQuery({
-    queryKey: ['guard-resident-search', societyId, normalizedSearch],
+    queryKey: getQueryKey(QueryKeyRoots.guardResidentSearch, societyId, normalizedSearch),
     queryFn: async () => {
       const { data, error } = await supabase.rpc('search_guard_residents', {
         requested_search: normalizedSearch,
@@ -286,10 +293,11 @@ export function useGuardResidentSearch(search: string, societyId: string | null 
       if (error) throw error;
 
       const residents = (data ?? []) as GuardResidentSearchResult[];
-      if (residents.some((resident) => resident.society_id !== societyId)) {
-        throw new Error('Resident search returned an invalid society scope');
-      }
-      return residents;
+      return assertSocietyRecords(
+        residents,
+        societyId as string,
+        'Resident search returned an invalid society scope',
+      );
     },
     enabled: !!societyId,
     staleTime: 15_000,
@@ -349,7 +357,7 @@ export function useCreateVisitorRequest() {
       };
     },
     onSuccess: ({ visitor, request }) => {
-      queryClient.invalidateQueries({ queryKey: ['visitor-requests'] });
+      invalidateVisitorRequests(queryClient);
       sendPushNotification({
         flatId: request.flat_id,
         title: `${visitor.name} is at the gate`,
@@ -414,7 +422,7 @@ export function useResidentVisitorHistory(
   filters: ResidentVisitorHistoryFilters,
 ) {
   return useInfiniteQuery({
-    queryKey: ['visitor-requests', 'resident-history', societyId, flatId, filters],
+    queryKey: getQueryKey(QueryKeyRoots.visitorRequests, 'resident-history', societyId, flatId, filters),
     queryFn: async ({ pageParam }) => {
       const cursor = pageParam as ResidentVisitorHistoryCursor | null;
       const { data, error } = await supabase.rpc('list_resident_visitor_history', {
@@ -431,9 +439,12 @@ export function useResidentVisitorHistory(
 
       const payload = data as unknown as ResidentVisitorHistoryPayload;
       const rows = Array.isArray(payload?.items) ? payload.items : [];
-      if (rows.some((row) => row.society_id !== societyId || row.flat_id !== flatId)) {
-        throw new Error('Resident visitor history returned an invalid ownership scope');
-      }
+      assertFlatRecords(
+        rows,
+        societyId as string,
+        flatId as string,
+        'Resident visitor history returned an invalid ownership scope',
+      );
 
       const items = rows.slice(0, VISITOR_LOGBOOK_PAGE_SIZE);
       const lastItem = items.at(-1);
@@ -458,7 +469,7 @@ export function useFlatVisitorRequests(
   limit = 10,
 ) {
   return useQuery({
-    queryKey: ['visitor-requests', 'flat', societyId, flatId],
+    queryKey: getQueryKey(QueryKeyRoots.visitorRequests, 'flat', societyId, flatId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('visitor_requests')
@@ -479,7 +490,7 @@ export function useActiveGatePasses(
   societyId: string | null | undefined,
 ) {
   return useQuery({
-    queryKey: ['visitor-requests', 'active-gate-passes', societyId, flatId],
+    queryKey: getQueryKey(QueryKeyRoots.visitorRequests, 'active-gate-passes', societyId, flatId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('visitor_requests')
@@ -504,7 +515,7 @@ export type VisitorRequestDetail = VisitorRequestForFlat & {
 
 export function useVisitorRequestDetail(id: string | undefined, societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['visitor-requests', 'detail', societyId, id],
+    queryKey: getQueryKey(QueryKeyRoots.visitorRequests, 'detail', societyId, id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('visitor_requests')
@@ -548,7 +559,7 @@ export function useVerifyGatePassCode(societyId: string | null | undefined) {
     },
     onSuccess: (request) => {
       queryClient.setQueryData(
-        ['visitor-requests', 'detail', societyId, request.id],
+        getQueryKey(QueryKeyRoots.visitorRequests, 'detail', societyId, request.id),
         request,
       );
     },
@@ -557,7 +568,7 @@ export function useVerifyGatePassCode(societyId: string | null | undefined) {
 
 export function useAwaitingEntryCount(societyId: string | null | undefined) {
   return useQuery({
-    queryKey: ['visitor-requests', 'awaiting-entry-count', societyId],
+    queryKey: getQueryKey(QueryKeyRoots.visitorRequests, 'awaiting-entry-count', societyId),
     queryFn: async () => {
       const { count, error } = await supabase
         .from('visitor_requests')
@@ -577,7 +588,7 @@ export function useAwaitingEntryCount(societyId: string | null | undefined) {
 
 export function useGuardLiveVisitorRequests(societyId: string | null | undefined, limit = 100) {
   return useQuery({
-    queryKey: ['visitor-requests', 'live', societyId],
+    queryKey: getQueryKey(QueryKeyRoots.visitorRequests, 'live', societyId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('visitor_requests')
@@ -599,7 +610,7 @@ export function useGuardLiveVisitorRequests(societyId: string | null | undefined
 // to the top on exit; acceptable for a hackathon-scale demo.
 export function useSocietyVisitorRequests(societyId: string | null | undefined, limit = 50) {
   return useQuery({
-    queryKey: ['visitor-requests', 'society', societyId],
+    queryKey: getQueryKey(QueryKeyRoots.visitorRequests, 'society', societyId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('visitor_requests')
@@ -625,7 +636,7 @@ export function useMarkEntry() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['visitor-requests'] });
+      invalidateVisitorRequests(queryClient);
     },
   });
 }
@@ -641,7 +652,7 @@ export function useMarkExit() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['visitor-requests'] });
+      invalidateVisitorRequests(queryClient);
     },
   });
 }
@@ -652,17 +663,14 @@ export function useVisitorLogbookRealtimeNotice(societyId: string | null | undef
   useEffect(() => {
     if (!societyId) return;
 
-    const channel = supabase
-      .channel(getUniqueRealtimeChannelTopic('visitor-logbook:' + societyId))
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'visitor_requests', filter: `society_id=eq.${societyId}` },
-        () => setHasNewActivity(true),
-      )
-      .subscribe();
+    const channel = subscribeToRealtimeTables(
+      'visitor-logbook:' + societyId,
+      [{ table: 'visitor_requests', filter: 'society_id=eq.' + societyId }],
+      () => setHasNewActivity(true),
+    );
 
     return () => {
-      supabase.removeChannel(channel);
+      void removeRealtimeSubscription(channel);
     };
   }, [societyId]);
 
@@ -681,19 +689,14 @@ export function useVisitorRequestsRealtimeSync(
   useEffect(() => {
     if (!filterValue) return;
 
-    const channel = supabase
-      .channel(getUniqueRealtimeChannelTopic('visitor_requests:' + filterColumn + ':' + filterValue))
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'visitor_requests', filter: `${filterColumn}=eq.${filterValue}` },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['visitor-requests'] });
-        },
-      )
-      .subscribe();
+    const channel = subscribeToRealtimeTables(
+      'visitor_requests:' + filterColumn + ':' + filterValue,
+      [{ table: 'visitor_requests', filter: filterColumn + '=eq.' + filterValue }],
+      () => invalidateVisitorRequests(queryClient),
+    );
 
     return () => {
-      supabase.removeChannel(channel);
+      void removeRealtimeSubscription(channel);
     };
   }, [filterColumn, filterValue, queryClient]);
 }
@@ -717,7 +720,7 @@ export function useDecideVisitorRequest() {
       return data;
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['visitor-requests'] });
+      invalidateVisitorRequests(queryClient);
       if (!variables.raisedBy) return;
       const decisionLabel =
         variables.decision === 'APPROVED'
@@ -755,7 +758,7 @@ export function useRevokePreApproval() {
       return data as VisitorRequestForFlat;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['visitor-requests'] });
+      invalidateVisitorRequests(queryClient);
     },
   });
 }
@@ -787,7 +790,7 @@ export function useCreatePreApproval() {
       return { request, gatePassCode: request.gate_pass_code };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['visitor-requests'] });
+      invalidateVisitorRequests(queryClient);
     },
   });
 }
