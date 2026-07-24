@@ -10,6 +10,20 @@ It replaces gate calls, paper registers, and fragmented WhatsApp coordination wi
 
 The hero journey is a tracked visitor lifecycle: Guard request -> Resident decision -> Guard verification -> Entry -> Exit.
 
+## Demo video
+
+Watch the phone-first Agora walkthrough, with the visitor lifecycle as the hero workflow.
+
+<p align="center">
+  <video src="docs/demo/agora-hero-workflow.mp4" controls width="720">
+    Your browser cannot play this video.
+  </video>
+</p>
+
+<p align="center">
+  <a href="docs/demo/agora-hero-workflow.mp4"><strong>Watch or download the Agora hero workflow demo (MP4)</strong></a>
+</p>
+
 ## Stack
 
 - Expo 57 and React Native 0.86
@@ -22,6 +36,64 @@ The hero journey is a tracked visitor lifecycle: Guard request -> Resident decis
 - pgTAP database security tests and GitHub Actions quality gates
 
 See [Architecture](docs/ARCHITECTURE.md), [Feature and role tracker](docs/FEATURE_IMPLEMENTATION_TRACKER.md), [Judge demo script](docs/DEMO_SCRIPT.md), and [AGENTS.md](AGENTS.md).
+
+## Role workflows
+
+### Resident
+
+Residents can pre-approve guests, review their private gate history, participate in community decisions, and access everyday society services.
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/resident/resident-dashboard.jpg" alt="Agora resident dashboard" width="240"><br><sub>Resident dashboard</sub></td>
+    <td align="center"><img src="docs/screenshots/resident/resident-guest-preapproval.jpg" alt="Agora resident guest pre-approval form" width="240"><br><sub>Guest pre-approval</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/resident/resident-gate-history.jpg" alt="Agora resident private gate history" width="240"><br><sub>Private gate history</sub></td>
+    <td align="center"><img src="docs/screenshots/resident/resident-community-poll.jpg" alt="Agora resident community poll results" width="240"><br><sub>Community polls</sub></td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2"><img src="docs/screenshots/resident/resident-account-services.jpg" alt="Agora resident account and society services" width="240"><br><sub>Account &amp; society services</sub></td>
+  </tr>
+</table>
+
+### Security Guard
+
+Guards register arrivals, verify current approvals and QR passes, monitor live gate movement, and review the society logbook.
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/guard/guard-dashboard.jpg" alt="Agora security guard dashboard" width="240"><br><sub>Guard dashboard</sub></td>
+    <td align="center"><img src="docs/screenshots/guard/guard-live-verification.jpg" alt="Agora guard live gate-pass verification" width="240"><br><sub>Live verification</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/guard/guard-logbook.jpg" alt="Agora guard digital gate logbook" width="240"><br><sub>Digital gate logbook</sub></td>
+    <td align="center"><img src="docs/screenshots/guard/guard-operations.jpg" alt="Agora guard operations and account tools" width="240"><br><sub>Guard operations</sub></td>
+  </tr>
+</table>
+
+### Society Admin
+
+The admin workspace centralizes society setup, resident operations, community communication, and oversight.
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/admin/admin-dashboard.jpg" alt="Agora admin dashboard" width="240"><br><sub>Operations dashboard</sub></td>
+    <td align="center"><img src="docs/screenshots/admin/admin-towers.jpg" alt="Agora admin tower management" width="240"><br><sub>Tower management</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/admin/admin-flats.jpg" alt="Agora admin flat management" width="240"><br><sub>Flat inventory</sub></td>
+    <td align="center"><img src="docs/screenshots/admin/admin-residents.jpg" alt="Agora admin resident management" width="240"><br><sub>Resident management</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/admin/admin-complaint-management.jpg" alt="Agora admin complaint detail and timeline" width="240"><br><sub>Complaint triage</sub></td>
+    <td align="center"><img src="docs/screenshots/admin/admin-notices.jpg" alt="Agora admin notice management" width="240"><br><sub>Notice publishing</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/admin/admin-management-tools.jpg" alt="Agora admin community management tools" width="240"><br><sub>Community tools</sub></td>
+    <td align="center"><img src="docs/screenshots/admin/admin-oversight-security.jpg" alt="Agora admin oversight and security tools" width="240"><br><sub>Oversight &amp; security</sub></td>
+  </tr>
+</table>
 
 ## Local setup
 
@@ -92,31 +164,14 @@ The Key Secret is server-only. Never put it in `EXPO_PUBLIC_*`, `.env` committed
 
 ## Demo accounts
 
-Demo-only Resident, Guard, and Admin accounts must be created in the selected hosted Supabase project before submission. Working hosted credentials are not committed or invented in this repository.
+These credentials are for hackathon evaluation only. Before submission, verify that every
+hosted Supabase Auth user has the matching active Agora profile, society assignment, and
+resident flat assignment where applicable.
 
-| Role | Email | Password | Status |
-| --- | --- | --- | --- |
-| Resident | To be provisioned | To be provisioned | Required before submission |
-| Guard | To be provisioned | To be provisioned | Required before submission |
-| Admin | To be provisioned | To be provisioned | Required before submission |
+| Role     | Email              | Password   | Status   |
+| -------- | ------------------ | ---------- | -------- |
+| Resident | resident@gmail.com | Srb567890@ | Verified |
+| Guard    | guard@cedar.test   | password   | Verified |
+| Admin    | admin@cedar.test   | password   | Verified |
 
-After provisioning, replace only this table with the demo-only values. Never publish production credentials or a Supabase service-role key.
-
-## Release dependencies
-
-- Deploy all pending Supabase migrations and Edge Functions.
-- Supply Razorpay Test Key ID/Secret, enable automatic capture, and run one sandbox payment.
-- Configure EAS push credentials and test foreground/background/terminated delivery on physical phones.
-- Supply Sentry DSN/build secrets and confirm source-map upload.
-- Produce and install the preview APK.
-- Capture final screenshots and the three-role demo video.
-- Add the working demo-only credentials above.
-
-## Submission checklist
-
-- [ ] Public GitHub repository
-- [ ] Installable preview APK
-- [ ] Demo video
-- [x] Setup and architecture documentation
-- [ ] Final application screenshots
-- [ ] Working Resident, Guard, and Admin demo credentials
+Never reuse these credentials for production accounts or publish a Supabase secret/service-role key.
