@@ -20,21 +20,23 @@ insert into public.profiles(id,society_id,role,flat_id,occupancy_type,full_name,
 ('48000000-0000-0000-0000-000000000004','18000000-0000-0000-0000-000000000001','GUARD',null,null,'Guard A',true);
 insert into public.staff(id,society_id,name,role,shift,phone,status) values
 ('58000000-0000-0000-0000-000000000001','18000000-0000-0000-0000-000000000001','Staff A','Security','Morning','9876543210','ON_DUTY'),
-('58000000-0000-0000-0000-000000000002','18000000-0000-0000-0000-000000000002','Staff B','Security','Night',null,'ON_DUTY');
+('58000000-0000-0000-0000-000000000002','18000000-0000-0000-0000-000000000002','Staff B','Security','Night',null,'ON_DUTY'),
+('58000000-0000-0000-0000-000000000003','18000000-0000-0000-0000-000000000001','Off Duty A','Security','Night',null,'OFF_DUTY');
 insert into public.service_providers(id,society_id,name,category,phone,status) values
 ('68000000-0000-0000-0000-000000000001','18000000-0000-0000-0000-000000000001','Provider A','Plumber','9876500000','ON_DUTY'),
-('68000000-0000-0000-0000-000000000002','18000000-0000-0000-0000-000000000002','Provider B','Electrician',null,'ON_DUTY');
+('68000000-0000-0000-0000-000000000002','18000000-0000-0000-0000-000000000002','Provider B','Electrician',null,'ON_DUTY'),
+('68000000-0000-0000-0000-000000000003','18000000-0000-0000-0000-000000000001','Unavailable A','Electrician',null,'OFF_DUTY');
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','48000000-0000-0000-0000-000000000003',true);
-select is((select count(*)::int from public.staff),0,'resident cannot read staff');
-select is((select count(*)::int from public.service_providers),0,'resident cannot read service providers');
+select is((select count(*)::int from public.staff),1,'resident reads only active own-society staff');
+select is((select count(*)::int from public.service_providers),1,'resident reads only active own-society service providers');
 select set_config('request.jwt.claim.sub','48000000-0000-0000-0000-000000000004',true);
 select is((select count(*)::int from public.staff),0,'guard cannot read staff directory');
 select is((select count(*)::int from public.service_providers),0,'guard cannot read service provider directory');
 select set_config('request.jwt.claim.sub','48000000-0000-0000-0000-000000000001',true);
-select is((select count(*)::int from public.staff),1,'admin reads own-society staff');
-select is((select count(*)::int from public.service_providers),1,'admin reads own-society providers');
+select is((select count(*)::int from public.staff),2,'admin reads active and inactive own-society staff');
+select is((select count(*)::int from public.service_providers),2,'admin reads active and inactive own-society providers');
 select is((select count(*)::int from public.staff where society_id='18000000-0000-0000-0000-000000000002'),0,'admin cannot read cross-society staff');
 
 select lives_ok($$select public.save_admin_staff(null,'  New Staff  ','  Maintenance  ',' Evening ',' 99999 88888 ')$$,'admin creates staff');

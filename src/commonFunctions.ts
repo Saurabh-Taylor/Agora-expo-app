@@ -2,17 +2,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { QueryClient } from '@tanstack/react-query';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import Constants, { AppOwnership } from 'expo-constants';
+import { router, type Href } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
 import {
+  AmenityNotificationTypes,
   AUTH_RESEND_SECONDS,
   AvatarPalette,
   Colors,
+  GATE_PASS_QR_PREFIX,
   ONBOARDING_COMPLETE_STORAGE_KEY,
   QueryKeyRoots,
   type QueryKeyRoot,
 } from '@/constants/commonConstants';
+import { Sentry } from '@/lib/sentry';
 import { supabase } from '@/lib/supabase';
 
 let onboardingCompletedCache: boolean | undefined;
@@ -59,6 +63,72 @@ export function normalizeEmailAddress(value: string) {
   return value.trim().toLowerCase();
 }
 
+export function createGatePassQrValue(code: string) {
+  return GATE_PASS_QR_PREFIX + encodeURIComponent(code.trim());
+}
+
+export function extractGatePassCodeFromQr(value: string) {
+  const trimmedValue = value.trim();
+  if (!trimmedValue.startsWith(GATE_PASS_QR_PREFIX)) return null;
+
+  try {
+    const digits = decodeURIComponent(trimmedValue.slice(GATE_PASS_QR_PREFIX.length)).replace(/\s/g, '');
+    if (digits.length !== 6 || [...digits].some((digit) => digit.charCodeAt(0) < 48 || digit.charCodeAt(0) > 57)) return null;
+    return digits.slice(0, 3) + ' ' + digits.slice(3);
+  } catch {
+    return null;
+  }
+}
+
+export function navigateFromNotificationResponse(
+  response: { notification: { request: { content: { data?: unknown } } } },
+  role: 'RESIDENT' | 'GUARD' | 'ADMIN',
+) {
+  const data = response.notification.request.content.data;
+  if (!data || typeof data !== 'object') return false;
+
+  const payload = data as Record<string, unknown>;
+  if (payload.type === 'VISITOR_REQUEST' && typeof payload.requestId === 'string' && role === 'RESIDENT') {
+    router.push({ pathname: '/(resident)/visitor-request/[id]', params: { id: payload.requestId } });
+    return true;
+  }
+  if (payload.type === 'VISITOR_DECISION' && role === 'GUARD') {
+    router.push('/(guard)/(tabs)');
+    return true;
+  }
+  if (payload.type === 'NOTICE' && typeof payload.noticeId === 'string' && role === 'RESIDENT') {
+    router.push({ pathname: '/(resident)/notice/[id]', params: { id: payload.noticeId } });
+    return true;
+  }
+  if (
+    payload.type === 'COMPLAINT_STATUS' &&
+    typeof payload.complaintId === 'string' &&
+    role === 'RESIDENT'
+  ) {
+    router.push({ pathname: '/(resident)/complaint/[id]', params: { id: payload.complaintId } });
+    return true;
+  }
+  if (payload.type === 'MAINTENANCE_REMINDER' && role === 'RESIDENT') {
+    router.push('/(resident)/dues');
+    return true;
+  }
+  if (payload.type === 'TASK_ASSIGNMENT' && typeof payload.taskId === 'string' && role === 'GUARD') {
+    router.push(`/(guard)/task/${payload.taskId}` as Href);
+    return true;
+  }
+  if (
+    (payload.type === AmenityNotificationTypes.decision ||
+      payload.type === AmenityNotificationTypes.maintenanceCancelled) &&
+    typeof payload.bookingId === 'string' &&
+    role === 'RESIDENT'
+  ) {
+    router.push({ pathname: '/(resident)/amenities', params: { tab: 'bookings' } });
+    return true;
+  }
+
+  return false;
+}
+
 export function useResendCountdown() {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const timer = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
@@ -87,6 +157,15 @@ export function useResendCountdown() {
   return { remainingSeconds, startCountdown, resetCountdown };
 }
 
+export function captureServerStateError(error: unknown, operation: 'query' | 'mutation') {
+  Sentry.captureException(error, {
+    tags: {
+      operation,
+      source: 'tanstack-query',
+    },
+  });
+}
+
 export function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
 }
@@ -103,6 +182,15 @@ export function getUniqueRealtimeChannelTopic(topic: string) {
 
 export function getQueryKey(root: QueryKeyRoot, ...segments: readonly unknown[]) {
   return [root, ...segments] as const;
+}
+
+export async function getEdgeFunctionErrorMessage(error: unknown, fallback: string) {
+  const response = (error as { context?: Response } | null)?.context;
+  if (!response || typeof response.clone !== 'function') {
+    return error instanceof Error && error.message ? error.message : fallback;
+  }
+  const payload = await response.clone().json().catch(() => null) as { error?: string } | null;
+  return payload?.error || (error instanceof Error && error.message ? error.message : fallback);
 }
 
 export function invalidateVisitorRequests(queryClient: QueryClient) {
@@ -329,8 +417,19 @@ export function getComplaintStatusStyle(status: keyof typeof COMPLAINT_STATUS_ST
   return COMPLAINT_STATUS_STYLES[status];
 }
 
+export function createCsv(rows: (string | number)[][]) {
+  return rows
+    .map((row) => row.map((value) => '"' + String(value).replaceAll('"', '""') + '"').join(','))
+    .join('\n');
+}
+
 export function formatCurrency(amount: number) {
   return "₹" + amount.toLocaleString("en-IN", { maximumFractionDigits: 0 });
+}
+
+export function getMaintenanceDueDisplayStatus(due: { status: 'UNPAID' | 'PAID'; cancelled_at?: string | null }) {
+  if (due.cancelled_at) return 'CANCELLED' as const;
+  return due.status;
 }
 
 export function formatDate(iso: string) {
@@ -485,7 +584,7 @@ export function invalidateSocietyDirectory(queryClient: QueryClient, societyId: 
 
 export function isValidDirectoryPhone(phone: string) {
   const value = phone.trim();
-  return !value || (value.length >= 7 && value.length <= 20 && value.split("").every((character) => "0123456789+() -".includes(character)));
+  return !value || (value.length >= 7 && value.length <= 20 && value.split('').every((character) => "0123456789+() -".includes(character)));
 }
 
 export function matchesDirectorySearch(entry: { name: string }, search: string, details: string[]) {

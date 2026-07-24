@@ -1,6 +1,11 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(22);
+select plan(14);
+
+select ok(
+  not has_function_privilege('authenticated', 'public.mark_due_paid_on_payment()', 'EXECUTE'),
+  'authenticated clients cannot execute the internal payment trigger'
+);
 
 insert into public.societies(id,name) values
 ('19000000-0000-0000-0000-000000000001','Dues Test A'),
@@ -43,25 +48,15 @@ select set_config('request.jwt.claim.sub','49000000-0000-0000-0000-000000000005'
 select is((select count(*)::int from public.maintenance_dues),2,'admin sees own-society dues');
 select is((select count(*)::int from public.payments),1,'admin sees own-society payments');
 
-select set_config('request.jwt.claim.sub','49000000-0000-0000-0000-000000000001',true);
-select lives_ok($$select public.pay_resident_maintenance_due('59000000-0000-0000-0000-000000000002','Card')$$,'resident pays own unpaid due');
 reset role;
-select is((select society_id from public.payments where due_id='59000000-0000-0000-0000-000000000002'),'19000000-0000-0000-0000-000000000001'::uuid,'payment derives society');
-select is((select flat_id from public.payments where due_id='59000000-0000-0000-0000-000000000002'),'39000000-0000-0000-0000-000000000001'::uuid,'payment derives flat');
-select is((select paid_by from public.payments where due_id='59000000-0000-0000-0000-000000000002'),'49000000-0000-0000-0000-000000000001'::uuid,'payment derives payer');
-select is((select amount from public.payments where due_id='59000000-0000-0000-0000-000000000002'),2750::numeric,'payment derives authoritative amount');
-select matches((select receipt_no from public.payments where due_id='59000000-0000-0000-0000-000000000002'),'^AGORA-[A-F0-9]{12}$','server creates receipt number');
-select is((select status::text from public.maintenance_dues where id='59000000-0000-0000-0000-000000000002'),'PAID','payment atomically marks due paid');
+select ok(not exists(
+  select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname = 'public' and p.proname = 'record_demo_razorpay_payment'
+), 'client-callable demo payment RPC is removed');
+select ok(not has_function_privilege('authenticated', 'public.pay_resident_maintenance_due(uuid,text)', 'EXECUTE'), 'unverified production-style payment RPC is disabled');
+select ok(not has_function_privilege('authenticated', 'public.record_verified_razorpay_payment(uuid,text,text)', 'EXECUTE'), 'verified payment recording is server-only');
 
 set local role authenticated;
-select set_config('request.jwt.claim.sub','49000000-0000-0000-0000-000000000001',true);
-select throws_ok($$select public.pay_resident_maintenance_due('59000000-0000-0000-0000-000000000002','Card')$$,'23505','This maintenance due is already paid','duplicate payment rejected');
-select throws_ok($$select public.pay_resident_maintenance_due('59000000-0000-0000-0000-000000000003','UPI')$$,'42501','Maintenance due is not available to this resident','cross-society payment rejected');
-select throws_ok($$select public.pay_resident_maintenance_due('59000000-0000-0000-0000-000000000002','Cash')$$,'22023','Payment method is invalid','invalid payment method rejected');
-select set_config('request.jwt.claim.sub','49000000-0000-0000-0000-000000000004',true);
-select throws_ok($$select public.pay_resident_maintenance_due('59000000-0000-0000-0000-000000000002','UPI')$$,'42501','Only active residents assigned to a flat can pay maintenance dues','guard cannot pay');
-select set_config('request.jwt.claim.sub','49000000-0000-0000-0000-000000000005',true);
-select throws_ok($$select public.pay_resident_maintenance_due('59000000-0000-0000-0000-000000000002','UPI')$$,'42501','Only active residents assigned to a flat can pay maintenance dues','admin cannot pay');
 select set_config('request.jwt.claim.sub','49000000-0000-0000-0000-000000000001',true);
 select throws_like($$insert into public.payments(due_id,society_id,flat_id,paid_by,amount,method,receipt_no) values('59000000-0000-0000-0000-000000000002','19000000-0000-0000-0000-000000000001','39000000-0000-0000-0000-000000000001','49000000-0000-0000-0000-000000000001',1,'UPI','FAKE')$$,'%permission denied%','direct payment writes denied');
 select throws_like($$update public.maintenance_dues set status='UNPAID' where id='59000000-0000-0000-0000-000000000002'$$,'%permission denied%','direct due writes denied');

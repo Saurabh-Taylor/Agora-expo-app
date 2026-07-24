@@ -11,7 +11,6 @@ import { useFlats } from '@/features/flats/api';
 import { useProfile } from '@/features/profile/api';
 import {
   useResident,
-  useResidents,
   useSetResidentActive,
   useSetResidentVerified,
   useUpdateResident,
@@ -27,13 +26,12 @@ export default function ResidentDetailScreen() {
   const profileQuery = useProfile(session?.user.id);
   const societyId = profileQuery.data?.society_id;
   const residentQuery = useResident(id, societyId);
-  const residentsQuery = useResidents(societyId);
   const towersQuery = useTowers(societyId);
   const flatsQuery = useFlats(societyId);
   const isLoading =
-    profileQuery.isLoading || residentQuery.isLoading || residentsQuery.isLoading || towersQuery.isLoading || flatsQuery.isLoading;
+    profileQuery.isLoading || residentQuery.isLoading || towersQuery.isLoading || flatsQuery.isLoading;
   const isError =
-    profileQuery.isError || residentQuery.isError || residentsQuery.isError || towersQuery.isError || flatsQuery.isError;
+    profileQuery.isError || residentQuery.isError || towersQuery.isError || flatsQuery.isError;
 
   if (isLoading || isError || !residentQuery.data || !societyId) {
     return (
@@ -44,7 +42,6 @@ export default function ResidentDetailScreen() {
           onRetry={() => {
             profileQuery.refetch();
             residentQuery.refetch();
-            residentsQuery.refetch();
             towersQuery.refetch();
             flatsQuery.refetch();
           }}
@@ -59,7 +56,6 @@ export default function ResidentDetailScreen() {
     <ResidentManager
       key={residentQuery.data.id}
       resident={residentQuery.data}
-      allResidents={residentsQuery.data ?? []}
       towers={towersQuery.data ?? []}
       flats={flatsQuery.data ?? []}
       societyId={societyId}
@@ -69,13 +65,11 @@ export default function ResidentDetailScreen() {
 
 function ResidentManager({
   resident,
-  allResidents,
   towers,
   flats,
   societyId,
 }: {
   resident: ResidentProfile;
-  allResidents: ResidentProfile[];
   towers: Tower[];
   flats: { id: string; tower_id: string; number: string; floor: number }[];
   societyId: string;
@@ -89,9 +83,7 @@ function ResidentManager({
   const [flatId, setFlatId] = useState(resident.flat_id ?? '');
   const [occupancyType, setOccupancyType] = useState<'OWNER' | 'TENANT'>(resident.occupancy_type ?? 'OWNER');
   const tower = towers.find((item) => item.id === resident.flat?.tower_id);
-  const availableFlats = flats.filter(
-    (flat) => flat.id === resident.flat_id || !allResidents.some((item) => item.id !== resident.id && item.flat_id === flat.id),
-  );
+  const availableFlats = flats;
   const selectedFlat = flats.find((flat) => flat.id === flatId);
   const selectedTower = towers.find((item) => item.id === selectedFlat?.tower_id);
   const status = getVerificationStatusStyle(resident.is_verified);

@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(27);
+select plan(32);
 
 insert into public.societies (id, name) values
   ('71000000-0000-0000-0000-000000000001', 'Visitor Society A'),
@@ -38,10 +38,15 @@ select set_config('request.jwt.claim.sub', '74000000-0000-0000-0000-000000000003
 select is((select count(*)::integer from public.search_guard_residents('')), 2, 'guard sees active residents in own society');
 select is((select count(*)::integer from public.search_guard_residents('') where society_id = '71000000-0000-0000-0000-000000000002'), 0, 'guard search excludes another society');
 select is((select count(*)::integer from public.search_guard_residents('A-102')), 1, 'guard can search the projected tower and flat label');
+select is((select count(*)::integer from public.profiles), 1, 'guard can directly read only their own profile');
+select is((select count(*)::integer from public.profiles where id = '74000000-0000-0000-0000-000000000001'), 0, 'guard cannot bypass resident search to read a resident profile');
 select set_config('request.jwt.claim.sub', '74000000-0000-0000-0000-000000000001', true);
 select throws_ok($$ select * from public.search_guard_residents('') $$, '42501', 'Only guards can search residents', 'resident cannot search guard directory');
+select is((select count(*)::integer from public.profiles), 1, 'resident can directly read only their own profile');
 select set_config('request.jwt.claim.sub', '74000000-0000-0000-0000-000000000004', true);
 select throws_ok($$ select * from public.search_guard_residents('') $$, '42501', 'Only guards can search residents', 'admin cannot use guard resident search');
+select is((select count(*)::integer from public.profiles), 5, 'admin can read profiles only in their own society');
+select is((select count(*)::integer from public.profiles where society_id = '71000000-0000-0000-0000-000000000002'), 0, 'admin cannot read profiles from another society');
 
 select set_config('request.jwt.claim.sub', '74000000-0000-0000-0000-000000000003', true);
 select lives_ok($$ select public.create_guard_visitor_request('73000000-0000-0000-0000-000000000001', '  Gate Guest  ', '+91 98765 43210', 'GUEST', '  mh 12 ab 1234  ', 'CAR') $$, 'guard atomically creates a pending request with optional vehicle details');

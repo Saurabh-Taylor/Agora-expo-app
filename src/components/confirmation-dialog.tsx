@@ -9,6 +9,7 @@ type ConfirmationDialogProps = {
   icon: ReactNode;
   title: string;
   message: string;
+  children?: ReactNode;
   confirmLabel: string;
   cancelLabel?: string;
   isPending?: boolean;
@@ -24,6 +25,7 @@ export function ConfirmationDialog({
   icon,
   title,
   message,
+  children,
   confirmLabel,
   cancelLabel = 'Cancel',
   isPending = false,
@@ -57,6 +59,7 @@ export function ConfirmationDialog({
 
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
+          {children}
 
           {!!errorMessage && (
             <View style={styles.errorBox} accessibilityRole="alert">

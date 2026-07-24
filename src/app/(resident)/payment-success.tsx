@@ -2,18 +2,15 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
+import { formatCurrency } from '@/commonFunctions';
 import { Colors, FontFamily } from '@/constants/commonConstants';
 
 function CheckIcon() {
   return (
-    <Svg width={40} height={40} viewBox="0 0 24 24" fill="none">
+    <Svg width={40} height={40} viewBox="0 0 24 24" fill="none" accessibilityElementsHidden>
       <Path d="M4.5 12.5l5 5L19.5 7" stroke={Colors.success400} strokeWidth={2.8} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
-}
-
-function formatCurrency(amount: number) {
-  return `₹${amount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 }
 
 export default function PaymentSuccessScreen() {
@@ -32,22 +29,31 @@ export default function PaymentSuccessScreen() {
       <View style={styles.iconWrap}>
         <CheckIcon />
       </View>
-      <Text style={styles.title}>{formatCurrency(amountNumber)} paid</Text>
-      <Text style={styles.subtitle}>{quarterLabel} maintenance cleared</Text>
+      <Text accessibilityRole="header" style={styles.title}>Payment verified</Text>
+      <Text style={styles.amount}>{formatCurrency(amountNumber)}</Text>
+      <Text style={styles.subtitle}>Razorpay Test Mode confirmed the payment. No real money was transferred.</Text>
 
       <View style={styles.receiptCard}>
-        <Text style={styles.receiptOverline}>RECEIPT</Text>
+        <Text style={styles.receiptOverline}>TEST MODE RECEIPT  -  NOT PROOF OF PAYMENT</Text>
         <View style={styles.receiptRow}>
-          <Text style={styles.receiptKey}>Receipt no.</Text>
+          <Text style={styles.receiptKey}>Receipt reference</Text>
           <Text style={styles.receiptValue}>{receiptNo}</Text>
         </View>
         <View style={styles.receiptRow}>
-          <Text style={styles.receiptKey}>Paid via</Text>
+          <Text style={styles.receiptKey}>Mode</Text>
           <Text style={styles.receiptValue}>{method}</Text>
         </View>
         <View style={styles.receiptRow}>
-          <Text style={styles.receiptKey}>Date</Text>
-          <Text style={styles.receiptValue}>{new Date().toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</Text>
+          <Text style={styles.receiptKey}>Recorded</Text>
+          <Text style={styles.receiptValue}>
+            {new Date().toLocaleString([], {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+            })}
+          </Text>
         </View>
         <View style={styles.receiptRow}>
           <Text style={styles.receiptKey}>Period</Text>
@@ -56,7 +62,11 @@ export default function PaymentSuccessScreen() {
       </View>
 
       <View style={styles.spacerBottom} />
-      <Pressable style={styles.doneButton} onPress={() => router.replace('/(resident)/dues')}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Return to maintenance dues"
+        style={styles.doneButton}
+        onPress={() => router.replace('/(resident)/dues')}>
         <Text style={styles.doneLabel}>Done</Text>
       </Pressable>
     </View>
@@ -66,7 +76,7 @@ export default function PaymentSuccessScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0F2C1F',
+    backgroundColor: Colors.green600,
     paddingTop: 78,
     paddingHorizontal: 24,
     paddingBottom: 40,
@@ -82,8 +92,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: { fontFamily: FontFamily.headingExtraBold, fontSize: 25, color: Colors.textOnDark, marginTop: 20 },
-  subtitle: { fontSize: 13.5, color: 'rgba(247,244,236,0.6)', marginTop: 6 },
+  title: {
+    fontFamily: FontFamily.headingExtraBold,
+    fontSize: 25,
+    color: Colors.textOnDark,
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  amount: { fontFamily: FontFamily.headingBold, fontSize: 20, color: Colors.gold, marginTop: 7 },
+  subtitle: {
+    maxWidth: 330,
+    fontSize: 13.5,
+    lineHeight: 20,
+    color: 'rgba(247,244,236,0.68)',
+    marginTop: 8,
+    textAlign: 'center',
+  },
   receiptCard: {
     width: '100%',
     marginTop: 26,
@@ -94,13 +118,13 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: 'rgba(231,163,60,0.06)',
   },
-  receiptOverline: { fontSize: 10.5, letterSpacing: 3, fontWeight: '700', color: Colors.gold },
-  receiptRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
+  receiptOverline: { fontSize: 10, letterSpacing: 1.8, fontWeight: '700', color: Colors.gold },
+  receiptRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginTop: 12 },
   receiptKey: { fontSize: 13.5, color: 'rgba(247,244,236,0.6)' },
-  receiptValue: { fontSize: 13.5, fontWeight: '700', color: Colors.textOnDark },
+  receiptValue: { flexShrink: 1, fontSize: 13.5, fontWeight: '700', color: Colors.textOnDark, textAlign: 'right' },
   doneButton: {
     width: '100%',
-    height: 54,
+    minHeight: 54,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',

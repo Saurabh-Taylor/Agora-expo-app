@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -131,6 +131,12 @@ export default function MovementLogScreen() {
               )}
             </Pressable>
           </View>
+          <Pressable
+            accessibilityRole="button"
+            style={styles.scanQrButton}
+            onPress={() => router.push('/(guard)/scan-pass' as Href)}>
+            <Text style={styles.scanQrButtonLabel}>Scan QR gate pass</Text>
+          </Pressable>
 
           <View style={styles.chipsRow}>
             {FILTERS.map((item) => {
@@ -251,6 +257,17 @@ const styles = StyleSheet.create({
   },
   codeButtonDisabled: { opacity: 0.65 },
   codeButtonLabel: { fontSize: 14, fontWeight: '700', color: Colors.textOnDark },
+  scanQrButton: {
+    minHeight: 48,
+    marginTop: 10,
+    borderRadius: Radius.input,
+    borderWidth: 1.5,
+    borderColor: Colors.green500,
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scanQrButtonLabel: { fontFamily: FontFamily.bodyBold, fontSize: 14, color: Colors.green500 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 20 },
   chip: {
     minHeight: 40,

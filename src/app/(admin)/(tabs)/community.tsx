@@ -11,7 +11,7 @@ import { avatarColorForName, getInitials, getVerificationStatusStyle } from '@/c
 import { useFlats } from '@/features/flats/api';
 import { useProfile } from '@/features/profile/api';
 import { useTowers, useTowerStats } from '@/features/towers/api';
-import { useResidents } from '@/features/residents/api';
+import { useResidents, type ResidentProfile } from '@/features/residents/api';
 import { useAuthStore } from '@/stores/auth-store';
 
 const RING_RADIUS = 15.5;
@@ -89,24 +89,27 @@ export default function CommunityScreen() {
     if (!isFlatsTab) return [];
 
     const towerById = new Map((towersQuery.data ?? []).map((tower) => [tower.id, tower]));
-    const residentByFlatId = new Map(
-      (residentsQuery.data ?? [])
-        .filter((resident) => !!resident.flat_id)
-        .map((resident) => [resident.flat_id as string, resident]),
-    );
+    const residentsByFlatId = new Map<string, ResidentProfile[]>();
+    for (const resident of residentsQuery.data ?? []) {
+      if (!resident.flat_id || !resident.is_active) continue;
+      const flatResidents = residentsByFlatId.get(resident.flat_id) ?? [];
+      flatResidents.push(resident);
+      residentsByFlatId.set(resident.flat_id, flatResidents);
+    }
 
     return (flatsQuery.data ?? [])
       .map((flat) => ({
         ...flat,
         tower: towerById.get(flat.tower_id),
-        resident: residentByFlatId.get(flat.id),
+        residents: residentsByFlatId.get(flat.id) ?? [],
       }))
       .filter(
         (flat) =>
           !query ||
           flat.number.toLowerCase().includes(query) ||
           flat.tower?.name.toLowerCase().includes(query) ||
-          flat.tower?.code.toLowerCase().includes(query),
+          flat.tower?.code.toLowerCase().includes(query) ||
+          flat.residents.some((resident) => resident.full_name.toLowerCase().includes(query)),
       );
   }, [flatsQuery.data, isFlatsTab, query, residentsQuery.data, towersQuery.data]);
   const filteredResidents = useMemo(
@@ -223,11 +226,17 @@ export default function CommunityScreen() {
                   <Text style={styles.towerSub}>{item.tower?.name ?? 'Unknown tower'} - Floor {item.floor}</Text>
                 </View>
                 <View style={styles.flatStatsCol}>
-                  <Text style={item.resident ? styles.flatOccupied : styles.flatVacant}>
-                    {item.resident ? 'Occupied' : 'Vacant'}
+                  <Text style={item.residents.length > 0 ? styles.flatOccupied : styles.flatVacant}>
+                    {item.residents.length > 0 ? 'Occupied' : 'Vacant'}
                   </Text>
                   <Text style={styles.flatResidentName} numberOfLines={1}>
-                    {item.resident?.full_name ?? 'Ready to assign'}
+                    {item.residents.length > 0
+                      ? [
+                          item.residents.length,
+                          item.residents.length === 1 ? ' member: ' : ' members: ',
+                          item.residents.map((resident) => resident.full_name).join(', '),
+                        ].join('')
+                      : 'Ready to assign'}
                   </Text>
                 </View>
                 <ChevronRightIcon />

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   assertFlatRecord,
   assertFlatRecords,
+  getEdgeFunctionErrorMessage,
   getQueryKey,
   removeRealtimeSubscription,
   subscribeToRealtimeTables,
@@ -21,6 +22,9 @@ export type MaintenanceDue = {
   amount: number;
   due_date: string;
   status: DuesStatus;
+  cancelled_at: string | null;
+  cancelled_by: string | null;
+  cancel_reason: string | null;
   created_at: string;
 };
 
@@ -34,6 +38,10 @@ export type MaintenancePayment = {
   method: string;
   receipt_no: string;
   paid_at: string;
+  gateway: string | null;
+  gateway_order_id: string | null;
+  gateway_payment_id: string | null;
+  is_test: boolean;
 };
 
 const duesKey = (societyId: string | null | undefined, flatId: string | null | undefined) =>
@@ -88,23 +96,65 @@ export function useDueDetail(
   });
 }
 
-type PayDueInput = {
+type CreateRazorpayOrderInput = {
   dueId: string;
   societyId: string;
   flatId: string;
-  method: string;
 };
 
-export function usePayMaintenanceDue() {
+export type RazorpayCheckoutSession = {
+  attemptId: string;
+  checkoutUrl: string;
+  amountPaise: number;
+  quarterLabel: string;
+};
+
+export function useCreateRazorpayOrder() {
+  return useMutation({
+    mutationFn: async (input: CreateRazorpayOrderInput) => {
+      const { data, error } = await supabase.functions.invoke<RazorpayCheckoutSession>(
+        'razorpay-create-order',
+        { body: { dueId: input.dueId } },
+      );
+      if (error) throw new Error(await getEdgeFunctionErrorMessage(error, 'Could not initialize Razorpay'));
+      if (
+        !data?.attemptId ||
+        !data.checkoutUrl ||
+        !Number.isSafeInteger(data.amountPaise) ||
+        data.amountPaise < 1
+      ) {
+        throw new Error('Razorpay returned an invalid checkout session');
+      }
+      return data;
+    },
+  });
+}
+
+type VerifyRazorpayPaymentInput = CreateRazorpayOrderInput & {
+  attemptId: string;
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
+};
+
+export function useVerifyRazorpayPayment() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: PayDueInput) => {
-      const { data, error } = await supabase.rpc('pay_resident_maintenance_due', {
-        target_due_id: input.dueId,
-        requested_method: input.method,
-      });
-      if (error) throw error;
-      const payment = data as MaintenancePayment;
+    mutationFn: async (input: VerifyRazorpayPaymentInput) => {
+      const { data, error } = await supabase.functions.invoke<{ payment: MaintenancePayment }>(
+        'razorpay-verify-payment',
+        {
+          body: {
+            attemptId: input.attemptId,
+            razorpayOrderId: input.razorpayOrderId,
+            razorpayPaymentId: input.razorpayPaymentId,
+            razorpaySignature: input.razorpaySignature,
+          },
+        },
+      );
+      if (error) throw new Error(await getEdgeFunctionErrorMessage(error, 'Could not verify Razorpay payment'));
+      const payment = data?.payment;
+      if (!payment) throw new Error('Verified payment was not returned');
       if (payment.society_id !== input.societyId || payment.flat_id !== input.flatId || payment.due_id !== input.dueId) {
         throw new Error('The server returned a payment outside your flat');
       }

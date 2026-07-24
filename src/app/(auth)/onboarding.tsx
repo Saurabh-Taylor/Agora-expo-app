@@ -219,7 +219,7 @@ export default function OnboardingScreen() {
           <SlideBackground source={require('@/assets/images/onboarding/slide4-dues.png')} contentFit="cover" overlay="plain" />
           <Animated.View style={[styles.slideBottomOnly, { paddingBottom: 168 }, slideMotionStyles[3].foreground]}>
             <Text style={styles.slideHeading}>Dues, minus the hassle</Text>
-            <Text style={styles.slideBody}>Pay maintenance and keep every receipt in one place — no paperwork, no follow-ups.</Text>
+            <Text style={styles.slideBody}>View maintenance dues and pay securely through Razorpay Test Mode.</Text>
           </Animated.View>
         </View>
       </Animated.ScrollView>

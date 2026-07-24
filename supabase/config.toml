@@ -429,3 +429,21 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/send-push-notification/deno.json"
 entrypoint = "./functions/send-push-notification/index.ts"
+
+[functions.razorpay-create-order]
+enabled = true
+verify_jwt = true
+import_map = "./functions/razorpay-create-order/deno.json"
+entrypoint = "./functions/razorpay-create-order/index.ts"
+
+[functions.razorpay-verify-payment]
+enabled = true
+verify_jwt = true
+import_map = "./functions/razorpay-verify-payment/deno.json"
+entrypoint = "./functions/razorpay-verify-payment/index.ts"
+
+[functions.razorpay-checkout]
+enabled = true
+verify_jwt = false
+import_map = "./functions/razorpay-checkout/deno.json"
+entrypoint = "./functions/razorpay-checkout/index.ts"

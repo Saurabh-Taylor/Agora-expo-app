@@ -1,0 +1,36 @@
+import { router, type Href } from 'expo-router';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { formatDateTime } from '@/commonFunctions';
+import { AsyncState } from '@/components/async-state';
+import { BackArrowButton } from '@/components/icons/back-arrow-button';
+import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
+import { useProfile } from '@/features/profile/api';
+import { type OperationalTaskStatus, useOperationalTaskRealtime, useOperationalTasks } from '@/features/tasks/api';
+import { useAuthStore } from '@/stores/auth-store';
+
+type OperationalTaskDashboardProps = { role: 'ADMIN' | 'GUARD' };
+
+export function OperationalTaskDashboard({ role }: OperationalTaskDashboardProps) {
+  const session = useAuthStore((state) => state.session);
+  const profileQuery = useProfile(session?.user.id);
+  const societyId = profileQuery.data?.society_id;
+  const tasksQuery = useOperationalTasks(societyId);
+  const [status, setStatus] = useState<OperationalTaskStatus>('PENDING');
+  const [renderedAt] = useState(() => new Date().getTime());
+  useOperationalTaskRealtime(societyId);
+  const tasks = tasksQuery.data ?? [];
+  const filtered = tasks.filter((task) => task.status === status);
+  const routePrefix = role === 'ADMIN' ? '/(admin)/task/' : '/(guard)/task/';
+  const statusOptions: { value: OperationalTaskStatus; label: string }[] = [
+    { value: 'PENDING', label: 'Pending' },
+    { value: 'IN_PROGRESS', label: 'In progress' },
+    { value: 'COMPLETED', label: 'Completed' },
+    { value: 'CANCELLED', label: 'Cancelled' },
+  ];
+
+  return <ScrollView style={styles.root} contentContainerStyle={styles.content}><View style={styles.headerRow}><BackArrowButton onPress={() => router.back()} /><View style={styles.flex}><Text accessibilityRole="header" style={styles.title}>{role === 'ADMIN' ? 'Daily operations' : 'My daily tasks'}</Text><Text style={styles.subtitle}>{role === 'ADMIN' ? 'Assign, track, and complete society work' : 'Work assigned to your guard account'}</Text></View></View><View style={styles.metrics}><View style={styles.metric}><Text style={styles.metricValue}>{tasks.filter((task) => task.status === 'PENDING').length}</Text><Text style={styles.metricLabel}>Pending</Text></View><View style={styles.metric}><Text style={styles.metricValue}>{tasks.filter((task) => task.status === 'IN_PROGRESS').length}</Text><Text style={styles.metricLabel}>In progress</Text></View><View style={styles.metric}><Text style={styles.metricValue}>{tasks.filter((task) => task.status === 'COMPLETED').length}</Text><Text style={styles.metricLabel}>Completed</Text></View></View>{role === 'ADMIN' && <Pressable accessibilityRole="button" style={styles.addButton} onPress={() => router.push('/(admin)/create-task' as Href)}><Text style={styles.addLabel}>+ Create & assign task</Text></Pressable>}<View style={styles.filters}>{statusOptions.map((item) => <Pressable key={item.value} accessibilityRole="tab" accessibilityState={{ selected: status === item.value }} onPress={() => setStatus(item.value)} style={[styles.filter, status === item.value && styles.filterActive]}><Text style={[styles.filterLabel, status === item.value && styles.filterLabelActive]}>{item.label}</Text></Pressable>)}</View><AsyncState isLoading={profileQuery.isLoading || tasksQuery.isLoading} isError={profileQuery.isError || tasksQuery.isError} isRetrying={profileQuery.isRefetching || tasksQuery.isRefetching} onRetry={() => { profileQuery.refetch(); tasksQuery.refetch(); }} isEmpty={!tasksQuery.isLoading && filtered.length === 0} emptyTitle={`No ${status.toLowerCase().replace('_', ' ')} tasks`} emptyMessage={role === 'ADMIN' && status === 'PENDING' ? 'Create a task and assign it to active staff, a committee member, or a guard.' : 'Tasks in this state will appear here automatically.'} /> <View style={styles.list}>{filtered.map((task) => { const overdue = !['COMPLETED', 'CANCELLED'].includes(task.status) && new Date(task.due_at).getTime() < renderedAt; const assignee = task.staff ? `${task.staff.name} · ${task.staff.role}` : task.guard?.full_name ?? 'Assigned guard'; return <Pressable key={task.id} accessibilityRole="button" onPress={() => router.push(`${routePrefix}${task.id}` as Href)} style={styles.card}><View style={styles.cardTop}><View style={styles.flex}><Text style={styles.taskTitle}>{task.title}</Text><Text style={styles.assignee}>{assignee}</Text></View><View style={[styles.priority, task.priority === 'URGENT' || task.priority === 'HIGH' ? styles.highPriority : styles.normalPriority]}><Text style={styles.priorityLabel}>{task.priority}</Text></View></View><Text style={[styles.due, overdue && styles.overdue]}>{overdue ? 'Overdue · ' : 'Due · '}{formatDateTime(task.due_at)}</Text>{task.description && <Text style={styles.description} numberOfLines={2}>{task.description}</Text>}</Pressable>; })}</View></ScrollView>;
+}
+
+const styles = StyleSheet.create({ root: { flex: 1, backgroundColor: Colors.canvas }, content: { paddingHorizontal: 16, paddingBottom: 48 }, flex: { flex: 1, minWidth: 0 }, headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 }, title: { fontFamily: FontFamily.headingExtraBold, fontSize: 22, color: Colors.textPrimary }, subtitle: { marginTop: 2, fontSize: 12.5, color: Colors.textMuted }, metrics: { flexDirection: 'row', gap: 8, marginTop: 18 }, metric: { flex: 1, minHeight: 74, padding: 11, borderRadius: Radius.input, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border }, metricValue: { fontFamily: FontFamily.headingExtraBold, fontSize: 21, color: Colors.green500 }, metricLabel: { marginTop: 4, fontSize: 10.5, color: Colors.textMuted }, addButton: { minHeight: 50, marginTop: 12, borderRadius: Radius.button, backgroundColor: Colors.green500, alignItems: 'center', justifyContent: 'center' }, addLabel: { fontSize: 14.5, fontWeight: '700', color: Colors.textOnDark }, filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 16 }, filter: { minHeight: 42, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, borderColor: Colors.borderAlt, alignItems: 'center', justifyContent: 'center' }, filterActive: { backgroundColor: Colors.green500, borderColor: Colors.green500 }, filterLabel: { fontSize: 11.5, fontWeight: '700', color: Colors.textMuted }, filterLabelActive: { color: Colors.textOnDark }, list: { gap: 10, marginTop: 12 }, card: { padding: 15, borderRadius: Radius.card, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border }, cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 9 }, taskTitle: { fontFamily: FontFamily.bodyBold, fontSize: 15, color: Colors.textPrimary }, assignee: { marginTop: 3, fontSize: 11.5, color: Colors.textMuted }, priority: { paddingHorizontal: 8, paddingVertical: 5, borderRadius: 999 }, highPriority: { backgroundColor: '#FCEBE8' }, normalPriority: { backgroundColor: Colors.categoryGeneral.bg }, priorityLabel: { fontSize: 9.5, fontWeight: '800', color: Colors.textPrimary }, due: { marginTop: 10, fontSize: 12, fontWeight: '600', color: Colors.success700 }, overdue: { color: Colors.danger700 }, description: { marginTop: 7, fontSize: 12.5, lineHeight: 18, color: Colors.textMuted } });

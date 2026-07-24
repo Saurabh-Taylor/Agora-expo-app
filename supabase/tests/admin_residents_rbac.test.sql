@@ -41,11 +41,9 @@ select is((select flat_id from public.profiles where id = '43000000-0000-0000-00
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '43000000-0000-0000-0000-000000000001', true);
-select throws_ok(
+select lives_ok(
   $$ select public.update_admin_resident('43000000-0000-0000-0000-000000000003', 'Resident Updated', '', '33000000-0000-0000-0000-000000000003', 'OWNER', false) $$,
-  '23505',
-  'This flat is already assigned to another resident',
-  'occupied flat reassignment is rejected'
+  'multiple residents can share an own-society flat'
 );
 select set_config('request.jwt.claim.sub', '43000000-0000-0000-0000-000000000002', true);
 select throws_ok(
@@ -120,7 +118,7 @@ select throws_like(
   '%permission denied%',
   'direct profile updates are denied'
 );
-select is((select count(*)::integer from public.audit_events where society_id = '13000000-0000-0000-0000-000000000001'), 4, 'resident management actions are audited');
+select is((select count(*)::integer from public.audit_events where society_id = '13000000-0000-0000-0000-000000000001'), 5, 'resident management actions are audited');
 
 select * from finish();
 rollback;

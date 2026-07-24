@@ -49,6 +49,38 @@ export default function MoreScreen() {
               subtitle="Manage staff, vendors, and verification"
               onPress={() => router.push('/(admin)/staff-services')}
               showChevron
+            />
+            <AdminDashboardListRow
+              icon="maintenance"
+              tone="green"
+              title="Maintenance billing"
+              subtitle="Create invoices and track demo collections"
+              onPress={() => router.push('/(admin)/maintenance' as Href)}
+              showChevron
+            />
+            <AdminDashboardListRow
+              icon="parking"
+              tone="blue"
+              title="Parking & vehicles"
+              subtitle="Manage the live layout and resident assignments"
+              onPress={() => router.push('/(admin)/parking' as Href)}
+              showChevron
+            />
+            <AdminDashboardListRow
+              icon="documents"
+              tone="purple"
+              title="Society documents"
+              subtitle="Publish private, role-scoped records and forms"
+              onPress={() => router.push('/(admin)/documents' as Href)}
+              showChevron
+            />
+            <AdminDashboardListRow
+              icon="tasks"
+              tone="gold"
+              title="Daily operations"
+              subtitle="Assign and track staff, committee, and guard tasks"
+              onPress={() => router.push('/(admin)/tasks' as Href)}
+              showChevron
               isLast
             />
           </AdminDashboardPanel>
@@ -86,6 +118,14 @@ export default function MoreScreen() {
           icon="account"
           tone="red">
           <AdminDashboardPanel>
+            <AdminDashboardListRow
+              icon="guards"
+              tone="green"
+              title="Security guard accounts"
+              subtitle="Create, activate, and deactivate gate accounts"
+              onPress={() => router.push('/(admin)/guard-accounts' as Href)}
+              showChevron
+            />
             <AdminDashboardListRow
               icon="signOut"
               tone="red"

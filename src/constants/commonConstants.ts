@@ -73,6 +73,12 @@ export const AvatarPalette = ['#E7A33C', '#B9A7D6', '#8FB3C7', '#A7C4B5', '#D6C9
 // the admin complaint list/triage labels.
 export const ComplaintCategories = ['Plumbing', 'Electrical', 'Cleanliness', 'Security', 'Noise', 'Other'] as const;
 export const COMPLAINT_ATTACHMENTS_BUCKET = 'complaint-attachments';
+export const SOCIETY_DOCUMENTS_BUCKET = 'society-documents';
+export const SOCIETY_DOCUMENT_MAX_BYTES = 10 * 1024 * 1024;
+export const SOCIETY_DOCUMENT_SIGNED_URL_SECONDS = 15 * 60;
+export const GATE_PASS_QR_PREFIX = 'agoraexpoapp://gate-pass/';
+export const RAZORPAY_RETURN_URL = 'agoraexpoapp://razorpay-complete';
+export const RAZORPAY_TEST_LABEL = 'Razorpay Test Mode';
 export const AMENITY_IMAGES_BUCKET = 'amenity-images';
 export const AMENITY_IMAGE_MAX_COUNT = 4;
 export const AMENITY_IMAGE_MAX_BYTES = 4 * 1024 * 1024;
@@ -121,7 +127,7 @@ export const NoticeCategories = [
   { value: 'SECURITY', label: 'Security' },
 ] as const;
 
-export const StaffRoles = ['Security', 'Housekeeping', 'Maintenance', 'Gardener', 'Other'] as const;
+export const StaffRoles = ['Security', 'Housekeeping', 'Maintenance', 'Gardener', 'Committee', 'Other'] as const;
 export const StaffShifts = ['Morning', 'Afternoon', 'Evening', 'Night'] as const;
 export const ServiceProviderCategories = ['Plumber', 'Electrician', 'Carpenter', 'Pest Control', 'Other'] as const;
 
@@ -242,6 +248,7 @@ export const QueryKeyRoots = {
   complaints: 'complaints',
   complaintAttachment: 'complaint-attachment',
   directory: 'directory',
+  documents: 'documents',
   dues: 'dues',
   flats: 'flats',
   guardResidentSearch: 'guard-resident-search',
@@ -250,6 +257,11 @@ export const QueryKeyRoots = {
   profile: 'profile',
   resident: 'resident',
   residents: 'residents',
+  guards: 'guards',
+  maintenance: 'maintenance',
+  tasks: 'tasks',
+  parking: 'parking',
+  vehicles: 'vehicles',
   towers: 'towers',
   visitorLogbook: 'visitor-logbook',
   visitorLogbookLocations: 'visitor-logbook-locations',

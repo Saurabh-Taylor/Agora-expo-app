@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Rect } from 'react-native-svg';
+import QRCode from 'react-native-qrcode-svg';
 
-import { formatDateTime, formatVehicleLabel, isGatePassActive, titleCase } from '@/commonFunctions';
+import { createGatePassQrValue, formatDateTime, formatVehicleLabel, isGatePassActive, titleCase } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
@@ -96,6 +97,7 @@ export default function GatePassScreen() {
   const visitorName = request.visitor?.name ?? 'Visitor';
   const category = request.visitor?.category ? titleCase(request.visitor.category) : '';
   const vehicle = formatVehicleLabel(request.vehicle_number, request.vehicle_type);
+  const qrValue = createGatePassQrValue(request.gate_pass_code);
   const passMessage = `Agora gate pass ${request.gate_pass_code} for ${visitorName} at your society. Valid until ${formatDateTime(
     request.valid_until,
   )}. Share this code with the guard at the gate.`;
@@ -145,10 +147,13 @@ export default function GatePassScreen() {
         <CheckIcon />
       </View>
       <Text style={styles.title}>{params.created === 'true' ? 'Gate pass created' : 'Active gate pass'}</Text>
-      <Text style={styles.sub}>Share this code with your visitor for verification at the gate</Text>
+      <Text style={styles.sub}>Share this QR or code with your visitor for verification at the gate</Text>
 
       <View style={styles.codeCard}>
         <Text style={styles.codeOverline}>AGORA GATE PASS</Text>
+        <View style={styles.qrWrap}>
+          <QRCode value={qrValue} size={142} color={Colors.green500} backgroundColor={Colors.surface} />
+        </View>
         <Text style={styles.code}>{request.gate_pass_code}</Text>
         <Text style={styles.codeName}>{visitorName}</Text>
         <Text style={styles.codeMeta}>{[category, vehicle].filter(Boolean).join(' / ')}</Text>
@@ -231,6 +236,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   codeOverline: { fontSize: 10.5, letterSpacing: 2, fontWeight: '700', color: Colors.gold },
+  qrWrap: { marginTop: 13, padding: 10, borderRadius: 12, backgroundColor: Colors.surface },
   code: { fontFamily: FontFamily.headingExtraBold, fontSize: 40, letterSpacing: 2, color: Colors.textOnDark, marginTop: 8 },
   codeName: { fontSize: 15, fontWeight: '600', color: Colors.textOnDark, marginTop: 10 },
   codeMeta: { fontSize: 13, color: 'rgba(247,244,236,0.65)', marginTop: 3 },

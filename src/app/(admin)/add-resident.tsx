@@ -1,10 +1,10 @@
-import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { isValidEmail } from '@/commonFunctions';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
+import { TemporaryAccountCredentials } from '@/components/temporary-account-credentials';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { findOrCreateFlat } from '@/features/flats/api';
 import { useProfile } from '@/features/profile/api';
@@ -77,33 +77,14 @@ export default function AddResidentScreen() {
     }
   }
 
-  async function copyPassword() {
-    if (!result) return;
-    await Clipboard.setStringAsync(result.tempPassword);
-    showToast('Password copied');
-  }
-
   if (result) {
     return (
-      <View style={styles.successRoot}>
-        <Text style={styles.successTitle}>Account created</Text>
-        <Text style={styles.successSubtitle}>
-          Share these credentials with the resident. The password is shown only once — they&apos;ll be asked to set a
-          new one on first login.
-        </Text>
-        <View style={styles.credentialCard}>
-          <Text style={styles.credentialLabel}>EMAIL</Text>
-          <Text style={styles.credentialValue}>{result.email}</Text>
-          <Text style={[styles.credentialLabel, styles.credentialLabelSpaced]}>TEMPORARY PASSWORD</Text>
-          <Text style={styles.credentialValue}>{result.tempPassword}</Text>
-        </View>
-        <Pressable style={styles.copyButton} onPress={copyPassword}>
-          <Text style={styles.copyButtonLabel}>Copy password</Text>
-        </Pressable>
-        <Pressable style={styles.doneButton} onPress={() => router.back()}>
-          <Text style={styles.doneButtonLabel}>Done</Text>
-        </Pressable>
-      </View>
+      <TemporaryAccountCredentials
+        accountLabel="resident"
+        email={result.email}
+        tempPassword={result.tempPassword}
+        onDone={() => router.back()}
+      />
     );
   }
 

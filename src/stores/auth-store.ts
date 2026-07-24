@@ -2,6 +2,8 @@ import type { Session } from '@supabase/supabase-js';
 import { create } from 'zustand';
 
 import { markOnboardingComplete } from '@/commonFunctions';
+import { unregisterCurrentDevicePushToken } from '@/features/notifications/api';
+import { queryClient } from '@/lib/query-client';
 import { supabase } from '@/lib/supabase';
 
 type AuthState = {
@@ -18,6 +20,8 @@ type AuthState = {
 
 export const useAuthStore = create<AuthState>((set) => {
   supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') queryClient.clear();
+
     set((state) => ({
       session,
       isInitializing: false,
@@ -37,8 +41,10 @@ export const useAuthStore = create<AuthState>((set) => {
     closeSignOutDialog: () => set({ isSignOutDialogOpen: false }),
     signOut: async () => {
       await markOnboardingComplete();
+      await unregisterCurrentDevicePushToken().catch(() => undefined);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      queryClient.clear();
     },
   };
 });

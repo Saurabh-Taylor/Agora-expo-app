@@ -85,15 +85,6 @@ export default {
         return badRequest("Flat does not belong to your society");
       }
 
-      const { data: assignedResident, error: assignmentError } = await ctx.supabaseAdmin
-        .from("profiles")
-        .select("id")
-        .eq("society_id", societyId)
-        .eq("flat_id", flatId)
-        .eq("role", "RESIDENT")
-        .maybeSingle();
-      if (assignmentError) return badRequest("Could not verify flat availability");
-      if (assignedResident) return badRequest("This flat is already assigned to another resident");
     }
 
     const tempPassword = generateTempPassword();

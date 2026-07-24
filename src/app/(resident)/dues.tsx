@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { formatCurrency, formatDate } from '@/commonFunctions';
+import { formatCurrency, formatDate, getMaintenanceDueDisplayStatus } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
@@ -28,7 +28,7 @@ export default function DuesScreen() {
   useDuesRealtimeSync(profileQuery.data?.flat_id, profileQuery.data?.society_id);
 
   const dues = duesQuery.data ?? [];
-  const unpaid = dues.filter((d) => d.status === 'UNPAID').sort((a, b) => a.due_date.localeCompare(b.due_date));
+  const unpaid = dues.filter((due) => getMaintenanceDueDisplayStatus(due) === 'UNPAID').sort((a, b) => a.due_date.localeCompare(b.due_date));
   const currentDue = unpaid[0];
   const history = dues.filter((d) => d.id !== currentDue?.id);
 
@@ -60,7 +60,7 @@ export default function DuesScreen() {
           <Text style={styles.dueAmount}>{formatCurrency(currentDue.amount)}</Text>
           <Text style={styles.dueMeta}>Due by {formatDate(currentDue.due_date)}</Text>
           <Pressable style={styles.payButton} onPress={() => router.push(`/(resident)/pay-due/${currentDue.id}`)}>
-            <Text style={styles.payButtonLabel}>Pay now</Text>
+            <Text style={styles.payButtonLabel}>Pay in Test Mode</Text>
           </Pressable>
         </View>
       )}
@@ -79,24 +79,46 @@ export default function DuesScreen() {
 
       {history.length > 0 && (
         <>
-          <Text style={styles.sectionTitle}>Payment history</Text>
+          <Text style={styles.sectionTitle}>Invoice history</Text>
           <View style={styles.list}>
-            {history.map((due) => (
-              <View key={due.id} style={styles.historyCard}>
-                <View>
-                  <Text style={styles.historyLabel}>{due.quarter_label}</Text>
-                  <Text style={styles.historySub}>Due {formatDate(due.due_date)}</Text>
-                </View>
-                <View style={styles.historyRight}>
-                  <Text style={styles.historyAmount}>{formatCurrency(due.amount)}</Text>
-                  <View style={[styles.statusPill, due.status === 'PAID' ? styles.statusPillPaid : styles.statusPillUnpaid]}>
-                    <Text style={[styles.statusPillLabel, due.status === 'PAID' ? styles.statusPillLabelPaid : styles.statusPillLabelUnpaid]}>
-                      {due.status}
-                    </Text>
+            {history.map((due) => {
+              const displayStatus = getMaintenanceDueDisplayStatus(due);
+              return (
+                <View key={due.id} style={styles.historyCard}>
+                  <View style={styles.flex}>
+                    <Text style={styles.historyLabel}>{due.quarter_label}</Text>
+                    <Text style={styles.historySub}>Due {formatDate(due.due_date)}</Text>
+                    {displayStatus === 'CANCELLED' && due.cancel_reason && (
+                      <Text style={styles.cancelReason} numberOfLines={2}>{due.cancel_reason}</Text>
+                    )}
+                  </View>
+                  <View style={styles.historyRight}>
+                    <Text style={styles.historyAmount}>{formatCurrency(due.amount)}</Text>
+                    <View
+                      style={[
+                        styles.statusPill,
+                        displayStatus === 'PAID'
+                          ? styles.statusPillPaid
+                          : displayStatus === 'CANCELLED'
+                            ? styles.statusPillCancelled
+                            : styles.statusPillUnpaid,
+                      ]}>
+                      <Text
+                        style={[
+                          styles.statusPillLabel,
+                          displayStatus === 'PAID'
+                            ? styles.statusPillLabelPaid
+                            : displayStatus === 'CANCELLED'
+                              ? styles.statusPillLabelCancelled
+                              : styles.statusPillLabelUnpaid,
+                        ]}>
+                        {displayStatus}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         </>
       )}
@@ -145,12 +167,15 @@ const styles = StyleSheet.create({
   },
   historyLabel: { fontSize: 14.5, fontWeight: '600' },
   historySub: { fontSize: 12.5, color: Colors.textMuted, marginTop: 2 },
+  cancelReason: { maxWidth: 220, marginTop: 4, fontSize: 11.5, lineHeight: 16, color: Colors.danger700 },
   historyRight: { alignItems: 'flex-end' },
   historyAmount: { fontSize: 14.5, fontWeight: '700' },
   statusPill: { borderRadius: 999, paddingVertical: 3, paddingHorizontal: 8, marginTop: 3 },
   statusPillPaid: { backgroundColor: '#E3F2E9' },
   statusPillUnpaid: { backgroundColor: '#F6ECD8' },
+  statusPillCancelled: { backgroundColor: '#F9E4E1' },
   statusPillLabel: { fontSize: 10.5, fontWeight: '700' },
   statusPillLabelPaid: { color: Colors.success600 },
   statusPillLabelUnpaid: { color: '#9A6B14' },
+  statusPillLabelCancelled: { color: Colors.danger700 },
 });

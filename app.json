@@ -47,6 +47,14 @@
         }
       ],
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Agora to scan visitor gate passes at the security desk.",
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": true
+        }
+      ],
+      [
         "expo-notifications",
         {
           "color": "#10261B"
@@ -61,7 +69,9 @@
           "style": "light"
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "@sentry/react-native",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -12,21 +12,23 @@ import {
 } from '@expo-google-fonts/schibsted-grotesk';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
-import { router, Stack, useSegments } from 'expo-router';
+import { router, Stack, type ErrorBoundaryProps, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { loadNotificationsModule } from '@/commonFunctions';
-import { AppLoadingScreen } from '@/components/app-loading-screen';
+import { loadNotificationsModule, navigateFromNotificationResponse } from '@/commonFunctions';
+import { AppLoadingScreen } from "@/components/app-loading-screen";
+import { NetworkStatusBanner } from "@/components/network-status-banner";
 import { SignOutDialog } from '@/components/sign-out-dialog';
 import { ToastHost } from '@/components/toast-host';
-import { AmenityNotificationTypes, AuthRoutes, Colors, FontFamily, Radius } from '@/constants/commonConstants';
+import { AuthRoutes, Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { useRegisterPushToken } from '@/features/notifications/api';
 import { useProfile } from '@/features/profile/api';
 import { queryClient } from '@/lib/query-client';
+import { Sentry, setSentryIdentity } from '@/lib/sentry';
 import { useAuthStore } from '@/stores/auth-store';
 
 SplashScreen.preventAutoHideAsync();
@@ -110,6 +112,10 @@ function RootNavigator() {
   useRegisterPushToken(isActive ? profile?.id : undefined, isActive ? profile?.society_id : undefined);
 
   useEffect(() => {
+    setSentryIdentity(profile);
+  }, [profile]);
+
+  useEffect(() => {
     if (!profile?.is_active) return;
     let cancelled = false;
     let subscription: { remove: () => void } | undefined;
@@ -117,31 +123,15 @@ function RootNavigator() {
     loadNotificationsModule()
       .then((Notifications) => {
         if (!Notifications || cancelled) return;
+
+        const initialResponse = Notifications.getLastNotificationResponse();
+        if (initialResponse && navigateFromNotificationResponse(initialResponse, profile.role)) {
+          void Notifications.clearLastNotificationResponseAsync();
+        }
+
         subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-          // A push payload is only a hint — the destination screen re-fetches the
-          // record itself and RLS re-authorizes it before showing anything.
-          const data = response.notification.request.content.data as {
-            type?: string;
-            requestId?: string;
-            noticeId?: string;
-            complaintId?: string;
-            bookingId?: string;
-          } | undefined;
-          if (data?.type === 'VISITOR_REQUEST' && data.requestId && profile.role === 'RESIDENT') {
-            router.push(`/(resident)/visitor-request/${data.requestId}`);
-          } else if (data?.type === 'VISITOR_DECISION' && profile.role === 'GUARD') {
-            router.push('/(guard)/(tabs)');
-          } else if (data?.type === 'NOTICE' && data.noticeId && profile.role === 'RESIDENT') {
-            router.push(`/(resident)/notice/${data.noticeId}`);
-          } else if (data?.type === 'COMPLAINT_STATUS' && data.complaintId && profile.role === 'RESIDENT') {
-            router.push(`/(resident)/complaint/${data.complaintId}`);
-          } else if (
-            (data?.type === AmenityNotificationTypes.decision
-              || data?.type === AmenityNotificationTypes.maintenanceCancelled)
-            && data.bookingId
-            && profile.role === 'RESIDENT'
-          ) {
-            router.push({ pathname: '/(resident)/amenities', params: { tab: 'bookings' } });
+          if (navigateFromNotificationResponse(response, profile.role)) {
+            void Notifications.clearLastNotificationResponseAsync();
           }
         });
       })
@@ -235,7 +225,7 @@ function RootNavigator() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const isInitializing = useAuthStore((state) => state.isInitializing);
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_500Medium,
@@ -258,11 +248,32 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <RootNavigator />
       <AppStatusBar />
+      <NetworkStatusBanner />
       <ToastHost />
       <SignOutDialog />
     </QueryClientProvider>
   );
 }
+
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  useEffect(() => {
+    Sentry.captureException(error, { tags: { source: 'expo-router-boundary' } });
+  }, [error]);
+
+  return (
+    <View style={sessionErrorStyles.root}>
+      <Text style={sessionErrorStyles.title}>Agora hit an unexpected error</Text>
+      <Text style={sessionErrorStyles.subtitle}>
+        Your data was not changed by this screen. Retry now, or reopen the app if the problem continues.
+      </Text>
+      <Pressable accessibilityRole='button' style={sessionErrorStyles.retryButton} onPress={retry}>
+        <Text style={sessionErrorStyles.retryLabel}>Try again</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+export default Sentry.wrap(RootLayout);
 
 const sessionErrorStyles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.canvas, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
