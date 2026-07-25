@@ -4,6 +4,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 
+import {
+  MAX_SECURE_STORE_CHUNKS,
+  SECURE_STORE_CHUNK_SIZE,
+  SECURE_STORE_KEY_SUFFIX,
+  SECURE_STORE_VERSION,
+} from '@/constants/commonConstants';
+
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -13,9 +20,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-const SECURE_STORE_CHUNK_SIZE = 1800;
-const MAX_SECURE_STORE_CHUNKS = 32;
-const SECURE_STORE_VERSION = 2;
 const isServerRenderEnvironment = typeof window === 'undefined';
 
 type SecureStoreManifest = {
@@ -24,11 +28,11 @@ type SecureStoreManifest = {
 };
 
 function getManifestKey(name: string) {
-  return `${name}-manifest-v2`;
+  return `${name}-manifest-${SECURE_STORE_KEY_SUFFIX}`;
 }
 
 function getChunkKey(name: string, index: number) {
-  return `${name}-chunk-v2-${index}`;
+  return `${name}-chunk-${SECURE_STORE_KEY_SUFFIX}-${index}`;
 }
 
 /**
@@ -73,12 +77,14 @@ class ChunkedSecureStore {
         return null;
       }
 
-      const chunks: string[] = [];
-      for (let index = 0; index < manifest.chunkCount; index += 1) {
-        const chunk = await SecureStore.getItemAsync(getChunkKey(name, index));
+      const chunks = await Promise.all(
+        Array.from({ length: manifest.chunkCount }, (_, index) =>
+          SecureStore.getItemAsync(getChunkKey(name, index)),
+        ),
+      );
+      chunks.forEach((chunk) => {
         if (chunk === null) throw new Error('Stored session is incomplete');
-        chunks.push(chunk);
-      }
+      });
       return chunks.join('');
     } catch {
       await this.removeItem(name);
@@ -98,9 +104,9 @@ class ChunkedSecureStore {
     }
 
     const previousManifest = await this.readManifest(name).catch(() => null);
-    for (let index = 0; index < chunks.length; index += 1) {
-      await SecureStore.setItemAsync(getChunkKey(name, index), chunks[index]);
-    }
+    await Promise.all(
+      chunks.map((chunk, index) => SecureStore.setItemAsync(getChunkKey(name, index), chunk)),
+    );
     await SecureStore.setItemAsync(
       getManifestKey(name),
       JSON.stringify({ version: SECURE_STORE_VERSION, chunkCount: chunks.length }),

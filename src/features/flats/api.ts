@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { assertSocietyRecord, getQueryKey, invalidateAuditEvents } from '@/commonFunctions';
-import { QueryKeyRoots } from '@/constants/commonConstants';
+import { FLAT_SELECT, QueryKeyRoots } from '@/constants/commonConstants';
 import { supabase } from '@/lib/supabase';
 
 export type Flat = {
@@ -22,7 +22,7 @@ export function useFlats(
     queryFn: async () => {
       const { data, error } = await supabase
         .from('flats')
-        .select('*')
+        .select(FLAT_SELECT)
         .eq('society_id', societyId as string)
         .order('floor')
         .order('number');
@@ -43,7 +43,7 @@ export function useFlatWithTower(flatId: string | null | undefined, societyId: s
     queryFn: async () => {
       const { data, error } = await supabase
         .from('flats')
-        .select('*, tower:towers(id, name, code, floors)')
+        .select(`${FLAT_SELECT}, tower:towers(id, name, code, floors)`)
         .eq('id', flatId as string)
         .eq('society_id', societyId as string)
         .single();
@@ -137,7 +137,7 @@ export async function findOrCreateFlat(params: { societyId: string; towerId: str
   const { societyId, towerId, number, floor } = params;
   const { data: existing, error: findError } = await supabase
     .from('flats')
-    .select('*')
+    .select(FLAT_SELECT)
     .eq('society_id', societyId)
     .eq('tower_id', towerId)
     .eq('number', number.trim().toUpperCase())

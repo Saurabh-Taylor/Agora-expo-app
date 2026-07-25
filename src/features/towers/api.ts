@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
 import { assertSocietyRecord, getQueryKey, invalidateAuditEvents } from '@/commonFunctions';
-import { QueryKeyRoots } from '@/constants/commonConstants';
+import { QueryKeyRoots, TOWER_SELECT } from '@/constants/commonConstants';
 import { useFlats } from '@/features/flats/api';
 import { useResidents } from '@/features/residents/api';
 import { supabase } from '@/lib/supabase';
@@ -26,7 +26,7 @@ export function useTowers(
     queryFn: async () => {
       const { data, error } = await supabase
         .from('towers')
-        .select('*')
+        .select(TOWER_SELECT)
         .eq('society_id', societyId as string)
         .order('name');
       if (error) throw error;
