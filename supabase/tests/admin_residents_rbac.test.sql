@@ -89,10 +89,9 @@ select set_config('request.jwt.claim.sub', '43000000-0000-0000-0000-000000000003
 select is((select public.current_user_role())::text, null, 'inactive resident has no RLS role');
 select is((select public.current_society_id())::text, null, 'inactive resident has no RLS society');
 select is((select count(*)::integer from public.towers), 0, 'inactive resident cannot read society domain data');
-select throws_ok(
+select throws_like(
   $$ select public.complete_password_change() $$,
-  '42501',
-  'Account is inactive',
+  '%permission denied%',
   'inactive resident cannot complete password workflow'
 );
 
@@ -106,10 +105,14 @@ select is((select is_active from public.profiles where id = '43000000-0000-0000-
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '43000000-0000-0000-0000-000000000003', true);
-select is((select public.current_user_role())::text, 'RESIDENT', 'reactivated resident regains the RLS role');
-select lives_ok($$ select public.complete_password_change() $$, 'active resident completes first-login password workflow');
+select is((select public.current_user_role())::text, null, 'forced-password resident has no RLS role');
+select throws_like(
+  $$ select public.complete_password_change() $$,
+  '%permission denied%',
+  'password completion RPC is not client-accessible'
+);
 reset role;
-select is((select must_change_password from public.profiles where id = '43000000-0000-0000-0000-000000000003'), false, 'password completion flag persists');
+select is((select must_change_password from public.profiles where id = '43000000-0000-0000-0000-000000000003'), true, 'password completion flag remains until Edge Function');
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '43000000-0000-0000-0000-000000000001', true);

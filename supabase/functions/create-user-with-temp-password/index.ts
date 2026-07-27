@@ -19,7 +19,17 @@ const TEMP_PASSWORD_LENGTH = 12;
 function generateTempPassword() {
   const bytes = new Uint8Array(TEMP_PASSWORD_LENGTH);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => TEMP_PASSWORD_CHARSET[b % TEMP_PASSWORD_CHARSET.length]).join("");
+  const password = [
+    "ABCDEFGHJKMNPQRSTUVWXYZ"[bytes[0] % 24],
+    "abcdefghijkmnpqrstuvwxyz"[bytes[1] % 24],
+    "23456789"[bytes[2] % 8],
+    ...Array.from(bytes.slice(3), (byte) => TEMP_PASSWORD_CHARSET[byte % TEMP_PASSWORD_CHARSET.length]),
+  ];
+  for (let index = password.length - 1; index > 0; index -= 1) {
+    const swapIndex = bytes[index % bytes.length] % (index + 1);
+    [password[index], password[swapIndex]] = [password[swapIndex], password[index]];
+  }
+  return password.join("");
 }
 
 function badRequest(message: string) {

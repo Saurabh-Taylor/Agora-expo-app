@@ -141,6 +141,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: new ChunkedSecureStore(),
     autoRefreshToken: true,
     persistSession: true,
+    flowType: 'pkce',
     detectSessionInUrl: false,
   },
 });
