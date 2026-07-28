@@ -8,8 +8,7 @@ import { AsyncState } from '@/components/async-state';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { useNotices, useNoticesRealtimeSync } from '@/features/notices/api';
 import { useCastVote, usePolls, usePollVotesRealtimeSync, type PollWithVotes } from '@/features/polls/api';
-import { useProfile } from '@/features/profile/api';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthenticatedProfile } from '@/features/profile/api';
 import { showToast } from '@/stores/toast-store';
 
 type CommunityTab = 'Notices' | 'Polls';
@@ -101,8 +100,7 @@ function PollCard({
 
 export default function CommunityScreen() {
   const [activeTab, setActiveTab] = useState<CommunityTab>('Notices');
-  const session = useAuthStore((state) => state.session);
-  const profileQuery = useProfile(session?.user.id);
+  const profileQuery = useAuthenticatedProfile();
   const noticesQuery = useNotices(profileQuery.data?.society_id);
   const pollsQuery = usePolls(profileQuery.data?.society_id);
 

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getQueryKey } from '@/commonFunctions';
 import { QueryKeyRoots } from '@/constants/commonConstants';
 import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/stores/auth-store';
 
 export type UserRole = 'RESIDENT' | 'GUARD' | 'ADMIN';
 
@@ -36,4 +37,9 @@ export function useProfile(userId: string | undefined) {
     },
     enabled: !!userId,
   });
+}
+
+export function useAuthenticatedProfile() {
+  const userId = useAuthStore((state) => state.session?.user.id);
+  return useProfile(userId);
 }

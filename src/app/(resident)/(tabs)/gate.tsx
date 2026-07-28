@@ -2,18 +2,23 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { formatDateTime, formatVehicleLabel, isGatePassActive, titleCase } from '@/commonFunctions';
+import {
+  formatDateTime,
+  formatFlatLabel,
+  formatVehicleLabel,
+  isGatePassActive,
+  refetchQueries,
+  titleCase,
+} from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { ResidentVisitorRegister } from '@/components/resident-visitor-register';
 import { Colors, FontFamily } from '@/constants/commonConstants';
 import { useFlatWithTower } from '@/features/flats/api';
-import { useProfile } from '@/features/profile/api';
+import { useAuthenticatedProfile } from '@/features/profile/api';
 import { useActiveGatePasses, useVisitorRequestsRealtimeSync } from '@/features/visitors/api';
-import { useAuthStore } from '@/stores/auth-store';
 
 export default function GateLogScreen() {
-  const session = useAuthStore((state) => state.session);
-  const profileQuery = useProfile(session?.user.id);
+  const profileQuery = useAuthenticatedProfile();
   const profile = profileQuery.data;
   const flatQuery = useFlatWithTower(profile?.flat_id, profile?.society_id);
   const activePassesQuery = useActiveGatePasses(profile?.flat_id, profile?.society_id);
@@ -47,10 +52,7 @@ export default function GateLogScreen() {
         <AsyncState
           isLoading={false}
           isError
-          onRetry={() => {
-            profileQuery.refetch();
-            flatQuery.refetch();
-          }}
+          onRetry={() => refetchQueries(profileQuery, flatQuery)}
           errorTitle="Could not open your gate"
           errorMessage="Your resident profile or flat assignment could not be loaded."
         />
@@ -61,9 +63,7 @@ export default function GateLogScreen() {
   const activePasses = (activePassesQuery.data ?? []).filter((request) =>
     isGatePassActive(request, expiryClock),
   );
-  const flatLabel = flatQuery.data?.tower
-    ? `${flatQuery.data.tower.code}-${flatQuery.data.number}`
-    : (flatQuery.data?.number ?? '');
+  const flatLabel = formatFlatLabel(flatQuery.data);
   const towerLabel = flatQuery.data?.tower?.name ?? 'Your society';
 
   const header = (
@@ -73,7 +73,10 @@ export default function GateLogScreen() {
           <Text style={styles.title}>My gate</Text>
           <Text style={styles.subtitle}>{[flatLabel, towerLabel].filter(Boolean).join(' / ')}</Text>
         </View>
-        <Pressable onPress={() => router.push('/(resident)/pre-approve')} style={styles.preApproveButton}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/(resident)/pre-approve')}
+          style={styles.preApproveButton}>
           <Text style={styles.preApproveIcon}>+</Text>
           <Text style={styles.preApproveText}>Guest pass</Text>
         </Pressable>
@@ -101,30 +104,36 @@ export default function GateLogScreen() {
             onRetry={() => activePassesQuery.refetch()}
           />
           <View style={styles.activeList}>
-            {activePasses.map((request) => (
-              <Pressable
-                key={request.id}
-                style={styles.passCard}
-                onPress={() => router.push({ pathname: '/(resident)/gate-pass', params: { id: request.id } })}>
-                <View style={styles.passTopRow}>
-                  <View>
-                    <Text style={styles.passOverline}>ACTIVE PASS</Text>
-                    <Text style={styles.passCode}>{request.gate_pass_code}</Text>
+            {activePasses.map((request) => {
+              const vehicleLabel = formatVehicleLabel(request.vehicle_number, request.vehicle_type);
+              return (
+                <Pressable
+                  key={request.id}
+                  accessibilityRole="button"
+                  style={styles.passCard}
+                  onPress={() =>
+                    router.push({ pathname: '/(resident)/gate-pass', params: { id: request.id } })
+                  }>
+                  <View style={styles.passTopRow}>
+                    <View>
+                      <Text style={styles.passOverline}>ACTIVE PASS</Text>
+                      <Text style={styles.passCode}>{request.gate_pass_code}</Text>
+                    </View>
+                    <Text style={styles.passLink}>Open</Text>
                   </View>
-                  <Text style={styles.passLink}>Open</Text>
-                </View>
-                <Text style={styles.passName}>{request.visitor?.name ?? 'Visitor'}</Text>
-                <Text style={styles.passMeta}>
-                  {request.visitor ? titleCase(request.visitor.category) : 'Visitor'}
-                  {formatVehicleLabel(request.vehicle_number, request.vehicle_type)
-                    ? ` / ${formatVehicleLabel(request.vehicle_number, request.vehicle_type)}`
-                    : ''}
-                </Text>
-                {request.valid_until && (
-                  <Text style={styles.passValidity}>Valid until {formatDateTime(request.valid_until)}</Text>
-                )}
-              </Pressable>
-            ))}
+                  <Text style={styles.passName}>{request.visitor?.name ?? 'Visitor'}</Text>
+                  <Text style={styles.passMeta}>
+                    {request.visitor ? titleCase(request.visitor.category) : 'Visitor'}
+                    {vehicleLabel ? ` / ${vehicleLabel}` : ''}
+                  </Text>
+                  {request.valid_until && (
+                    <Text style={styles.passValidity}>
+                      Valid until {formatDateTime(request.valid_until)}
+                    </Text>
+                  )}
+                </Pressable>
+              );
+            })}
           </View>
         </View>
       )}

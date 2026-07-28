@@ -2,13 +2,12 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { getInitials, matchesDirectorySearch } from '@/commonFunctions';
+import { getInitials, matchesDirectorySearch, refetchQueries } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
-import { useProfile } from '@/features/profile/api';
+import { useAuthenticatedProfile } from '@/features/profile/api';
 import { useDirectoryRealtimeSync, useServiceProviders, useStaff } from '@/features/staff/api';
-import { useAuthStore } from '@/stores/auth-store';
 import { showToast } from '@/stores/toast-store';
 
 type DirectoryTab = 'Staff' | 'Services';
@@ -21,8 +20,7 @@ function callDirectoryContact(phone: string) {
 export default function ResidentDirectoryScreen() {
   const [tab, setTab] = useState<DirectoryTab>('Staff');
   const [search, setSearch] = useState('');
-  const session = useAuthStore((state) => state.session);
-  const profileQuery = useProfile(session?.user.id);
+  const profileQuery = useAuthenticatedProfile();
   const societyId = profileQuery.data?.society_id;
   const staffQuery = useStaff(societyId);
   const providersQuery = useServiceProviders(societyId);
@@ -88,10 +86,7 @@ export default function ResidentDirectoryScreen() {
           isLoading={profileQuery.isLoading || activeQuery.isLoading}
           isError={profileQuery.isError || activeQuery.isError}
           isRetrying={profileQuery.isRefetching || activeQuery.isRefetching}
-          onRetry={() => {
-            profileQuery.refetch();
-            activeQuery.refetch();
-          }}
+          onRetry={() => refetchQueries(profileQuery, activeQuery)}
           isEmpty={activeRecords.length === 0}
           emptyTitle={search.trim() ? 'No matching contacts' : 'No active contacts'}
           emptyMessage={

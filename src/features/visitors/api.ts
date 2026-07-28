@@ -32,6 +32,8 @@ export type VisitorRequestStatus =
   | 'CANCELLED'
   | 'EXPIRED';
 
+export type ResidentVisitorDecision = 'APPROVED' | 'REJECTED' | 'LEFT_AT_GATE';
+
 export type AdminVisitorHistoryFilters = {
   since: string | null;
   status: VisitorRequestStatus | 'ALL';
@@ -703,7 +705,7 @@ export function useVisitorRequestsRealtimeSync(
 
 type DecideVisitorRequestInput = {
   id: string;
-  decision: 'APPROVED' | 'REJECTED' | 'LEFT_AT_GATE';
+  decision: ResidentVisitorDecision;
   raisedBy: string | null;
   visitorName: string;
 };

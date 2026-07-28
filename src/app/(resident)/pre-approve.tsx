@@ -13,21 +13,28 @@ import {
 } from 'react-native';
 
 import {
+  getErrorMessage,
   isVehicleDetailsValid,
   normalizeSingleLineInput,
   normalizeVehicleNumber,
 } from '@/commonFunctions';
+import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { VehicleFields } from '@/components/vehicle-fields';
-import { Colors, FontFamily, Radius, VisitorCategoryOptions, type VisitorVehicleType } from '@/constants/commonConstants';
-import { useProfile } from '@/features/profile/api';
+import {
+  Colors,
+  FontFamily,
+  Radius,
+  VisitorCategoryOptions,
+  type VisitorVehicleType,
+} from '@/constants/commonConstants';
+import { useAuthenticatedProfile } from '@/features/profile/api';
 import { useCreatePreApproval, type VisitorCategory } from '@/features/visitors/api';
-import { useAuthStore } from '@/stores/auth-store';
 import { showToast } from '@/stores/toast-store';
 
 export default function PreApproveScreen() {
-  const session = useAuthStore((state) => state.session);
-  const profileQuery = useProfile(session?.user.id);
+  const profileQuery = useAuthenticatedProfile();
+  const profile = profileQuery.data;
   const createPreApproval = useCreatePreApproval();
 
   const [name, setName] = useState('');
@@ -35,13 +42,18 @@ export default function PreApproveScreen() {
   const [vehicleType, setVehicleType] = useState<VisitorVehicleType | null>(null);
   const [vehicleNumber, setVehicleNumber] = useState('');
 
-  const canCreate = name.trim().length > 1 && !!category && isVehicleDetailsValid(vehicleNumber, vehicleType);
+  const hasResidentContext = !!profile?.society_id && !!profile.flat_id;
+  const canCreate =
+    hasResidentContext &&
+    name.trim().length > 1 &&
+    !!category &&
+    isVehicleDetailsValid(vehicleNumber, vehicleType);
 
   async function handleCreate() {
-    if (!canCreate || !category || !profileQuery.data?.flat_id) return;
+    if (!canCreate || !category || !profile) return;
     try {
       const result = await createPreApproval.mutateAsync({
-        societyId: profileQuery.data.society_id,
+        societyId: profile.society_id,
         visitorName: normalizeSingleLineInput(name),
         category,
         vehicleType: vehicleType ?? undefined,
@@ -52,7 +64,7 @@ export default function PreApproveScreen() {
         params: { id: result.request.id, created: 'true' },
       });
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Could not create the gate pass');
+      showToast(getErrorMessage(error, 'Could not create the gate pass'));
     }
   }
 
@@ -69,47 +81,82 @@ export default function PreApproveScreen() {
         <BackArrowButton onPress={() => router.back()} />
         <Text style={styles.title}>Pre-approve a visitor</Text>
       </View>
-      <Text style={styles.subtitle}>The guard lets them in with a pass code - no gate call needed. The pass stays active for 24 hours.</Text>
+      <Text style={styles.subtitle}>
+        The guard lets them in with a pass code - no gate call needed. The pass stays active for
+        24 hours.
+      </Text>
 
-      <Text style={styles.label}>VISITOR NAME</Text>
-      <TextInput
-        value={name}
-        onChangeText={setName}
-        onBlur={() => setName(normalizeSingleLineInput(name))}
-        placeholder="e.g. Priya Nair"
-        placeholderTextColor={Colors.textFaint}
-        style={styles.input}
+      <AsyncState
+        isLoading={profileQuery.isLoading}
+        isError={profileQuery.isError}
+        isRetrying={profileQuery.isRefetching}
+        onRetry={() => profileQuery.refetch()}
+        isEmpty={!profileQuery.isLoading && !profileQuery.isError && !hasResidentContext}
+        emptyTitle="No flat assigned"
+        emptyMessage="Ask your society admin to assign your resident account to a flat."
       />
 
-      <Text style={styles.label}>TYPE</Text>
-      <View style={styles.chipsRow}>
-        {VisitorCategoryOptions.map((item) => {
-          const active = category === item.value;
-          return (
-            <Pressable
-              key={item.value}
-              onPress={() => setCategory(item.value)}
-              style={[styles.chip, active ? styles.chipActive : styles.chipInactive]}>
-              <Text style={active ? styles.chipLabelActive : styles.chipLabelInactive}>{item.label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {hasResidentContext && (
+        <>
+          <Text style={styles.label}>VISITOR NAME</Text>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            onBlur={() => setName(normalizeSingleLineInput(name))}
+            placeholder="e.g. Priya Nair"
+            placeholderTextColor={Colors.textFaint}
+            style={styles.input}
+            accessibilityLabel="Visitor name"
+          />
 
-      <VehicleFields
-        vehicleType={vehicleType}
-        vehicleNumber={vehicleNumber}
-        onTypeChange={setVehicleType}
-        onNumberChange={setVehicleNumber}
-      />
+          <Text style={styles.label}>TYPE</Text>
+          <View style={styles.chipsRow}>
+            {VisitorCategoryOptions.map((item) => {
+              const active = category === item.value;
+              return (
+                <Pressable
+                  key={item.value}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: active }}
+                  onPress={() => setCategory(item.value)}
+                  style={[styles.chip, active ? styles.chipActive : styles.chipInactive]}>
+                  <Text style={active ? styles.chipLabelActive : styles.chipLabelInactive}>
+                    {item.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
 
-      <Pressable
-        style={[styles.createButton, { backgroundColor: canCreate ? Colors.green500 : '#DDD8C8' }]}
-        onPress={handleCreate}
-        disabled={!canCreate || createPreApproval.isPending}>
-        {createPreApproval.isPending && <ActivityIndicator size="small" color="#fff" />}
-        <Text style={[styles.createButtonLabel, { color: canCreate ? Colors.textOnDark : '#9B9682' }]}>Create gate pass</Text>
-      </Pressable>
+          <VehicleFields
+            vehicleType={vehicleType}
+            vehicleNumber={vehicleNumber}
+            onTypeChange={setVehicleType}
+            onNumberChange={setVehicleNumber}
+          />
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canCreate, busy: createPreApproval.isPending }}
+            style={[
+              styles.createButton,
+              { backgroundColor: canCreate ? Colors.green500 : '#DDD8C8' },
+            ]}
+            onPress={handleCreate}
+            disabled={!canCreate || createPreApproval.isPending}>
+            {createPreApproval.isPending && (
+              <ActivityIndicator size="small" color={Colors.textOnDark} />
+            )}
+            <Text
+              style={[
+                styles.createButtonLabel,
+                { color: canCreate ? Colors.textOnDark : '#9B9682' },
+              ]}>
+              Create gate pass
+            </Text>
+          </Pressable>
+        </>
+      )}
       </ScrollView>
     </KeyboardAvoidingView>
   );

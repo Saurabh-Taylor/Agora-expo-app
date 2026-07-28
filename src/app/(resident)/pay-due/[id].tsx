@@ -2,19 +2,17 @@ import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { formatCurrency, formatDate } from '@/commonFunctions';
+import { formatCurrency, formatDate, refetchQueries } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { Colors, FontFamily, Radius, RAZORPAY_RETURN_URL, RAZORPAY_TEST_LABEL } from '@/constants/commonConstants';
 import { useCreateRazorpayOrder, useDueDetail, useVerifyRazorpayPayment } from '@/features/dues/api';
-import { useProfile } from '@/features/profile/api';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthenticatedProfile } from '@/features/profile/api';
 import { showToast } from '@/stores/toast-store';
 
 export default function PayDueScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const session = useAuthStore((state) => state.session);
-  const profileQuery = useProfile(session?.user.id);
+  const profileQuery = useAuthenticatedProfile();
   const dueQuery = useDueDetail(id, profileQuery.data?.flat_id, profileQuery.data?.society_id);
   const createOrder = useCreateRazorpayOrder();
   const verifyPayment = useVerifyRazorpayPayment();
@@ -81,10 +79,7 @@ export default function PayDueScreen() {
         <AsyncState
           isLoading={profileQuery.isLoading || dueQuery.isLoading}
           isError={profileQuery.isError || dueQuery.isError}
-          onRetry={() => {
-            profileQuery.refetch();
-            dueQuery.refetch();
-          }}
+          onRetry={() => refetchQueries(profileQuery, dueQuery)}
           isEmpty={!profileQuery.isLoading && !dueQuery.isLoading && !profileQuery.isError && !dueQuery.isError}
           emptyMessage="This due isn't available."
         />

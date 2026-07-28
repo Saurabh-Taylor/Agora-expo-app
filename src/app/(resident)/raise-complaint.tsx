@@ -18,8 +18,7 @@ import {
   useCreateComplaint,
   type ComplaintAttachmentInput,
 } from '@/features/complaints/api';
-import { useProfile } from '@/features/profile/api';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthenticatedProfile } from '@/features/profile/api';
 import { showToast } from '@/stores/toast-store';
 
 const AttachmentSources = [
@@ -28,8 +27,8 @@ const AttachmentSources = [
 ] as const;
 
 export default function RaiseComplaintScreen() {
-  const session = useAuthStore((state) => state.session);
-  const profileQuery = useProfile(session?.user.id);
+  const profileQuery = useAuthenticatedProfile();
+  const profile = profileQuery.data;
   const createComplaint = useCreateComplaint();
 
   const [title, setTitle] = useState('');
@@ -40,8 +39,7 @@ export default function RaiseComplaintScreen() {
   const canSubmit =
     title.trim().length > 1 &&
     description.trim().length > 1 &&
-    !!profileQuery.data?.flat_id &&
-    !!session?.user.id;
+    !!profile?.flat_id;
 
   async function selectAttachment(source: (typeof AttachmentSources)[number]['value']) {
     try {
@@ -85,12 +83,12 @@ export default function RaiseComplaintScreen() {
   }
 
   async function handleSubmit() {
-    if (!canSubmit || !profileQuery.data?.flat_id || !session?.user.id) return;
+    if (!canSubmit || !profile?.flat_id) return;
     try {
       const complaint = await createComplaint.mutateAsync({
-        societyId: profileQuery.data.society_id,
-        flatId: profileQuery.data.flat_id,
-        userId: session.user.id,
+        societyId: profile.society_id,
+        flatId: profile.flat_id,
+        userId: profile.id,
         title: title.trim(),
         description: description.trim(),
         category,
@@ -113,7 +111,11 @@ export default function RaiseComplaintScreen() {
         <Text style={styles.title}>Raise a complaint</Text>
       </View>
 
-      <AsyncState isLoading={profileQuery.isLoading} isError={profileQuery.isError} onRetry={() => profileQuery.refetch()} />
+      <AsyncState
+        isLoading={profileQuery.isLoading}
+        isError={profileQuery.isError}
+        onRetry={() => profileQuery.refetch()}
+      />
 
       <Text style={styles.label}>TITLE</Text>
       <TextInput

@@ -6,14 +6,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Rect } from 'react-native-svg';
 import QRCode from 'react-native-qrcode-svg';
 
-import { createGatePassQrValue, formatDateTime, formatVehicleLabel, isGatePassActive, titleCase } from '@/commonFunctions';
+import {
+  createGatePassQrValue,
+  formatDateTime,
+  formatVehicleLabel,
+  isGatePassActive,
+  refetchQueries,
+  titleCase,
+} from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
-import { useProfile } from '@/features/profile/api';
+import { useAuthenticatedProfile } from '@/features/profile/api';
 import { useRevokePreApproval, useVisitorRequestDetail } from '@/features/visitors/api';
-import { useAuthStore } from '@/stores/auth-store';
 import { showToast } from '@/stores/toast-store';
 
 function CheckIcon() {
@@ -49,8 +55,7 @@ function RevokeIcon() {
 export default function GatePassScreen() {
   const params = useLocalSearchParams<{ id?: string; created?: string }>();
   const insets = useSafeAreaInsets();
-  const session = useAuthStore((state) => state.session);
-  const profileQuery = useProfile(session?.user.id);
+  const profileQuery = useAuthenticatedProfile();
   const detailQuery = useVisitorRequestDetail(params.id, profileQuery.data?.society_id);
   const revokePreApproval = useRevokePreApproval();
   const request = detailQuery.data;
@@ -66,10 +71,7 @@ export default function GatePassScreen() {
         <AsyncState
           isLoading={isLoading}
           isError={isError}
-          onRetry={() => {
-            profileQuery.refetch();
-            detailQuery.refetch();
-          }}
+          onRetry={() => refetchQueries(profileQuery, detailQuery)}
           isEmpty={!isLoading && !isError && !request}
           emptyTitle="Gate pass unavailable"
           emptyMessage="This gate pass could not be found."
