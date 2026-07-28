@@ -1,17 +1,27 @@
 import { router } from 'expo-router';
+import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { avatarColorForName, formatTime, getInitials, getTimeBasedGreeting, getVisitorRequestStatusStyle, titleCase } from '@/commonFunctions';
+import {
+  avatarColorForName,
+  formatCurrency,
+  formatFlatLabel,
+  formatTime,
+  getCurrentMaintenanceDue,
+  getInitials,
+  getTimeBasedGreeting,
+  getVisitorRequestStatusStyle,
+  titleCase,
+} from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { AgoraLogo } from '@/components/icons/agora-logo';
 import { StatusPill } from '@/components/status-pill';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { useDuesRealtimeSync, useFlatDues } from '@/features/dues/api';
 import { useFlatWithTower } from '@/features/flats/api';
-import { useProfile } from '@/features/profile/api';
+import { useAuthenticatedProfile } from '@/features/profile/api';
 import { useFlatVisitorRequests, useVisitorRequestsRealtimeSync } from '@/features/visitors/api';
-import { useAuthStore } from '@/stores/auth-store';
 
 function PlusIcon() {
   return (
@@ -56,9 +66,27 @@ function RupeeIcon() {
   );
 }
 
+type QuickActionCardProps = {
+  title: string;
+  subtitle: string;
+  icon: ReactNode;
+  onPress: () => void;
+};
+
+function QuickActionCard({ title, subtitle, icon, onPress }: QuickActionCardProps) {
+  return (
+    <Pressable accessibilityRole="button" style={styles.actionCard} onPress={onPress}>
+      <View style={styles.actionIconWrap}>{icon}</View>
+      <View style={styles.flex}>
+        <Text style={styles.actionTitle}>{title}</Text>
+        <Text style={styles.actionSub}>{subtitle}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
 export default function ResidentHomeScreen() {
-  const session = useAuthStore((state) => state.session);
-  const profileQuery = useProfile(session?.user.id);
+  const profileQuery = useAuthenticatedProfile();
   const profile = profileQuery.data;
   const flatQuery = useFlatWithTower(profile?.flat_id, profile?.society_id);
   const requestsQuery = useFlatVisitorRequests(profile?.flat_id, profile?.society_id);
@@ -72,11 +100,9 @@ export default function ResidentHomeScreen() {
   const recent = requests.filter((request) => request.id !== pending?.id).slice(0, 5);
   const lastResolved = recent[0];
 
-  const currentDue = (duesQuery.data ?? [])
-    .filter((due) => due.status === 'UNPAID')
-    .sort((a, b) => a.due_date.localeCompare(b.due_date))[0];
+  const currentDue = getCurrentMaintenanceDue(duesQuery.data ?? []);
   const duesSubtitle = currentDue
-    ? `₹${currentDue.amount.toLocaleString('en-IN', { maximumFractionDigits: 0 })} due`
+    ? `${formatCurrency(currentDue.amount)} due`
     : 'View bills & payment history';
 
   return (
@@ -112,8 +138,7 @@ export default function ResidentHomeScreen() {
           {flatQuery.data && (
             <View style={styles.flatChip}>
               <Text style={styles.flatChipLabel}>
-                {flatQuery.data.tower ? `${flatQuery.data.tower.code}-${flatQuery.data.number}` : flatQuery.data.number}
-                {flatQuery.data.tower ? ` · ${flatQuery.data.tower.name}` : ''}
+                {formatFlatLabel(flatQuery.data, true)}
                 {profile?.society?.name ? ` · ${profile.society.name}` : ''}
               </Text>
             </View>
@@ -158,45 +183,30 @@ export default function ResidentHomeScreen() {
             </View>
           )}
 
-          <Pressable style={styles.actionCard} onPress={() => router.push('/(resident)/pre-approve')}>
-            <View style={styles.actionIconWrap}>
-              <PlusIcon />
-            </View>
-            <View style={styles.flex}>
-              <Text style={styles.actionTitle}>Pre-approve a guest</Text>
-              <Text style={styles.actionSub}>Skip the gate call</Text>
-            </View>
-          </Pressable>
-
-          <Pressable style={styles.actionCard} onPress={() => router.push('/(resident)/complaints')}>
-            <View style={styles.actionIconWrap}>
-              <MegaphoneIcon />
-            </View>
-            <View style={styles.flex}>
-              <Text style={styles.actionTitle}>Raise a complaint</Text>
-              <Text style={styles.actionSub}>Track it through to resolution</Text>
-            </View>
-          </Pressable>
-
-          <Pressable style={styles.actionCard} onPress={() => router.push('/(resident)/amenities')}>
-            <View style={styles.actionIconWrap}>
-              <CalendarIcon />
-            </View>
-            <View style={styles.flex}>
-              <Text style={styles.actionTitle}>Book an amenity</Text>
-              <Text style={styles.actionSub}>Clubhouse, pool, and more</Text>
-            </View>
-          </Pressable>
-
-          <Pressable style={styles.actionCard} onPress={() => router.push('/(resident)/dues')}>
-            <View style={styles.actionIconWrap}>
-              <RupeeIcon />
-            </View>
-            <View style={styles.flex}>
-              <Text style={styles.actionTitle}>Maintenance dues</Text>
-              <Text style={styles.actionSub}>{duesSubtitle}</Text>
-            </View>
-          </Pressable>
+          <QuickActionCard
+            title="Pre-approve a guest"
+            subtitle="Skip the gate call"
+            icon={<PlusIcon />}
+            onPress={() => router.push('/(resident)/pre-approve')}
+          />
+          <QuickActionCard
+            title="Raise a complaint"
+            subtitle="Track it through to resolution"
+            icon={<MegaphoneIcon />}
+            onPress={() => router.push('/(resident)/complaints')}
+          />
+          <QuickActionCard
+            title="Book an amenity"
+            subtitle="Clubhouse, pool, and more"
+            icon={<CalendarIcon />}
+            onPress={() => router.push('/(resident)/amenities')}
+          />
+          <QuickActionCard
+            title="Maintenance dues"
+            subtitle={duesSubtitle}
+            icon={<RupeeIcon />}
+            onPress={() => router.push('/(resident)/dues')}
+          />
 
           <View style={styles.sectionTitleRow}>
             <Text style={styles.sectionTitle}>Recent visitors</Text>

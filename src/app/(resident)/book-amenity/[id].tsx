@@ -7,6 +7,7 @@ import {
   formatDateForDatabase,
   getAmenitySlotStatusStyle,
   getErrorMessage,
+  refetchQueries,
 } from '@/commonFunctions';
 import { AmenityGallery } from '@/components/amenity-gallery';
 import { AsyncState } from '@/components/async-state';
@@ -18,14 +19,12 @@ import {
   useAmenitySlotAvailability,
   useCreateBooking,
 } from '@/features/amenities/api';
-import { useProfile } from '@/features/profile/api';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthenticatedProfile } from '@/features/profile/api';
 import { showToast } from '@/stores/toast-store';
 
 export default function BookAmenityScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const session = useAuthStore((state) => state.session);
-  const profileQuery = useProfile(session?.user.id);
+  const profileQuery = useAuthenticatedProfile();
   const societyId = profileQuery.data?.society_id;
   const amenityQuery = useAmenityDetail(id, societyId);
   const createBooking = useCreateBooking();
@@ -77,10 +76,7 @@ export default function BookAmenityScreen() {
         <AsyncState
           isLoading={profileQuery.isLoading || amenityQuery.isLoading}
           isError={profileQuery.isError || amenityQuery.isError}
-          onRetry={() => {
-            profileQuery.refetch();
-            amenityQuery.refetch();
-          }}
+          onRetry={() => refetchQueries(profileQuery, amenityQuery)}
           isEmpty={!profileQuery.isLoading && !amenityQuery.isLoading && !profileQuery.isError && !amenityQuery.isError}
           emptyMessage="This amenity isn't available."
         />

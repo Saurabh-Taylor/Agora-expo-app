@@ -4,11 +4,24 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
-import { avatarColorForName, formatTime, formatVehicleLabel, getInitials, getVisitorRequestStatusStyle, titleCase } from '@/commonFunctions';
+import {
+  avatarColorForName,
+  formatFlatLabel,
+  formatTime,
+  formatVehicleLabel,
+  getErrorMessage,
+  getInitials,
+  getVisitorRequestStatusStyle,
+  refetchQueries,
+  titleCase,
+} from '@/commonFunctions';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
-import { useProfile } from '@/features/profile/api';
-import { useDecideVisitorRequest, useVisitorRequestDetail } from '@/features/visitors/api';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthenticatedProfile } from '@/features/profile/api';
+import {
+  type ResidentVisitorDecision,
+  useDecideVisitorRequest,
+  useVisitorRequestDetail,
+} from '@/features/visitors/api';
 import { showToast } from '@/stores/toast-store';
 
 function DenyIcon() {
@@ -30,15 +43,17 @@ function ApproveIcon() {
 export default function VisitorRequestScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
-  const session = useAuthStore((state) => state.session);
-  const profileQuery = useProfile(session?.user.id);
+  const profileQuery = useAuthenticatedProfile();
   const detailQuery = useVisitorRequestDetail(id, profileQuery.data?.society_id);
   const decide = useDecideVisitorRequest();
-  const [pendingDecision, setPendingDecision] = useState<'APPROVED' | 'REJECTED' | 'LEFT_AT_GATE' | null>(null);
+  const [pendingDecision, setPendingDecision] = useState<ResidentVisitorDecision | null>(null);
 
   const request = detailQuery.data;
+  const visitorName = request?.visitor?.name ?? 'Visitor';
+  const flatLabel = formatFlatLabel(request?.flat);
+  const vehicleLabel = formatVehicleLabel(request?.vehicle_number, request?.vehicle_type);
 
-  async function handleDecide(decision: 'APPROVED' | 'REJECTED' | 'LEFT_AT_GATE') {
+  async function handleDecide(decision: ResidentVisitorDecision) {
     if (!request || decide.isPending) return;
     setPendingDecision(decision);
     try {
@@ -46,19 +61,19 @@ export default function VisitorRequestScreen() {
         id: request.id,
         decision,
         raisedBy: request.raised_by,
-        visitorName: request.visitor?.name ?? 'Visitor',
+        visitorName,
       });
       router.replace({
         pathname: '/(resident)/decision',
         params: {
           outcome: decision,
-          visitorName: request.visitor?.name ?? 'Visitor',
-          flatLabel: request.flat?.tower ? `${request.flat.tower.code}-${request.flat.number}` : (request.flat?.number ?? ''),
+          visitorName,
+          flatLabel,
         },
       });
-    } catch {
-      showToast('This request was already handled.');
-      router.replace('/(resident)/(tabs)');
+    } catch (error) {
+      showToast(getErrorMessage(error, 'Could not update this visitor request. Try again.'));
+      void detailQuery.refetch();
     } finally {
       setPendingDecision(null);
     }
@@ -79,10 +94,7 @@ export default function VisitorRequestScreen() {
         <Pressable
           accessibilityRole="button"
           style={styles.errorButton}
-          onPress={() => {
-            profileQuery.refetch();
-            detailQuery.refetch();
-          }}>
+          onPress={() => refetchQueries(profileQuery, detailQuery)}>
           <Text style={styles.errorButtonLabel}>Try again</Text>
         </Pressable>
         <Pressable accessibilityRole="button" style={styles.homeButton} onPress={() => router.replace('/(resident)/(tabs)')}>
@@ -120,20 +132,14 @@ export default function VisitorRequestScreen() {
 
       <View style={styles.center}>
         <View style={[styles.avatar, { backgroundColor: avatarBg }]}>
-          <Text style={styles.avatarLabel}>{getInitials(request.visitor?.name ?? '?')}</Text>
+          <Text style={styles.avatarLabel}>{getInitials(visitorName)}</Text>
         </View>
         <View style={styles.tag}>
           <Text style={styles.tagLabel}>{request.visitor ? titleCase(request.visitor.category) : '—'} · WAITING</Text>
         </View>
-        <Text style={styles.name}>{request.visitor?.name ?? 'Visitor'}</Text>
-        {request.flat && (
-          <Text style={styles.detail}>
-            For {request.flat.tower ? `${request.flat.tower.code}-${request.flat.number}` : request.flat.number}
-          </Text>
-        )}
-        {!!formatVehicleLabel(request.vehicle_number, request.vehicle_type) && (
-          <Text style={styles.detail}>Vehicle: {formatVehicleLabel(request.vehicle_number, request.vehicle_type)}</Text>
-        )}
+        <Text style={styles.name}>{visitorName}</Text>
+        {!!flatLabel && <Text style={styles.detail}>For {flatLabel}</Text>}
+        {!!vehicleLabel && <Text style={styles.detail}>Vehicle: {vehicleLabel}</Text>}
       </View>
 
       <View style={styles.actionsRow}>

@@ -170,6 +170,12 @@ export function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
+export function refetchQueries(...queries: readonly { refetch: () => unknown }[]) {
+  queries.forEach((query) => {
+    void query.refetch();
+  });
+}
+
 // Supabase reuses a registered channel when its topic matches. A fast
 // unmount/remount can occur before asynchronous channel removal completes,
 // so every hook mount needs a fresh topic before adding callbacks.
@@ -424,7 +430,7 @@ export function createCsv(rows: (string | number)[][]) {
 }
 
 export function formatCurrency(amount: number) {
-  return "₹" + amount.toLocaleString("en-IN", { maximumFractionDigits: 0 });
+  return '₹' + amount.toLocaleString('en-IN', { maximumFractionDigits: 0 });
 }
 
 export function getMaintenanceDueDisplayStatus(due: { status: 'UNPAID' | 'PAID'; cancelled_at?: string | null }) {
@@ -432,8 +438,34 @@ export function getMaintenanceDueDisplayStatus(due: { status: 'UNPAID' | 'PAID';
   return due.status;
 }
 
+export function getCurrentMaintenanceDue<
+  T extends { status: 'UNPAID' | 'PAID'; cancelled_at?: string | null; due_date: string },
+>(dues: readonly T[]) {
+  return dues
+    .filter((due) => getMaintenanceDueDisplayStatus(due) === 'UNPAID')
+    .sort((first, second) => first.due_date.localeCompare(second.due_date))[0];
+}
+
 export function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString([], { day: 'numeric', month: 'short' });
+}
+
+export function formatFlatLabel(
+  flat:
+    | {
+        number: string;
+        tower: { code: string; name?: string } | null;
+      }
+    | null
+    | undefined,
+  includeTowerName = false,
+) {
+  if (!flat) return '';
+
+  const unitLabel = flat.tower ? `${flat.tower.code}-${flat.number}` : flat.number;
+  return includeTowerName && flat.tower?.name
+    ? `${unitLabel} · ${flat.tower.name}`
+    : unitLabel;
 }
 
 export function parseHistoryDateInput(value: string, endExclusive = false) {

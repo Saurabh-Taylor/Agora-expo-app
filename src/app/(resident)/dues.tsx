@@ -2,14 +2,20 @@ import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { formatCurrency, formatDate, getMaintenanceDueDisplayStatus } from '@/commonFunctions';
+import {
+  formatCurrency,
+  formatDate,
+  formatFlatLabel,
+  getCurrentMaintenanceDue,
+  getMaintenanceDueDisplayStatus,
+  refetchQueries,
+} from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { useDuesRealtimeSync, useFlatDues } from '@/features/dues/api';
 import { useFlatWithTower } from '@/features/flats/api';
-import { useProfile } from '@/features/profile/api';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthenticatedProfile } from '@/features/profile/api';
 
 function CheckCircleIcon() {
   return (
@@ -20,17 +26,15 @@ function CheckCircleIcon() {
 }
 
 export default function DuesScreen() {
-  const session = useAuthStore((state) => state.session);
-  const profileQuery = useProfile(session?.user.id);
+  const profileQuery = useAuthenticatedProfile();
   const flatQuery = useFlatWithTower(profileQuery.data?.flat_id, profileQuery.data?.society_id);
   const duesQuery = useFlatDues(profileQuery.data?.flat_id, profileQuery.data?.society_id);
 
   useDuesRealtimeSync(profileQuery.data?.flat_id, profileQuery.data?.society_id);
 
   const dues = duesQuery.data ?? [];
-  const unpaid = dues.filter((due) => getMaintenanceDueDisplayStatus(due) === 'UNPAID').sort((a, b) => a.due_date.localeCompare(b.due_date));
-  const currentDue = unpaid[0];
-  const history = dues.filter((d) => d.id !== currentDue?.id);
+  const currentDue = getCurrentMaintenanceDue(dues);
+  const history = dues.filter((due) => due.id !== currentDue?.id);
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
@@ -39,15 +43,13 @@ export default function DuesScreen() {
         <Text style={styles.title}>Maintenance</Text>
       </View>
       {!!flatQuery.data && (
-        <Text style={styles.subtitle}>
-          {flatQuery.data.tower ? `${flatQuery.data.tower.code}-${flatQuery.data.number} · ${flatQuery.data.tower.name}` : flatQuery.data.number}
-        </Text>
+        <Text style={styles.subtitle}>{formatFlatLabel(flatQuery.data, true)}</Text>
       )}
 
       <AsyncState
         isLoading={profileQuery.isLoading || flatQuery.isLoading || duesQuery.isLoading}
         isError={profileQuery.isError || flatQuery.isError || duesQuery.isError}
-        onRetry={() => { profileQuery.refetch(); flatQuery.refetch(); duesQuery.refetch(); }}
+        onRetry={() => refetchQueries(profileQuery, flatQuery, duesQuery)}
         isEmpty={dues.length === 0}
         emptySymbol={null}
         emptyTitle="No maintenance dues"
@@ -89,7 +91,9 @@ export default function DuesScreen() {
                     <Text style={styles.historyLabel}>{due.quarter_label}</Text>
                     <Text style={styles.historySub}>Due {formatDate(due.due_date)}</Text>
                     {displayStatus === 'CANCELLED' && due.cancel_reason && (
-                      <Text style={styles.cancelReason} numberOfLines={2}>{due.cancel_reason}</Text>
+                      <Text style={styles.cancelReason} numberOfLines={2}>
+                        {due.cancel_reason}
+                      </Text>
                     )}
                   </View>
                   <View style={styles.historyRight}>

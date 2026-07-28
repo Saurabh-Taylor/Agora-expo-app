@@ -3,14 +3,26 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { formatAmenityTimings, formatBookingSlot, getBookingStatusStyle, getErrorMessage, getInitials } from '@/commonFunctions';
+import {
+  formatAmenityTimings,
+  formatBookingSlot,
+  getBookingStatusStyle,
+  getErrorMessage,
+  getInitials,
+  refetchQueries,
+} from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { StatusPill } from '@/components/status-pill';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
-import { useAmenities, useAmenityImageUrls, useAmenityRealtimeSync, useCancelBooking, useFlatBookings } from '@/features/amenities/api';
-import { useProfile } from '@/features/profile/api';
-import { useAuthStore } from '@/stores/auth-store';
+import {
+  useAmenities,
+  useAmenityImageUrls,
+  useAmenityRealtimeSync,
+  useCancelBooking,
+  useFlatBookings,
+} from '@/features/amenities/api';
+import { useAuthenticatedProfile } from '@/features/profile/api';
 import { showToast } from '@/stores/toast-store';
 
 type Tab = 'Browse' | 'My Bookings';
@@ -19,8 +31,7 @@ export default function ResidentAmenitiesScreen() {
   const params = useLocalSearchParams<{ tab?: string }>();
   const [tab, setTab] = useState<Tab>(params.tab === 'bookings' ? 'My Bookings' : 'Browse');
   const [screenOpenedAt] = useState(Date.now);
-  const session = useAuthStore((state) => state.session);
-  const profileQuery = useProfile(session?.user.id);
+  const profileQuery = useAuthenticatedProfile();
   const societyId = profileQuery.data?.society_id;
   const amenitiesQuery = useAmenities(societyId);
   const bookingsQuery = useFlatBookings(profileQuery.data?.flat_id, societyId);
@@ -67,10 +78,7 @@ export default function ResidentAmenitiesScreen() {
           <AsyncState
             isLoading={profileQuery.isLoading || amenitiesQuery.isLoading}
             isError={profileQuery.isError || amenitiesQuery.isError}
-            onRetry={() => {
-              profileQuery.refetch();
-              amenitiesQuery.refetch();
-            }}
+            onRetry={() => refetchQueries(profileQuery, amenitiesQuery)}
             isEmpty={amenities.length === 0}
             emptySymbol={null}
             emptyTitle="No amenities available"
@@ -109,10 +117,7 @@ export default function ResidentAmenitiesScreen() {
           <AsyncState
             isLoading={profileQuery.isLoading || bookingsQuery.isLoading}
             isError={profileQuery.isError || bookingsQuery.isError}
-            onRetry={() => {
-              profileQuery.refetch();
-              bookingsQuery.refetch();
-            }}
+            onRetry={() => refetchQueries(profileQuery, bookingsQuery)}
             isEmpty={bookings.length === 0}
             emptySymbol={null}
             emptyTitle="No bookings yet"

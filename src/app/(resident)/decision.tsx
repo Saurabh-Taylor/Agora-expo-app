@@ -5,8 +5,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { formatTime } from '@/commonFunctions';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
-
-type Outcome = 'APPROVED' | 'REJECTED' | 'LEFT_AT_GATE';
+import type { ResidentVisitorDecision } from '@/features/visitors/api';
 
 function ApprovedIcon() {
   return (
@@ -34,7 +33,7 @@ function GateIcon() {
 }
 
 const OUTCOME_COPY: Record<
-  Outcome,
+  ResidentVisitorDecision,
   { title: (name: string) => string; sub: (flat: string) => string; bg: string; icon: () => ReactElement }
 > = {
   APPROVED: {
@@ -58,7 +57,11 @@ const OUTCOME_COPY: Record<
 };
 
 export default function DecisionScreen() {
-  const params = useLocalSearchParams<{ outcome: Outcome; visitorName: string; flatLabel: string }>();
+  const params = useLocalSearchParams<{
+    outcome: ResidentVisitorDecision;
+    visitorName: string;
+    flatLabel: string;
+  }>();
   const copy = OUTCOME_COPY[params.outcome] ?? OUTCOME_COPY.APPROVED;
   const Icon = copy.icon;
   const now = formatTime(new Date().toISOString());

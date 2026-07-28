@@ -1,20 +1,18 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { formatDateTime, getComplaintStatusStyle } from '@/commonFunctions';
+import { formatDateTime, getComplaintStatusStyle, refetchQueries } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { ComplaintAttachment } from '@/components/complaint-attachment';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { StatusPill } from '@/components/status-pill';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { useComplaintDetail, useComplaintRealtimeSync } from '@/features/complaints/api';
-import { useProfile } from '@/features/profile/api';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthenticatedProfile } from '@/features/profile/api';
 
 export default function ResidentComplaintDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const session = useAuthStore((state) => state.session);
-  const profileQuery = useProfile(session?.user.id);
+  const profileQuery = useAuthenticatedProfile();
   const detailQuery = useComplaintDetail(id, profileQuery.data?.society_id);
   useComplaintRealtimeSync(profileQuery.data?.society_id);
   const complaint = detailQuery.data?.complaint;
@@ -26,7 +24,7 @@ export default function ResidentComplaintDetailScreen() {
         <AsyncState
           isLoading={profileQuery.isLoading || detailQuery.isLoading}
           isError={profileQuery.isError || detailQuery.isError}
-          onRetry={() => { profileQuery.refetch(); detailQuery.refetch(); }}
+          onRetry={() => refetchQueries(profileQuery, detailQuery)}
           isEmpty={!detailQuery.isLoading && !detailQuery.isError}
           emptyMessage="This complaint isn't available."
         />

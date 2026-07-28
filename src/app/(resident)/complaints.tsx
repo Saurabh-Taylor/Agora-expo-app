@@ -1,18 +1,16 @@
 import { router } from 'expo-router';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { formatDate, getComplaintStatusStyle } from '@/commonFunctions';
+import { formatDate, getComplaintStatusStyle, refetchQueries } from '@/commonFunctions';
 import { AsyncState } from '@/components/async-state';
 import { BackArrowButton } from '@/components/icons/back-arrow-button';
 import { StatusPill } from '@/components/status-pill';
 import { Colors, FontFamily, Radius } from '@/constants/commonConstants';
 import { useComplaintRealtimeSync, useFlatComplaints } from '@/features/complaints/api';
-import { useProfile } from '@/features/profile/api';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthenticatedProfile } from '@/features/profile/api';
 
 export default function ResidentComplaintsScreen() {
-  const session = useAuthStore((state) => state.session);
-  const profileQuery = useProfile(session?.user.id);
+  const profileQuery = useAuthenticatedProfile();
   const complaintsQuery = useFlatComplaints(profileQuery.data?.flat_id, profileQuery.data?.society_id);
   const complaints = complaintsQuery.data ?? [];
   useComplaintRealtimeSync(profileQuery.data?.society_id);
@@ -33,7 +31,7 @@ export default function ResidentComplaintsScreen() {
           <AsyncState
             isLoading={profileQuery.isLoading || complaintsQuery.isLoading}
             isError={profileQuery.isError || complaintsQuery.isError}
-            onRetry={() => { profileQuery.refetch(); complaintsQuery.refetch(); }}
+            onRetry={() => refetchQueries(profileQuery, complaintsQuery)}
             isEmpty={complaints.length === 0}
             emptyMessage="No complaints raised yet. Tap + to raise one."
           />
