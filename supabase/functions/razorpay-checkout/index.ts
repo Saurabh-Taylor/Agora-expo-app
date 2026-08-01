@@ -3,7 +3,7 @@ import { withSupabase } from "@supabase/server";
 
 import { getRazorpayCredentials } from "../_shared/razorpay.ts";
 
-const APP_RETURN_URL = "agoraexpoapp://razorpay-complete";
+const APP_RETURN_URL = "com.saurabh.agora://razorpay-complete";
 
 function page(message: string, status = 200) {
   return new Response(`<!doctype html>
