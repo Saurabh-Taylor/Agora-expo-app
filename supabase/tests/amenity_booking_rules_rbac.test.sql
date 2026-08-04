@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(28);
+select plan(30);
 
 insert into public.societies(id,name) values
 ('18000000-0000-0000-0000-000000000001','Rules A'),
@@ -19,7 +19,9 @@ insert into auth.users(id) values
 ('48000000-0000-0000-0000-000000000003'),
 ('48000000-0000-0000-0000-000000000004'),
 ('48000000-0000-0000-0000-000000000005'),
-('48000000-0000-0000-0000-000000000006');
+('48000000-0000-0000-0000-000000000006'),
+('48000000-0000-0000-0000-000000000007'),
+('48000000-0000-0000-0000-000000000008');
 insert into public.profiles(id,society_id,role,flat_id,occupancy_type,full_name,is_active) values
 ('48000000-0000-0000-0000-000000000001','18000000-0000-0000-0000-000000000001','ADMIN',null,null,'Admin A',true),
 ('48000000-0000-0000-0000-000000000002','18000000-0000-0000-0000-000000000002','ADMIN',null,null,'Admin B',true),
@@ -27,6 +29,26 @@ insert into public.profiles(id,society_id,role,flat_id,occupancy_type,full_name,
 ('48000000-0000-0000-0000-000000000004','18000000-0000-0000-0000-000000000001','RESIDENT','38000000-0000-0000-0000-000000000002','TENANT','Resident A2',true),
 ('48000000-0000-0000-0000-000000000005','18000000-0000-0000-0000-000000000001','RESIDENT','38000000-0000-0000-0000-000000000003','OWNER','Resident A3',true),
 ('48000000-0000-0000-0000-000000000006','18000000-0000-0000-0000-000000000001','GUARD',null,null,'Guard A',true);
+insert into public.profiles(id,society_id,role,flat_id,occupancy_type,full_name,is_active,must_change_password)
+values (
+  '48000000-0000-0000-0000-000000000007',
+  '18000000-0000-0000-0000-000000000001',
+  'RESIDENT',
+  '38000000-0000-0000-0000-000000000003',
+  'OWNER',
+  'Forced Password Resident',
+  true,
+  true
+), (
+  '48000000-0000-0000-0000-000000000008',
+  '18000000-0000-0000-0000-000000000001',
+  'ADMIN',
+  null,
+  null,
+  'Forced Password Admin',
+  true,
+  true
+);
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','48000000-0000-0000-0000-000000000001',true);
@@ -37,6 +59,28 @@ select is((select count(*)::int from public.amenity_slots where amenity_id=(sele
 select ok((select max_bookings_per_slot=2 and not requires_admin_approval from public.amenities where name='Shared Gym'),'configuration persists');
 
 set local role authenticated;
+select set_config('request.jwt.claim.sub','48000000-0000-0000-0000-000000000007',true);
+select throws_ok(
+  $$select * from public.get_amenity_slot_availability(
+    (select id from public.amenities where name='Shared Gym'),
+    (now() at time zone 'Asia/Kolkata')::date+1
+  )$$,
+  '42501',
+  'Amenity availability is not available to this role',
+  'forced-password resident cannot inspect amenity availability'
+);
+
+select set_config('request.jwt.claim.sub','48000000-0000-0000-0000-000000000008',true);
+select throws_ok(
+  $$select * from public.get_amenity_slot_availability(
+    (select id from public.amenities where name='Shared Gym'),
+    (now() at time zone 'Asia/Kolkata')::date+1
+  )$$,
+  '42501',
+  'Amenity availability is not available to this role',
+  'forced-password admin cannot inspect amenity availability'
+);
+
 select set_config('request.jwt.claim.sub','48000000-0000-0000-0000-000000000006',true);
 select is((select count(*)::int from public.amenity_slots),0,'guard cannot view slots');
 select is((select count(*)::int from public.amenity_blocks),0,'guard cannot view blocks');

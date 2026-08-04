@@ -1,6 +1,7 @@
 import "@supabase/functions-js/edge-runtime.d.ts";
 import { withSupabase } from "@supabase/server";
 
+import { ACCOUNT_SETUP_REQUIRED_MESSAGE } from "../_shared/commonConstants.ts";
 import { getRazorpayCredentials } from "../_shared/razorpay.ts";
 
 const APP_RETURN_URL = "agoraexpoapp://razorpay-complete";
@@ -30,10 +31,26 @@ export default {
 
     const { data: attempt, error } = await ctx.supabaseAdmin
       .from("razorpay_payment_attempts")
-      .select("id, razorpay_order_id, amount_paise, currency, status, expires_at")
+      .select("id, society_id, flat_id, created_by, razorpay_order_id, amount_paise, currency, status, expires_at")
       .eq("checkout_token", session)
       .single();
     if (error || !attempt) return page("This checkout link is invalid or has expired.", 404);
+
+    const { data: owner, error: ownerError } = await ctx.supabaseAdmin
+      .from("profiles")
+      .select("id, is_active, must_change_password")
+      .eq("id", attempt.created_by)
+      .eq("society_id", attempt.society_id)
+      .eq("flat_id", attempt.flat_id)
+      .eq("role", "RESIDENT")
+      .maybeSingle();
+    if (ownerError || !owner || !owner.is_active) {
+      return page("Account access is not available. Return to Agora for help.", 403);
+    }
+    if (owner.must_change_password) {
+      return page(ACCOUNT_SETUP_REQUIRED_MESSAGE, 403);
+    }
+
     if (attempt.status === "CAPTURED") return page("This maintenance invoice is already paid.", 409);
     if (attempt.status !== "CREATED" || new Date(attempt.expires_at).getTime() <= Date.now()) {
       await ctx.supabaseAdmin

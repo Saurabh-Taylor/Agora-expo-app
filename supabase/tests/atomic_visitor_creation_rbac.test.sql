@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(32);
+select plan(33);
 
 insert into public.societies (id, name) values
   ('71000000-0000-0000-0000-000000000001', 'Visitor Society A'),
@@ -20,7 +20,8 @@ insert into auth.users (id) values
   ('74000000-0000-0000-0000-000000000004'),
   ('74000000-0000-0000-0000-000000000005'),
   ('74000000-0000-0000-0000-000000000006'),
-  ('74000000-0000-0000-0000-000000000007');
+  ('74000000-0000-0000-0000-000000000007'),
+  ('74000000-0000-0000-0000-000000000008');
 insert into public.profiles (id, society_id, role, flat_id, full_name, is_active) values
   ('74000000-0000-0000-0000-000000000001', '71000000-0000-0000-0000-000000000001', 'RESIDENT', '73000000-0000-0000-0000-000000000001', 'Alice Resident', true),
   ('74000000-0000-0000-0000-000000000002', '71000000-0000-0000-0000-000000000001', 'RESIDENT', '73000000-0000-0000-0000-000000000002', 'Arun Resident', true),
@@ -29,6 +30,15 @@ insert into public.profiles (id, society_id, role, flat_id, full_name, is_active
   ('74000000-0000-0000-0000-000000000005', '71000000-0000-0000-0000-000000000002', 'RESIDENT', '73000000-0000-0000-0000-000000000003', 'Bob Resident', true),
   ('74000000-0000-0000-0000-000000000006', '71000000-0000-0000-0000-000000000002', 'GUARD', null, 'Guard B', true),
   ('74000000-0000-0000-0000-000000000007', '71000000-0000-0000-0000-000000000001', 'RESIDENT', '73000000-0000-0000-0000-000000000001', 'Inactive Resident', false);
+insert into public.profiles (id, society_id, role, full_name, is_active, must_change_password)
+values (
+  '74000000-0000-0000-0000-000000000008',
+  '71000000-0000-0000-0000-000000000002',
+  'GUARD',
+  'Forced Password Guard',
+  true,
+  true
+);
 
 select ok(has_function_privilege('authenticated', 'public.search_guard_residents(text)', 'EXECUTE'), 'authenticated role can execute minimal resident search');
 select ok(not has_function_privilege('anon', 'public.search_guard_residents(text)', 'EXECUTE'), 'anonymous role cannot execute resident search');
@@ -47,6 +57,14 @@ select set_config('request.jwt.claim.sub', '74000000-0000-0000-0000-000000000004
 select throws_ok($$ select * from public.search_guard_residents('') $$, '42501', 'Only guards can search residents', 'admin cannot use guard resident search');
 select is((select count(*)::integer from public.profiles), 5, 'admin can read profiles only in their own society');
 select is((select count(*)::integer from public.profiles where society_id = '71000000-0000-0000-0000-000000000002'), 0, 'admin cannot read profiles from another society');
+
+select set_config('request.jwt.claim.sub', '74000000-0000-0000-0000-000000000008', true);
+select throws_ok(
+  $$ select * from public.search_guard_residents('') $$,
+  '42501',
+  'Only guards can search residents',
+  'forced-password guard cannot search residents'
+);
 
 select set_config('request.jwt.claim.sub', '74000000-0000-0000-0000-000000000003', true);
 select lives_ok($$ select public.create_guard_visitor_request('73000000-0000-0000-0000-000000000001', '  Gate Guest  ', '+91 98765 43210', 'GUEST', '  mh 12 ab 1234  ', 'CAR') $$, 'guard atomically creates a pending request with optional vehicle details');

@@ -2,6 +2,9 @@
 import "@supabase/functions-js/edge-runtime.d.ts";
 import { withSupabase } from "@supabase/server";
 
+import { ACCOUNT_SETUP_REQUIRED_MESSAGE } from "../_shared/commonConstants.ts";
+import { generateTemporaryPassword } from "../_shared/commonFunctions.ts";
+
 type Role = "RESIDENT" | "GUARD" | "ADMIN";
 
 type CreateUserBody = {
@@ -12,25 +15,6 @@ type CreateUserBody = {
   flatId?: string;
   occupancyType?: "OWNER" | "TENANT";
 };
-
-const TEMP_PASSWORD_CHARSET = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-const TEMP_PASSWORD_LENGTH = 12;
-
-function generateTempPassword() {
-  const bytes = new Uint8Array(TEMP_PASSWORD_LENGTH);
-  crypto.getRandomValues(bytes);
-  const password = [
-    "ABCDEFGHJKMNPQRSTUVWXYZ"[bytes[0] % 24],
-    "abcdefghijkmnpqrstuvwxyz"[bytes[1] % 24],
-    "23456789"[bytes[2] % 8],
-    ...Array.from(bytes.slice(3), (byte) => TEMP_PASSWORD_CHARSET[byte % TEMP_PASSWORD_CHARSET.length]),
-  ];
-  for (let index = password.length - 1; index > 0; index -= 1) {
-    const swapIndex = bytes[index % bytes.length] % (index + 1);
-    [password[index], password[swapIndex]] = [password[swapIndex], password[index]];
-  }
-  return password.join("");
-}
 
 function badRequest(message: string) {
   return Response.json({ error: message }, { status: 400 });
@@ -55,12 +39,15 @@ export default {
     // never trust a client-supplied role or societyId.
     const { data: callerProfile, error: callerError } = await ctx.supabase
       .from("profiles")
-      .select("role, society_id, is_active")
+      .select("role, society_id, is_active, must_change_password")
       .eq("id", callerId)
       .single();
 
     if (callerError || !callerProfile || callerProfile.role !== "ADMIN" || !callerProfile.is_active) {
       return Response.json({ error: "Only society admins can create accounts" }, { status: 403 });
+    }
+    if (callerProfile.must_change_password) {
+      return Response.json({ error: ACCOUNT_SETUP_REQUIRED_MESSAGE }, { status: 403 });
     }
 
     const body = (await req.json().catch(() => null)) as CreateUserBody | null;
@@ -97,7 +84,7 @@ export default {
 
     }
 
-    const tempPassword = generateTempPassword();
+    const tempPassword = generateTemporaryPassword();
 
     const { data: created, error: createError } = await ctx.supabaseAdmin.auth.admin.createUser({
       email,

@@ -1,6 +1,7 @@
 import "@supabase/functions-js/edge-runtime.d.ts";
 import { withSupabase } from "@supabase/server";
 
+import { ACCOUNT_SETUP_REQUIRED_MESSAGE } from "../_shared/commonConstants.ts";
 import {
   getRazorpayCredentials,
   jsonError,
@@ -31,7 +32,7 @@ export default {
 
     const { data: caller, error: callerError } = await ctx.supabase
       .from("profiles")
-      .select("id, role, society_id, flat_id, full_name, is_active")
+      .select("id, role, society_id, flat_id, full_name, is_active, must_change_password")
       .eq("id", callerId)
       .single();
     if (
@@ -42,6 +43,9 @@ export default {
       !caller.flat_id
     ) {
       return jsonError("Only active residents assigned to a flat can pay dues", 403);
+    }
+    if (caller.must_change_password) {
+      return jsonError(ACCOUNT_SETUP_REQUIRED_MESSAGE, 403);
     }
 
     const { data: due, error: dueError } = await ctx.supabase

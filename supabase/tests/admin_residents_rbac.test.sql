@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(22);
+select plan(26);
 
 insert into public.societies (id, name) values
   ('13000000-0000-0000-0000-000000000001', 'Resident Test Society A'),
@@ -20,7 +20,8 @@ insert into auth.users (id) values
   ('43000000-0000-0000-0000-000000000003'),
   ('43000000-0000-0000-0000-000000000004'),
   ('43000000-0000-0000-0000-000000000005'),
-  ('43000000-0000-0000-0000-000000000006');
+  ('43000000-0000-0000-0000-000000000006'),
+  ('43000000-0000-0000-0000-000000000007');
 insert into public.profiles (id, society_id, role, flat_id, occupancy_type, full_name, must_change_password) values
   ('43000000-0000-0000-0000-000000000001', '13000000-0000-0000-0000-000000000001', 'ADMIN', null, null, 'Admin A', false),
   ('43000000-0000-0000-0000-000000000002', '13000000-0000-0000-0000-000000000002', 'ADMIN', null, null, 'Admin B', false),
@@ -28,6 +29,49 @@ insert into public.profiles (id, society_id, role, flat_id, occupancy_type, full
   ('43000000-0000-0000-0000-000000000004', '13000000-0000-0000-0000-000000000001', 'RESIDENT', '33000000-0000-0000-0000-000000000003', 'TENANT', 'Resident A2', false),
   ('43000000-0000-0000-0000-000000000005', '13000000-0000-0000-0000-000000000001', 'GUARD', null, null, 'Guard A', false),
   ('43000000-0000-0000-0000-000000000006', '13000000-0000-0000-0000-000000000002', 'RESIDENT', '33000000-0000-0000-0000-000000000004', 'OWNER', 'Resident B', false);
+insert into public.profiles (id, society_id, role, full_name, must_change_password)
+values (
+  '43000000-0000-0000-0000-000000000007',
+  '13000000-0000-0000-0000-000000000001',
+  'ADMIN',
+  'Forced Password Admin',
+  true
+);
+
+select ok(
+  not has_function_privilege('authenticated', 'public.complete_password_change()', 'EXECUTE')
+    and not has_function_privilege('service_role', 'public.complete_password_change()', 'EXECUTE'),
+  'legacy password-completion RPC remains unavailable to clients and service role'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '43000000-0000-0000-0000-000000000007', true);
+select throws_ok(
+  $$ select public.set_admin_resident_verified(
+    '43000000-0000-0000-0000-000000000003',
+    true
+  ) $$,
+  '42501',
+  'Complete your password change before using Agora',
+  'forced-password admin cannot mutate profiles'
+);
+reset role;
+
+set local role service_role;
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claims', '', true);
+select lives_ok(
+  $$ update public.profiles
+     set must_change_password = false
+     where id = '43000000-0000-0000-0000-000000000007' $$,
+  'service role without a client JWT completes the password lifecycle'
+);
+reset role;
+select is(
+  (select must_change_password from public.profiles where id = '43000000-0000-0000-0000-000000000007'),
+  false,
+  'service-role password completion persists'
+);
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '43000000-0000-0000-0000-000000000001', true);

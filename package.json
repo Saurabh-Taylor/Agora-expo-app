@@ -69,6 +69,8 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
+    "check:functions": "bun build supabase/functions/*/index.ts --outdir=dist/edge-functions --target=bun --external=@supabase/server --external=@supabase/functions-js/edge-runtime.d.ts",
+    "test:functions": "bun test supabase/functions/create-user-with-temp-password/password.test.ts",
     "test:db": "supabase test db",
     "export:android": "expo export --platform android"
   },

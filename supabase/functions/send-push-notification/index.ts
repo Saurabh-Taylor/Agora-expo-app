@@ -2,6 +2,8 @@ import "@supabase/functions-js/edge-runtime.d.ts";
 import { withSupabase } from "@supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { ACCOUNT_SETUP_REQUIRED_MESSAGE } from "../_shared/commonConstants.ts";
+
 type Role = "RESIDENT" | "GUARD" | "ADMIN";
 type NotificationType = "VISITOR_REQUEST" | "VISITOR_DECISION" | "NOTICE" | "COMPLAINT_STATUS" | "BOOKING_DECISION" | "BOOKING_MAINTENANCE_CANCELLED" | "MAINTENANCE_REMINDER" | "TASK_ASSIGNMENT";
 
@@ -36,11 +38,12 @@ export default {
 
     const { data: caller, error: callerError } = await ctx.supabase
       .from("profiles")
-      .select("id, role, society_id, flat_id, is_active")
+      .select("id, role, society_id, flat_id, is_active, must_change_password")
       .eq("id", callerId)
       .single();
 
     if (callerError || !caller || !caller.is_active) return jsonError("Unauthorized", 401);
+    if (caller.must_change_password) return jsonError(ACCOUNT_SETUP_REQUIRED_MESSAGE, 403);
 
     const body = (await req.json().catch(() => null)) as SendPushBody | null;
     const type = body?.data?.type;
@@ -63,7 +66,8 @@ export default {
       .select("id")
       .in("id", audienceResult.profileIds)
       .eq("society_id", caller.society_id)
-      .eq("is_active", true);
+      .eq("is_active", true)
+      .eq("must_change_password", false);
     if (recipientsError) return jsonError("Could not authorize notification recipients", 500);
 
     const allowedIds = (recipients ?? []).map((profile) => profile.id);

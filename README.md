@@ -130,6 +130,8 @@ EXPO_PUBLIC_SENTRY_DSN=
 
 ```bash
 bun run typecheck
+bun run check:functions
+bun run test:functions
 bun run lint
 npx expo-doctor
 ./node_modules/.bin/supabase db reset --local

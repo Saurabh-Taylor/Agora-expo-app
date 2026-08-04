@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(25);
+select plan(26);
 
 insert into public.societies (id, name) values
   ('81000000-0000-0000-0000-000000000001', 'Active Pass Society'),
@@ -22,7 +22,8 @@ insert into auth.users (id) values
   ('84000000-0000-0000-0000-000000000003'),
   ('84000000-0000-0000-0000-000000000004'),
   ('84000000-0000-0000-0000-000000000005'),
-  ('84000000-0000-0000-0000-000000000006');
+  ('84000000-0000-0000-0000-000000000006'),
+  ('84000000-0000-0000-0000-000000000007');
 
 insert into public.profiles (id, society_id, role, flat_id, full_name, is_active) values
   ('84000000-0000-0000-0000-000000000001', '81000000-0000-0000-0000-000000000001', 'RESIDENT', '83000000-0000-0000-0000-000000000001', 'Pass Owner', true),
@@ -31,6 +32,15 @@ insert into public.profiles (id, society_id, role, flat_id, full_name, is_active
   ('84000000-0000-0000-0000-000000000004', '81000000-0000-0000-0000-000000000002', 'GUARD', null, 'Second Guard', true),
   ('84000000-0000-0000-0000-000000000005', '81000000-0000-0000-0000-000000000001', 'ADMIN', null, 'Society Admin', true),
   ('84000000-0000-0000-0000-000000000006', '81000000-0000-0000-0000-000000000002', 'RESIDENT', '83000000-0000-0000-0000-000000000003', 'Second Resident', true);
+insert into public.profiles (id, society_id, role, full_name, is_active, must_change_password)
+values (
+  '84000000-0000-0000-0000-000000000007',
+  '81000000-0000-0000-0000-000000000001',
+  'GUARD',
+  'Forced Password Guard',
+  true,
+  true
+);
 
 select ok(
   has_function_privilege('authenticated', 'public.revoke_resident_visitor_preapproval(uuid)', 'EXECUTE'),
@@ -76,6 +86,16 @@ select matches(
 );
 
 set local role authenticated;
+select set_config('request.jwt.claim.sub', '84000000-0000-0000-0000-000000000007', true);
+select throws_ok(
+  $$ select * from public.lookup_guard_gate_pass(
+    (select gate_pass_code from public.visitor_requests where visitor_id = (select id from public.visitors where name = 'Recoverable Guest'))
+  ) $$,
+  '42501',
+  'Only active guards can verify gate passes',
+  'forced-password guard cannot verify gate passes'
+);
+
 select set_config('request.jwt.claim.sub', '84000000-0000-0000-0000-000000000001', true);
 select throws_ok(
   $$ select * from public.lookup_guard_gate_pass(

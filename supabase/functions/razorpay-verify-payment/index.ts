@@ -6,6 +6,7 @@ import {
   jsonError,
   razorpayApi,
 } from "../_shared/razorpay.ts";
+import { ACCOUNT_SETUP_REQUIRED_MESSAGE } from "../_shared/commonConstants.ts";
 
 type VerifyPaymentBody = {
   attemptId?: string;
@@ -53,6 +54,25 @@ export default {
 
     const callerId = ctx.userClaims?.id;
     if (!callerId) return jsonError("Unauthorized", 401);
+
+    const { data: caller, error: callerError } = await ctx.supabase
+      .from("profiles")
+      .select("id, society_id, flat_id, role, is_active, must_change_password")
+      .eq("id", callerId)
+      .single();
+    if (
+      callerError ||
+      !caller ||
+      !caller.is_active ||
+      caller.role !== "RESIDENT" ||
+      !caller.flat_id
+    ) {
+      return jsonError("Only active residents assigned to a flat can verify payments", 403);
+    }
+    if (caller.must_change_password) {
+      return jsonError(ACCOUNT_SETUP_REQUIRED_MESSAGE, 403);
+    }
+
     const body = await req.json().catch(() => null) as VerifyPaymentBody | null;
     if (
       !body?.attemptId ||
@@ -68,6 +88,8 @@ export default {
       .select("id, society_id, flat_id, due_id, created_by, razorpay_order_id, amount_paise, currency, status, expires_at")
       .eq("id", body.attemptId)
       .eq("created_by", callerId)
+      .eq("society_id", caller.society_id)
+      .eq("flat_id", caller.flat_id)
       .single();
     if (attemptError || !attempt) return jsonError("Payment attempt is not available", 404);
     if (attempt.razorpay_order_id !== body.razorpayOrderId) {
