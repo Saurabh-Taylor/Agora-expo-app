@@ -139,13 +139,15 @@ npx expo-doctor
 bun run export:android
 ```
 
-Latest local verification on July 24, 2026:
+Latest local verification on August 8, 2026:
 
-- 21 database suites and 504 pgTAP assertions passed
+- 21 database suites and 512 pgTAP assertions passed
 - TypeScript passed
 - full ESLint passed
 - Expo Doctor passed 20/20 checks
 - Android production export passed
+
+The export validates the Android JavaScript bundle; an installable APK still requires an authenticated EAS preview build and physical-device verification.
 
 CI repeats the app and database gates for feature branches, fixes, pull requests, and `main`.
 
