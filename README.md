@@ -1,6 +1,6 @@
 # Agora
 
-Agora is a phone-first apartment society management app built for the ChaiCode and Masterji Mobile Dev Hackathon (July 12-26, 2026).
+Agora is a phone-first apartment society management.
 
 It replaces gate calls, paper registers, and fragmented WhatsApp coordination with three isolated mobile experiences:
 
@@ -164,7 +164,7 @@ The Key Secret is server-only. Never put it in `EXPO_PUBLIC_*`, `.env` committed
 
 ## Demo accounts
 
-These credentials are for hackathon evaluation only. Before submission, verify that every
+These credentials are for testing evaluation only. Before submission, verify that every
 hosted Supabase Auth user has the matching active Agora profile, society assignment, and
 resident flat assignment where applicable.
 
